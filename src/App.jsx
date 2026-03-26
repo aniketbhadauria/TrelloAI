@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { BoardProvider } from './context/BoardContext';
 import { Navbar1 } from './components/ui/shadcnblocks-com-navbar1';
+import Landing from './pages/Landing';
 import Home from './pages/Home';
 import BoardView from './pages/BoardView';
 import { LayoutDashboard, Book, Sunset, Trees, Zap, HelpCircle, Mail, Activity, FileText } from 'lucide-react';
@@ -15,6 +16,7 @@ const navbarData = {
   },
   menu: [
     { title: "Home", url: "/" },
+    { title: "Boards", url: "/boards" },
     {
       title: "Products",
       url: "#",
@@ -102,8 +104,9 @@ function App() {
           <div className="relative z-10">
             <Navbar1 {...navbarData} />
             <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/board/:boardId" element={<BoardView />} />
+              <Route path="/" element={<Landing />} />
+              <Route path="/boards" element={<Home />} />
+              <Route path="/boards/:boardId" element={<BoardView />} />
             </Routes>
           </div>
         </div>

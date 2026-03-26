@@ -39,7 +39,7 @@ export default function BoardCard({ board }) {
   ];
 
   return (
-    <Link to={`/board/${board.id}`} className="block relative">
+    <Link to={`/boards/${board.id}`} className="block relative">
       <WorkflowBuilderCard
         gradientClass={board.gradient}
         status="Active"

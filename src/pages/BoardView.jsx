@@ -36,7 +36,7 @@ export default function BoardView() {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-56px)] gap-4">
         <p className="text-muted-foreground text-lg">Board not found</p>
-        <Button onClick={() => navigate('/')}>Go home</Button>
+        <Button onClick={() => navigate('/boards')}>Go home</Button>
       </div>
     );
   }
@@ -55,7 +55,7 @@ export default function BoardView() {
   return (
     <div className="h-[calc(100vh-56px)] flex flex-col page-enter">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border/30 bg-background/50 backdrop-blur-sm shrink-0">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="gap-1.5">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/boards')} className="gap-1.5">
           <ArrowLeft className="w-4 h-4" />
           Boards
         </Button>
@@ -92,7 +92,7 @@ export default function BoardView() {
           {showMenu && (
             <div className="absolute top-full right-0 mt-1 bg-popover border border-border rounded-lg shadow-xl p-1 z-10 min-w-[160px] animate-slide-down">
               <button
-                onClick={() => { deleteBoard(boardId); navigate('/'); }}
+                onClick={() => { deleteBoard(boardId); navigate('/boards'); }}
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-md transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
