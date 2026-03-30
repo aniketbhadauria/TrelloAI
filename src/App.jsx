@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { BoardProvider } from './context/BoardContext';
 import { Navbar1 } from './components/ui/shadcnblocks-com-navbar1';
 import Landing from './pages/Landing';
@@ -92,24 +92,33 @@ const navbarData = {
   },
 };
 
+function AppContent() {
+  const location = useLocation();
+  const isLanding = location.pathname === '/';
+
+  return (
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      <div className="gradient-orb gradient-orb-1" />
+      <div className="gradient-orb gradient-orb-2" />
+      <div className="gradient-orb gradient-orb-3" />
+
+      <div className="relative z-10">
+        <Navbar1 {...navbarData} hideMenu={!isLanding} />
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/boards" element={<Home />} />
+          <Route path="/boards/:boardId" element={<BoardView />} />
+        </Routes>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
       <BoardProvider>
-        <div className="min-h-screen bg-background relative overflow-hidden">
-          <div className="gradient-orb gradient-orb-1" />
-          <div className="gradient-orb gradient-orb-2" />
-          <div className="gradient-orb gradient-orb-3" />
-
-          <div className="relative z-10">
-            <Navbar1 {...navbarData} />
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/boards" element={<Home />} />
-              <Route path="/boards/:boardId" element={<BoardView />} />
-            </Routes>
-          </div>
-        </div>
+        <AppContent />
       </BoardProvider>
     </BrowserRouter>
   );

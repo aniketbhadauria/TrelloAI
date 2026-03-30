@@ -44,6 +44,7 @@ const Navbar1 = ({
     alt: "logo",
     title: "Shadcnblocks.com",
   },
+  hideMenu = false,
   menu = [
     { title: "Home", url: "#" },
     {
@@ -130,13 +131,15 @@ const Navbar1 = ({
               <LogoIcon src={logo.src} alt={logo.alt} />
               <span className="text-lg font-semibold bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 bg-clip-text text-transparent font-bold tracking-tight">{logo.title}</span>
             </Link>
-            <div className="flex items-center">
-              <NavigationMenu>
-                <NavigationMenuList>
-                  {menu.map((item) => renderMenuItem(item))}
-                </NavigationMenuList>
-              </NavigationMenu>
-            </div>
+            {!hideMenu && (
+              <div className="flex items-center">
+                <NavigationMenu>
+                  <NavigationMenuList>
+                    {menu.map((item) => renderMenuItem(item))}
+                  </NavigationMenuList>
+                </NavigationMenu>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-4">
             <AnimatedTooltipMotion />
@@ -180,26 +183,30 @@ const Navbar1 = ({
                   </SheetTitle>
                 </SheetHeader>
                 <div className="my-6 flex flex-col gap-6">
-                  <Accordion
-                    type="single"
-                    collapsible
-                    className="flex w-full flex-col gap-4"
-                  >
-                    {menu.map((item) => renderMobileMenuItem(item))}
-                  </Accordion>
-                  <div className="border-t py-4">
-                    <div className="grid grid-cols-2 justify-start">
-                      {mobileExtraLinks.map((link, idx) => (
-                        <a
-                          key={idx}
-                          className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-accent-foreground"
-                          href={link.url}
-                        >
-                          {link.name}
-                        </a>
-                      ))}
-                    </div>
-                  </div>
+                  {!hideMenu && (
+                    <>
+                      <Accordion
+                        type="single"
+                        collapsible
+                        className="flex w-full flex-col gap-4"
+                      >
+                        {menu.map((item) => renderMobileMenuItem(item))}
+                      </Accordion>
+                      <div className="border-t py-4">
+                        <div className="grid grid-cols-2 justify-start">
+                          {mobileExtraLinks.map((link, idx) => (
+                            <a
+                              key={idx}
+                              className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-accent-foreground"
+                              href={link.url}
+                            >
+                              {link.name}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-center py-2">
                     <AnimatedTooltipMotion />
                   </div>
