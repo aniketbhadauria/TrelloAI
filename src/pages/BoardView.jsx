@@ -5,9 +5,10 @@ import KanbanList from '../components/KanbanList';
 import AddListForm from '../components/AddListForm';
 import CardDetailModal from '../components/CardDetailModal';
 import { PromptInputBox } from '../components/ui/ai-prompt-box';
-import { ArrowLeft, Star, MoreHorizontal, Trash2 } from 'lucide-react';
+import { ArrowLeft, Star, MoreHorizontal, Trash2, X, Bot, User, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { streamGeminiResponse } from '../lib/gemini';
 
 export default function BoardView() {
   const { boardId } = useParams();
@@ -19,10 +20,57 @@ export default function BoardView() {
   const [titleValue, setTitleValue] = useState('');
   const [showMenu, setShowMenu] = useState(false);
   const [selectedCard, setSelectedCard] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const chatEndRef = useRef(null);
 
   useEffect(() => {
     if (board) setTitleValue(board.title);
   }, [board]);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  const handleAiSend = async (message) => {
+    if (!message.trim() || aiLoading) return;
+
+    const userMsg = { role: 'user', text: message };
+    setChatMessages((prev) => [...prev, userMsg]);
+    setChatOpen(true);
+    setAiLoading(true);
+
+    const aiMsg = { role: 'ai', text: '' };
+    setChatMessages((prev) => [...prev, aiMsg]);
+
+    try {
+      const history = chatMessages.filter((m) => m.text);
+      const stream = await streamGeminiResponse(message, board, history);
+
+      let fullText = '';
+      for await (const chunk of stream) {
+        const text = chunk.text();
+        fullText += text;
+        setChatMessages((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { role: 'ai', text: fullText };
+          return updated;
+        });
+      }
+    } catch (err) {
+      setChatMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: 'ai',
+          text: `Sorry, I encountered an error: ${err.message}`,
+        };
+        return updated;
+      });
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   if (boardsLoading) {
     return (
@@ -132,11 +180,80 @@ export default function BoardView() {
         </Droppable>
       </DragDropContext>
 
-      {/* AI Prompt Box */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-30">
+      {/* AI Chat Panel + Prompt */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-30 flex flex-col">
+        {chatOpen && chatMessages.length > 0 && (
+          <div className="mb-3 rounded-2xl border border-[#333] bg-[#1A1B1E]/95 backdrop-blur-xl shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#333]">
+              <div className="flex items-center gap-2">
+                <Bot className="w-4 h-4 text-pink-400" />
+                <span className="text-xs font-medium text-gray-300">TaskFlow AI</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => { setChatMessages([]); setChatOpen(false); }}
+                  className="text-[10px] text-gray-500 hover:text-gray-300 px-2 py-1 rounded hover:bg-white/5 transition-colors"
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={() => setChatOpen(false)}
+                  className="p-1 rounded hover:bg-white/10 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5 text-gray-400" />
+                </button>
+              </div>
+            </div>
+            <div className="max-h-[50vh] overflow-y-auto p-4 space-y-4 scroll-smooth">
+              {chatMessages.map((msg, i) => (
+                <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  {msg.role === 'ai' && (
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center shrink-0 mt-0.5">
+                      <Bot className="w-3.5 h-3.5 text-white" />
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                      msg.role === 'user'
+                        ? 'bg-pink-500/20 text-gray-100 rounded-br-md'
+                        : 'bg-[#2A2B2F] text-gray-200 rounded-bl-md'
+                    }`}
+                  >
+                    {msg.role === 'ai' && !msg.text && aiLoading ? (
+                      <div className="flex items-center gap-2 py-1">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-pink-400" />
+                        <span className="text-xs text-gray-400">Thinking...</span>
+                      </div>
+                    ) : (
+                      <div className="whitespace-pre-wrap break-words">{msg.text}</div>
+                    )}
+                  </div>
+                  {msg.role === 'user' && (
+                    <div className="w-7 h-7 rounded-full bg-[#2A2B2F] flex items-center justify-center shrink-0 mt-0.5">
+                      <User className="w-3.5 h-3.5 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+          </div>
+        )}
+
+        {!chatOpen && chatMessages.length > 0 && (
+          <button
+            onClick={() => setChatOpen(true)}
+            className="mb-3 self-center flex items-center gap-2 px-4 py-2 rounded-full bg-[#1A1B1E]/90 border border-[#333] text-xs text-gray-300 hover:bg-[#2A2B2F] transition-colors backdrop-blur-xl shadow-lg"
+          >
+            <Bot className="w-3.5 h-3.5 text-pink-400" />
+            Show chat ({chatMessages.length} messages)
+          </button>
+        )}
+
         <PromptInputBox
           placeholder="Ask AI about this board..."
-          onSend={(message, files) => console.log('AI:', message, files)}
+          onSend={(message) => handleAiSend(message)}
+          isLoading={aiLoading}
         />
       </div>
 

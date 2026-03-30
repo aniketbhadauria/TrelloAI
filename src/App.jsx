@@ -4,6 +4,7 @@ import { Navbar1 } from './components/ui/shadcnblocks-com-navbar1';
 import Landing from './pages/Landing';
 import Home from './pages/Home';
 import BoardView from './pages/BoardView';
+import GitHubView from './pages/GitHubView';
 import { LayoutDashboard, Book, Sunset, Trees, Zap, HelpCircle, Mail, Activity, FileText } from 'lucide-react';
 import './App.css';
 
@@ -108,6 +109,7 @@ function AppContent() {
           <Route path="/" element={<Landing />} />
           <Route path="/boards" element={<Home />} />
           <Route path="/boards/:boardId" element={<BoardView />} />
+          <Route path="/github" element={<GitHubView />} />
         </Routes>
       </div>
     </div>

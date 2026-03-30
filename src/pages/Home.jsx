@@ -30,6 +30,10 @@ export default function Home() {
       navigate('/');
       return;
     }
+    if (appId === 'terminal') {
+      navigate('/github');
+      return;
+    }
     if (appId === 'calendar') {
       window.open('https://calendar.google.com', '_blank');
       return;
