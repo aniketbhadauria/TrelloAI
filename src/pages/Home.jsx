@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useBoards } from '../context/BoardContext';
 import BoardCard from '../components/BoardCard';
 import CreateBoardModal from '../components/CreateBoardModal';
@@ -22,7 +23,13 @@ export default function Home() {
   const [showCreate, setShowCreate] = useState(false);
   const [openApps, setOpenApps] = useState(['finder', 'safari']);
 
+  const navigate = useNavigate();
+
   const handleDockAppClick = (appId) => {
+    if (appId === 'finder') {
+      navigate('/');
+      return;
+    }
     if (appId === 'calendar') {
       window.open('https://calendar.google.com', '_blank');
       return;

@@ -102,9 +102,8 @@ function App() {
           <div className="gradient-orb gradient-orb-3" />
 
           <div className="relative z-10">
-            <Navbar1 {...navbarData} />
             <Routes>
-              <Route path="/" element={<Landing />} />
+              <Route path="/" element={<><Navbar1 {...navbarData} /><Landing /></>} />
               <Route path="/boards" element={<Home />} />
               <Route path="/boards/:boardId" element={<BoardView />} />
             </Routes>
