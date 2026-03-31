@@ -48,6 +48,19 @@ export function BoardProvider({ children }) {
     saveToSupabase(data);
   }, [data, saveToSupabase]);
 
+  const refreshBoards = useCallback(async () => {
+    const { data: row, error } = await supabase
+      .from('app_boards')
+      .select('data')
+      .eq('id', ROW_ID)
+      .single();
+    if (!error && row?.data) {
+      isInitialLoad.current = true;
+      setData(row.data);
+      setTimeout(() => { isInitialLoad.current = false; }, 100);
+    }
+  }, []);
+
   const updateData = useCallback((updater) => {
     setData(prev => (typeof updater === 'function' ? updater(prev) : updater));
   }, []);
@@ -152,7 +165,7 @@ export function BoardProvider({ children }) {
   }, [updateData]);
 
   return (
-    <BoardContext.Provider value={{ boards: data.boards, boardsLoading, getBoard, addBoard, deleteBoard, updateBoard, toggleStarBoard, addList, deleteList, updateListTitle, addCard, deleteCard, updateCard, handleDragEnd }}>
+    <BoardContext.Provider value={{ boards: data.boards, boardsLoading, getBoard, addBoard, deleteBoard, updateBoard, toggleStarBoard, addList, deleteList, updateListTitle, addCard, deleteCard, updateCard, handleDragEnd, refreshBoards }}>
       {children}
     </BoardContext.Provider>
   );

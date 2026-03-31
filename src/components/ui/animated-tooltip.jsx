@@ -47,7 +47,7 @@ const AnimatedTooltipMotion = ({ items }) => {
       id: 1,
       name: "Aarav Mehta",
       designation: "AI Researcher",
-      image: "https://images.unsplash.com/photo-1599566150163-29194dcabd9c?w=120&h=120&fit=crop&crop=face",
+      image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop&crop=face",
     },
     {
       id: 2,

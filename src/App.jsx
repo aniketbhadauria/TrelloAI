@@ -5,7 +5,8 @@ import Landing from './pages/Landing';
 import Home from './pages/Home';
 import BoardView from './pages/BoardView';
 import GitHubView from './pages/GitHubView';
-import { LayoutDashboard, Book, Sunset, Trees, Zap, HelpCircle, Mail, Activity, FileText } from 'lucide-react';
+import MindMapView from './pages/MindMapView';
+import { Book, Sunset, Trees, Zap, HelpCircle, Mail, Activity, FileText } from 'lucide-react';
 import './App.css';
 
 const navbarData = {
@@ -110,6 +111,7 @@ function AppContent() {
           <Route path="/boards" element={<Home />} />
           <Route path="/boards/:boardId" element={<BoardView />} />
           <Route path="/github" element={<GitHubView />} />
+          <Route path="/mindmap" element={<MindMapView />} />
         </Routes>
       </div>
     </div>
