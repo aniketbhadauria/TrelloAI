@@ -1,0 +1,24 @@
+-- Optional follow-up after switching the app to per-user board rows (id = auth user UUID).
+-- The app creates rows via upsert when a user signs in; no manual seed per user is required.
+--
+-- To enforce isolation with Row Level Security (recommended for production), run:
+
+-- alter table public.app_boards enable row level security;
+--
+-- create policy "app_boards_select_own"
+--   on public.app_boards for select
+--   to authenticated
+--   using (id = auth.uid()::text);
+--
+-- create policy "app_boards_insert_own"
+--   on public.app_boards for insert
+--   to authenticated
+--   with check (id = auth.uid()::text);
+--
+-- create policy "app_boards_update_own"
+--   on public.app_boards for update
+--   to authenticated
+--   using (id = auth.uid()::text);
+--
+-- Note: If you enable RLS, any server-side code using only the anon key without a user JWT
+-- (e.g. a shared AI demo row) must use the service role key or a dedicated policy.

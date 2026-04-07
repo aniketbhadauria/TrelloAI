@@ -1,5 +1,7 @@
-import { Book, Menu, Sunset, Trees, Zap, LayoutDashboard } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Book, Menu, Sunset, Trees, Zap, LayoutDashboard, Bell, X as XIcon } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useNotifications } from "@/context/NotificationContext";
 
 import {
   Accordion,
@@ -7,8 +9,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import AnimatedTooltipMotion from "@/components/ui/animated-tooltip";
-import { buttonVariants } from "@/components/ui/button";
+
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -36,6 +38,29 @@ const LogoIcon = ({ src, alt }) => {
     </div>
   );
 };
+
+const AVATAR_COLORS = [
+  '#8b5cf6', '#3b82f6', '#06b6d4', '#10b981',
+  '#f59e0b', '#f97316', '#ef4444', '#ec4899',
+  '#6366f1', '#14b8a6', '#a855f7', '#e11d48',
+];
+
+function getUserColor(email) {
+  if (!email) return AVATAR_COLORS[0];
+  let hash = 0;
+  for (let i = 0; i < email.length; i++) hash = email.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function getUserInitials(email) {
+  if (!email) return 'U';
+  const name = email.split('@')[0];
+  const parts = name.split(/[._-]/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
 
 const Navbar1 = ({
   logo = {
@@ -120,8 +145,14 @@ const Navbar1 = ({
   auth = {
     login: { text: "Log in", url: "#" },
     signup: { text: "Sign up", url: "#" },
+    session: null,
   },
 }) => {
+  const session = auth.session;
+  const [showNotifs, setShowNotifs] = useState(false);
+  const notifData = useNotifications();
+  const { notifications: notifs, unreadCount, markAsRead, markAllAsRead } = notifData;
+  const navigate = useNavigate();
   return (
     <section className="py-4 sticky top-0 z-40 bg-background/60 backdrop-blur-xl border-b border-border/40">
       <div className="container mx-auto px-4">
@@ -142,20 +173,110 @@ const Navbar1 = ({
             )}
           </div>
           <div className="flex items-center gap-4">
-            <AnimatedTooltipMotion />
-            <div className="flex gap-2">
-              <Link
-                to={auth.login.url}
-                className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            {session && (
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ring-2 ring-background shadow-md"
+                style={{ backgroundColor: getUserColor(session.email) }}
+                title={session.email}
               >
-                {auth.login.text}
-              </Link>
-              <Link
-                to={auth.signup.url}
-                className={cn(buttonVariants({ size: "sm" }))}
-              >
-                {auth.signup.text}
-              </Link>
+                {getUserInitials(session.email)}
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              {session ? (
+                <>
+                  {/* Notification bell */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowNotifs(v => !v)}
+                      className="relative p-2 rounded-lg hover:bg-secondary/50 transition-colors"
+                    >
+                      <Bell className="w-4.5 h-4.5 text-muted-foreground" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 rounded-full bg-pink-500 text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-background">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </button>
+                    {showNotifs && (
+                      <>
+                        <div className="fixed inset-0 z-50" onClick={() => setShowNotifs(false)} />
+                        <div className="absolute top-full right-0 mt-1 w-80 bg-card border border-border rounded-xl shadow-2xl z-50 max-h-[70vh] overflow-hidden animate-slide-down">
+                          <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
+                            <span className="text-sm font-semibold">Notifications</span>
+                            <div className="flex items-center gap-1">
+                              {unreadCount > 0 && (
+                                <button onClick={markAllAsRead} className="text-[11px] text-primary hover:text-primary/80 font-medium px-2 py-1 rounded hover:bg-secondary/40 transition-colors">
+                                  Mark all read
+                                </button>
+                              )}
+                              <button onClick={() => setShowNotifs(false)} className="p-1 rounded-lg hover:bg-secondary transition-colors">
+                                <XIcon className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                            </div>
+                          </div>
+                          <div className="overflow-y-auto max-h-[55vh]">
+                            {notifs.length === 0 ? (
+                              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+                                <Bell className="w-8 h-8 mb-2 opacity-30" />
+                                <p className="text-sm">No notifications yet</p>
+                              </div>
+                            ) : (
+                              notifs.map(n => (
+                                <button
+                                  key={n.id}
+                                  onClick={() => {
+                                    markAsRead(n.id);
+                                    if (n.board_id) navigate(`/boards/${n.board_id}`);
+                                    setShowNotifs(false);
+                                  }}
+                                  className={`w-full text-left px-4 py-3 border-b border-border/20 hover:bg-secondary/30 transition-colors flex items-start gap-3 ${
+                                    !n.read ? 'bg-primary/5' : ''
+                                  }`}
+                                >
+                                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.read ? 'bg-pink-500' : 'bg-transparent'}`} />
+                                  <div className="flex-1 min-w-0">
+                                    <p className={`text-sm leading-snug ${!n.read ? 'font-semibold' : 'text-muted-foreground'}`}>
+                                      {n.title}
+                                    </p>
+                                    {n.body && (
+                                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{n.body}</p>
+                                    )}
+                                    <p className="text-[10px] text-muted-foreground/60 mt-1">
+                                      {formatNotifTime(n.created_at)}
+                                    </p>
+                                  </div>
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <span className="text-sm text-muted-foreground truncate max-w-[160px]" title={session.email}>
+                    {session.email}
+                  </span>
+                  <Button type="button" variant="outline" size="sm" onClick={session.onSignOut}>
+                    Sign out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to={auth.login.url}
+                    className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                  >
+                    {auth.login.text}
+                  </Link>
+                  <Link
+                    to={auth.signup.url}
+                    className={cn(buttonVariants({ size: "sm" }))}
+                  >
+                    {auth.signup.text}
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </nav>
@@ -208,21 +329,41 @@ const Navbar1 = ({
                     </>
                   )}
                   <div className="flex justify-center py-2">
-                    <AnimatedTooltipMotion />
+                    {session && (
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold ring-2 ring-background shadow-md"
+                        style={{ backgroundColor: getUserColor(session.email) }}
+                      >
+                        {getUserInitials(session.email)}
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-col gap-3">
-                    <Link
-                      to={auth.login.url}
-                      className={cn(buttonVariants({ variant: "outline" }))}
-                    >
-                      {auth.login.text}
-                    </Link>
-                    <Link
-                      to={auth.signup.url}
-                      className={cn(buttonVariants())}
-                    >
-                      {auth.signup.text}
-                    </Link>
+                    {session ? (
+                      <>
+                        <span className="text-sm text-muted-foreground px-1 truncate" title={session.email}>
+                          {session.email}
+                        </span>
+                        <Button type="button" variant="outline" onClick={session.onSignOut}>
+                          Sign out
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Link
+                          to={auth.login.url}
+                          className={cn(buttonVariants({ variant: "outline" }))}
+                        >
+                          {auth.login.text}
+                        </Link>
+                        <Link
+                          to={auth.signup.url}
+                          className={cn(buttonVariants())}
+                        >
+                          {auth.signup.text}
+                        </Link>
+                      </>
+                    )}
                   </div>
                 </div>
               </SheetContent>
@@ -319,5 +460,18 @@ const renderMobileMenuItem = (item) => {
     </a>
   );
 };
+
+function formatNotifTime(dateStr) {
+  if (!dateStr) return '';
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
 
 export { Navbar1 };

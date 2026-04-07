@@ -5,6 +5,8 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import { useBoards } from '../context/BoardContext';
+import { useAuth } from '../context/AuthContext';
+import { sendNotification } from '../context/NotificationContext';
 import { LABEL_COLORS } from '../data/initialData';
 import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
@@ -26,6 +28,7 @@ function getMemberColor(name) {
 
 export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
   const { getBoard, updateCard, deleteCard } = useBoards();
+  const { user } = useAuth();
   const board = getBoard(boardId);
   const list = board?.lists.find(l => l.id === listId);
   const card = list?.cards.find(c => c.id === cardId);
@@ -101,11 +104,24 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
 
   const handleAddMember = () => {
     if (!newMemberName.trim()) return;
-    const exists = members.some(m => m.name.toLowerCase() === newMemberName.trim().toLowerCase());
+    const memberName = newMemberName.trim();
+    const exists = members.some(m => m.name.toLowerCase() === memberName.toLowerCase());
     if (exists) { setNewMemberName(''); setActiveSection(null); return; }
-    const member = { id: uuidv4(), name: newMemberName.trim() };
+    const member = { id: uuidv4(), name: memberName };
     updateCard(boardId, listId, cardId, { members: [...members, member] });
     setNewMemberName('');
+
+    // Send notification if the member name looks like an email
+    const emailToNotify = memberName.includes('@') ? memberName : null;
+    if (emailToNotify && emailToNotify !== user?.email) {
+      sendNotification({
+        userEmail: emailToNotify,
+        title: `You were assigned to "${card.title}"`,
+        body: `${user?.email || 'Someone'} added you to a card in ${board?.title || 'a board'}`,
+        boardId,
+        cardId,
+      });
+    }
   };
 
   const handleRemoveMember = (memberId) => {
@@ -117,7 +133,7 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
     const comment = {
       id: uuidv4(),
       text: newComment.trim(),
-      author: 'You',
+      author: user?.email || 'Anonymous',
       createdAt: new Date().toISOString(),
     };
     updateCard(boardId, listId, cardId, { comments: [...comments, comment] });
@@ -471,9 +487,10 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Add a more detailed description..."
-                    rows={4}
+                    rows={8}
                     autoFocus
-                    className="bg-secondary/50 text-sm"
+                    className="bg-white text-foreground text-sm border-border/40 rounded-xl leading-relaxed"
+                    style={{ whiteSpace: 'pre-wrap', tabSize: 2 }}
                   />
                   <div className="flex gap-2">
                     <Button size="sm" onClick={handleDescSave}>Save</Button>
@@ -483,9 +500,13 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
               ) : (
                 <button
                   onClick={() => setEditingDesc(true)}
-                  className="w-full text-left min-h-[80px] bg-secondary/20 border border-border/30 rounded-xl p-3 text-sm cursor-pointer hover:bg-secondary/40 transition-colors"
+                  className="w-full text-left min-h-[80px] rounded-xl p-4 text-sm cursor-pointer transition-colors bg-white hover:bg-gray-50 border border-border/40"
                 >
-                  {card.description || <span className="text-muted-foreground">Add a more detailed description...</span>}
+                  {card.description ? (
+                    <DescriptionRenderer text={card.description} />
+                  ) : (
+                    <span className="text-gray-500">Add a more detailed description...</span>
+                  )}
                 </button>
               )}
             </div>
@@ -510,8 +531,11 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
               <div className="flex-1 overflow-y-auto px-5 pb-4">
                 {/* Comment input */}
                 <div className="flex items-start gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-full bg-linear-to-br from-pink-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">
-                    Y
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5"
+                    style={{ backgroundColor: getMemberColor(user?.email || 'U') }}
+                  >
+                    {getInitials(user?.email?.split('@')[0] || 'U')}
                   </div>
                   <div className="flex-1 flex gap-1.5">
                     <Input
@@ -629,4 +653,49 @@ function formatCommentTime(dateStr) {
   const days = Math.floor(hours / 24);
   if (days < 30) return `${days}d ago`;
   return new Date(dateStr).toLocaleDateString();
+}
+
+function DescriptionRenderer({ text }) {
+  if (!text) return null;
+
+  const lines = text.split('\n');
+  const elements = [];
+  let currentBullets = [];
+  let key = 0;
+
+  const flushBullets = () => {
+    if (currentBullets.length > 0) {
+      elements.push(
+        <ul key={`ul-${key++}`} className="list-disc list-inside space-y-0.5 my-1.5 text-foreground">
+          {currentBullets.map((b, i) => (
+            <li key={i} className="leading-relaxed">{b}</li>
+          ))}
+        </ul>
+      );
+      currentBullets = [];
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const bulletMatch = line.match(/^\s*[•\-\*]\s+(.*)/);
+
+    if (bulletMatch) {
+      currentBullets.push(bulletMatch[1]);
+    } else {
+      flushBullets();
+      if (line.trim() === '') {
+        elements.push(<div key={`br-${key++}`} className="h-2" />);
+      } else {
+        elements.push(
+          <p key={`p-${key++}`} className="text-foreground leading-relaxed whitespace-pre-wrap break-words">
+            {line}
+          </p>
+        );
+      }
+    }
+  }
+  flushBullets();
+
+  return <div className="space-y-0.5">{elements}</div>;
 }

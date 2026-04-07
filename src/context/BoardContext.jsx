@@ -1,43 +1,106 @@
 import { createContext, useContext, useCallback, useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../lib/supabase';
+import { useAuth } from './AuthContext';
 import { useDebouncedCallback } from '../hooks/useDebouncedCallback';
 
 const BoardContext = createContext(null);
 
-const ROW_ID = 'default';
+const SHARED_ROW_ID = 'shared';
 const EMPTY_DATA = { boards: [] };
 
 export function BoardProvider({ children }) {
+  const { user, loading: authLoading } = useAuth();
+  const isAuthenticated = !!user && !authLoading;
+
   const [data, setData] = useState(EMPTY_DATA);
   const [boardsLoading, setBoardsLoading] = useState(true);
   const isInitialLoad = useRef(true);
 
+  // Load shared boards
   useEffect(() => {
+    if (authLoading) return;
+
+    if (!isAuthenticated) {
+      isInitialLoad.current = true;
+      setData(EMPTY_DATA);
+      setBoardsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
     isInitialLoad.current = true;
     setBoardsLoading(true);
 
-    supabase
-      .from('app_boards')
-      .select('data')
-      .eq('id', ROW_ID)
-      .single()
-      .then(({ data: row, error }) => {
-        if (error) {
-          console.error('Failed to load boards:', error.message);
-        } else if (row?.data) {
-          setData(row.data);
-        }
+    (async () => {
+      const { data: row, error } = await supabase
+        .from('app_boards')
+        .select('data')
+        .eq('id', SHARED_ROW_ID)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error('Failed to load boards:', error.message);
         setBoardsLoading(false);
         isInitialLoad.current = false;
-      });
-  }, []);
+        return;
+      }
 
+      if (!row) {
+        // Create shared row if it doesn't exist
+        const { error: upsertError } = await supabase
+          .from('app_boards')
+          .upsert(
+            { id: SHARED_ROW_ID, data: EMPTY_DATA, updated_at: new Date().toISOString() },
+            { onConflict: 'id' }
+          );
+        if (upsertError) {
+          console.error('Failed to create shared board row:', upsertError.message);
+        }
+        setData(EMPTY_DATA);
+      } else if (row.data) {
+        setData(row.data);
+      }
+
+      if (!cancelled) {
+        setBoardsLoading(false);
+        isInitialLoad.current = false;
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [isAuthenticated, authLoading]);
+
+  // Realtime subscription – sync changes from other users
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const channel = supabase
+      .channel('shared-boards')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'app_boards', filter: `id=eq.${SHARED_ROW_ID}` },
+        (payload) => {
+          if (payload.new?.data) {
+            isInitialLoad.current = true;
+            setData(payload.new.data);
+            setTimeout(() => { isInitialLoad.current = false; }, 150);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [isAuthenticated]);
+
+  // Save to Supabase (debounced)
   const saveToSupabase = useDebouncedCallback((boardData) => {
     supabase
       .from('app_boards')
       .update({ data: boardData, updated_at: new Date().toISOString() })
-      .eq('id', ROW_ID)
+      .eq('id', SHARED_ROW_ID)
       .then(({ error }) => {
         if (error) console.error('Failed to save boards:', error.message);
       });
@@ -45,14 +108,15 @@ export function BoardProvider({ children }) {
 
   useEffect(() => {
     if (isInitialLoad.current) return;
+    if (!isAuthenticated) return;
     saveToSupabase(data);
-  }, [data, saveToSupabase]);
+  }, [data, saveToSupabase, isAuthenticated]);
 
   const refreshBoards = useCallback(async () => {
     const { data: row, error } = await supabase
       .from('app_boards')
       .select('data')
-      .eq('id', ROW_ID)
+      .eq('id', SHARED_ROW_ID)
       .single();
     if (!error && row?.data) {
       isInitialLoad.current = true;

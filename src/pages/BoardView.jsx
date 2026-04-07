@@ -208,7 +208,7 @@ export default function BoardView() {
 
   return (
     <div className="h-[calc(100vh-56px)] flex flex-col page-enter">
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border/30 bg-background/50 backdrop-blur-sm shrink-0">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border/30 bg-background/50 backdrop-blur-sm shrink-0 relative z-20">
         <Button variant="ghost" size="sm" onClick={() => navigate('/boards')} className="gap-1.5">
           <ArrowLeft className="w-4 h-4" />
           Boards
@@ -256,8 +256,8 @@ export default function BoardView() {
           </Button>
           {showFilter && (
             <>
-              <div className="fixed inset-0 z-30" onClick={() => setShowFilter(false)} />
-              <div className="absolute top-full right-0 mt-1 w-72 bg-card border border-border rounded-xl shadow-2xl z-40 max-h-[70vh] overflow-y-auto animate-slide-down">
+              <div className="fixed inset-0 z-50" onClick={() => setShowFilter(false)} />
+              <div className="absolute top-full right-0 mt-1 w-72 bg-card border border-border rounded-xl shadow-2xl z-50 max-h-[70vh] overflow-y-auto animate-slide-down">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border/30 sticky top-0 bg-card z-10 rounded-t-xl">
                   <span className="text-sm font-semibold">Filter</span>
                   <button onClick={() => setShowFilter(false)} className="p-1 rounded-lg hover:bg-secondary transition-colors">
