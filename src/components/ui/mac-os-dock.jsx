@@ -67,6 +67,8 @@ const MacOSDock = ({ apps, onAppClick, openApps = [], className = '' }) => {
     setCurrentPositions(initialPositions);
   }, [apps, calculatePositions, minScale, config]);
 
+  const animateToTargetRef = useRef();
+
   const animateToTarget = useCallback(() => {
     const targetScales = calculateTargetMagnification(mouseX);
     const targetPositions = calculatePositions(targetScales);
@@ -79,9 +81,13 @@ const MacOSDock = ({ apps, onAppClick, openApps = [], className = '' }) => {
     const positionsNeedUpdate = currentPositions.some((p, i) => Math.abs(p - targetPositions[i]) > 0.1);
 
     if (scalesNeedUpdate || positionsNeedUpdate || mouseX !== null) {
-      animationFrameRef.current = requestAnimationFrame(animateToTarget);
+      animationFrameRef.current = requestAnimationFrame(animateToTargetRef.current);
     }
   }, [mouseX, calculateTargetMagnification, calculatePositions, currentScales, currentPositions]);
+
+  useEffect(() => {
+    animateToTargetRef.current = animateToTarget;
+  }, [animateToTarget]);
 
   useEffect(() => {
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);

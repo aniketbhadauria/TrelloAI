@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { X, Calendar, Tag, Trash2, AlignLeft, CheckSquare, Users, MessageSquare, Plus, Send, Zap, Puzzle, Circle, Paperclip, Settings2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -27,7 +27,7 @@ function getMemberColor(name) {
 }
 
 export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
-  const { getBoard, updateCard, deleteCard } = useBoards();
+  const { getBoard, updateCard, deleteCard, boards } = useBoards();
   const { user } = useAuth();
   const board = getBoard(boardId);
   const list = board?.lists.find(l => l.id === listId);
@@ -46,6 +46,24 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
   const [showDetails, setShowDetails] = useState(true);
   const [bottomTab, setBottomTab] = useState('comments');
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionIndex, setSuggestionIndex] = useState(-1);
+  const suggestionsRef = useRef(null);
+
+  // Collect all unique member names across every board
+  const allBoardMembers = useMemo(() => {
+    const nameSet = new Set();
+    for (const b of boards) {
+      for (const l of b.lists || []) {
+        for (const c of l.cards || []) {
+          for (const m of c.members || []) {
+            if (m.name) nameSet.add(m.name);
+          }
+        }
+      }
+    }
+    return [...nameSet].sort((a, b) => a.localeCompare(b));
+  }, [boards]);
 
   if (!card) return null;
 
@@ -54,6 +72,15 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
   const comments = card.comments || [];
   const completedCount = checklist.filter(i => i.completed).length;
   const checklistProgress = checklist.length > 0 ? Math.round((completedCount / checklist.length) * 100) : 0;
+
+  // Filtered suggestions: matching typed text, excluding already-assigned
+  const assignedNames = new Set(members.map(m => m.name.toLowerCase()));
+  const filteredSuggestions = newMemberName.trim().length > 0
+    ? allBoardMembers.filter(name =>
+        name.toLowerCase().includes(newMemberName.trim().toLowerCase()) &&
+        !assignedNames.has(name.toLowerCase())
+      )
+    : [];
 
   const toggleSection = (section) => setActiveSection(prev => prev === section ? null : section);
 
@@ -416,21 +443,82 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                     </button>
                   ))}
                 </div>
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={newMemberName}
-                    onChange={(e) => setNewMemberName(e.target.value)}
-                    placeholder="Add a member by name..."
-                    className="h-8 text-sm bg-background/50 flex-1"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleAddMember();
-                      if (e.key === 'Escape') setActiveSection(null);
-                    }}
-                  />
-                  <Button size="sm" className="h-8 px-3" onClick={handleAddMember} disabled={!newMemberName.trim()}>
-                    Add
-                  </Button>
+                <div className="relative">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={newMemberName}
+                      onChange={(e) => {
+                        setNewMemberName(e.target.value);
+                        setShowSuggestions(true);
+                        setSuggestionIndex(-1);
+                      }}
+                      placeholder="Add a member by name..."
+                      className="h-8 text-sm bg-background/50 flex-1"
+                      autoFocus
+                      onFocus={() => setShowSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                      onKeyDown={(e) => {
+                        if (showSuggestions && filteredSuggestions.length > 0) {
+                          if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            setSuggestionIndex(prev => Math.min(prev + 1, filteredSuggestions.length - 1));
+                          } else if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            setSuggestionIndex(prev => Math.max(prev - 1, 0));
+                          } else if (e.key === 'Enter' && suggestionIndex >= 0) {
+                            e.preventDefault();
+                            setNewMemberName(filteredSuggestions[suggestionIndex]);
+                            setShowSuggestions(false);
+                            setSuggestionIndex(-1);
+                            return;
+                          }
+                        }
+                        if (e.key === 'Enter') handleAddMember();
+                        if (e.key === 'Escape') {
+                          if (showSuggestions) { setShowSuggestions(false); }
+                          else { setActiveSection(null); }
+                        }
+                      }}
+                    />
+                    <Button size="sm" className="h-8 px-3" onClick={handleAddMember} disabled={!newMemberName.trim()}>
+                      Add
+                    </Button>
+                  </div>
+
+                  {/* Autosuggest dropdown */}
+                  {showSuggestions && filteredSuggestions.length > 0 && (
+                    <div
+                      ref={suggestionsRef}
+                      className="absolute left-0 right-12 top-full mt-1 z-50 bg-card/95 backdrop-blur-xl border border-border/50 rounded-xl shadow-xl overflow-hidden animate-slide-down"
+                    >
+                      <div className="py-1 max-h-40 overflow-y-auto">
+                        {filteredSuggestions.map((name, i) => (
+                          <button
+                            key={name}
+                            onMouseDown={(e) => { e.preventDefault(); }}
+                            onClick={() => {
+                              setNewMemberName(name);
+                              setShowSuggestions(false);
+                              setSuggestionIndex(-1);
+                            }}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors ${
+                              i === suggestionIndex
+                                ? 'bg-primary/10 text-primary'
+                                : 'hover:bg-secondary/50 text-foreground'
+                            }`}
+                          >
+                            <div
+                              className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                              style={{ backgroundColor: getMemberColor(name) }}
+                            >
+                              {getInitials(name)}
+                            </div>
+                            <span className="truncate">{name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -678,7 +766,7 @@ function DescriptionRenderer({ text }) {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const bulletMatch = line.match(/^\s*[•\-\*]\s+(.*)/);
+    const bulletMatch = line.match(/^\s*[•\-*]\s+(.*)/);
 
     if (bulletMatch) {
       currentBullets.push(bulletMatch[1]);

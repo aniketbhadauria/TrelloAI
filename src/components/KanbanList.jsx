@@ -4,7 +4,7 @@ import { MoreHorizontal, Trash2 } from 'lucide-react';
 import KanbanCard from './KanbanCard';
 import AddCardForm from './AddCardForm';
 
-export default function KanbanList({ list, index, boardId, onDeleteList, onUpdateListTitle, onAddCard, onCardClick, dragHandleProps }) {
+export default function KanbanList({ list, onDeleteList, onUpdateListTitle, onAddCard, onCardClick, dragHandleProps }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(list.title);
   const [showMenu, setShowMenu] = useState(false);

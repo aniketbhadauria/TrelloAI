@@ -8,21 +8,23 @@ import Home from './pages/Home';
 import BoardView from './pages/BoardView';
 
 import MindMapView from './pages/MindMapView';
+import Analytics from './pages/Analytics';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import { Book, Sunset, Trees, Zap, HelpCircle, Mail, Activity, FileText } from 'lucide-react';
+import { Book, Sunset, Trees, Zap, HelpCircle, Mail, Activity, FileText, BarChart3 } from 'lucide-react';
 import './App.css';
 
 const navbarDataBase = {
   logo: {
     url: "/",
     src: "",
-    alt: "TaskFlow",
-    title: "TaskFlow",
+    alt: "Trello",
+    title: "Trello",
   },
   menu: [
     { title: "Home", url: "/" },
     { title: "Boards", url: "/boards" },
+    { title: "Analytics", url: "/analytics" },
     {
       title: "Products",
       url: "#",
@@ -126,12 +128,12 @@ function AppContent() {
       signup: { text: 'Sign up', url: '/signup' },
       session: session?.user?.email
         ? {
-            email: session.user.email,
-            onSignOut: async () => {
-              await signOut();
-              navigate('/', { replace: true });
-            },
-          }
+          email: session.user.email,
+          onSignOut: async () => {
+            await signOut();
+            navigate('/', { replace: true });
+          },
+        }
         : null,
     },
   };
@@ -170,6 +172,14 @@ function AppContent() {
             element={(
               <ProtectedRoute>
                 <MindMapView />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="/analytics"
+            element={(
+              <ProtectedRoute>
+                <Analytics />
               </ProtectedRoute>
             )}
           />

@@ -138,6 +138,14 @@ const VoiceRecorder = ({ isRecording, onStartRecording, onStopRecording, visuali
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const barsData = React.useMemo(() => {
+    return [...Array(visualizerBars)].map((_, i) => ({
+      // Use deterministic values instead of Math.random to satisfy strict purity rules
+      height: `${15 + ((i * 37) % 85)}%`,
+      duration: `${0.5 + ((i * 13) % 5) / 10}s`
+    }));
+  }, [visualizerBars]);
+
   return (
     <div className={cn("flex flex-col items-center justify-center w-full transition-all duration-300 py-3", isRecording ? "opacity-100" : "opacity-0 h-0")}>
       <div className="flex items-center gap-2 mb-3">
@@ -145,11 +153,11 @@ const VoiceRecorder = ({ isRecording, onStartRecording, onStopRecording, visuali
         <span className="font-mono text-sm text-white/80">{formatTime(time)}</span>
       </div>
       <div className="w-full h-10 flex items-center justify-center gap-0.5 px-4">
-        {[...Array(visualizerBars)].map((_, i) => (
+        {barsData.map((bar, i) => (
           <div
             key={i}
             className="w-0.5 rounded-full bg-white/50 animate-pulse"
-            style={{ height: `${Math.max(15, Math.random() * 100)}%`, animationDelay: `${i * 0.05}s`, animationDuration: `${0.5 + Math.random() * 0.5}s` }}
+            style={{ height: bar.height, animationDelay: `${i * 0.05}s`, animationDuration: bar.duration }}
           />
         ))}
       </div>

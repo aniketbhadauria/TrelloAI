@@ -26,7 +26,7 @@ function GitHubMark({ className }) {
 }
 
 export default function Login() {
-  const { signIn, session, loading } = useAuth();
+  const { signIn, signInWithGitHub, session, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState('');

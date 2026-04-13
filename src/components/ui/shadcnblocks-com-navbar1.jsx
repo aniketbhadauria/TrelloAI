@@ -67,7 +67,7 @@ const Navbar1 = ({
     url: "/",
     src: "https://www.shadcnblocks.com/images/block/block-1.svg",
     alt: "logo",
-    title: "Shadcnblocks.com",
+    title: "Trello",
   },
   hideMenu = false,
   menu = [
@@ -230,9 +230,8 @@ const Navbar1 = ({
                                     if (n.board_id) navigate(`/boards/${n.board_id}`);
                                     setShowNotifs(false);
                                   }}
-                                  className={`w-full text-left px-4 py-3 border-b border-border/20 hover:bg-secondary/30 transition-colors flex items-start gap-3 ${
-                                    !n.read ? 'bg-primary/5' : ''
-                                  }`}
+                                  className={`w-full text-left px-4 py-3 border-b border-border/20 hover:bg-secondary/30 transition-colors flex items-start gap-3 ${!n.read ? 'bg-primary/5' : ''
+                                    }`}
                                 >
                                   <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.read ? 'bg-pink-500' : 'bg-transparent'}`} />
                                   <div className="flex-1 min-w-0">

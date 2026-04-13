@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Plus, Minus, Maximize2, Sparkles, Trash2, Edit3,
   ChevronRight, ChevronDown, X, Loader2, Brain, RotateCcw,
@@ -372,7 +372,7 @@ export default function MindMapView() {
         {/* Selected node toolbar (outside transform for consistent size) */}
         <AnimatePresence>
           {selectedPos && selectedId && (
-            <motion.div
+            <Motion.div
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 4 }}
@@ -402,7 +402,7 @@ export default function MindMapView() {
                   </button>
                 </>
               )}
-            </motion.div>
+            </Motion.div>
           )}
         </AnimatePresence>
 
@@ -427,12 +427,12 @@ export default function MindMapView() {
       <AnimatePresence>
         {showAI && (
           <>
-            <motion.div
+            <Motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/40 z-40 backdrop-blur-sm"
               onClick={() => !aiLoading && setShowAI(false)}
             />
-            <motion.div
+            <Motion.div
               initial={{ opacity: 0, x: 40 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 40 }}
@@ -517,7 +517,7 @@ export default function MindMapView() {
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </Motion.div>
           </>
         )}
       </AnimatePresence>
