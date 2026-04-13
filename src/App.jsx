@@ -1,22 +1,30 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { BoardProvider } from './context/BoardContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import { Navbar1 } from './components/ui/shadcnblocks-com-navbar1';
 import Landing from './pages/Landing';
 import Home from './pages/Home';
 import BoardView from './pages/BoardView';
-import { LayoutDashboard, Book, Sunset, Trees, Zap, HelpCircle, Mail, Activity, FileText } from 'lucide-react';
+
+import MindMapView from './pages/MindMapView';
+import Analytics from './pages/Analytics';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import { Book, Sunset, Trees, Zap, HelpCircle, Mail, Activity, FileText, BarChart3 } from 'lucide-react';
 import './App.css';
 
-const navbarData = {
+const navbarDataBase = {
   logo: {
     url: "/",
     src: "",
-    alt: "TaskFlow",
-    title: "TaskFlow",
+    alt: "Trello",
+    title: "Trello",
   },
   menu: [
     { title: "Home", url: "/" },
     { title: "Boards", url: "/boards" },
+    { title: "Analytics", url: "/analytics" },
     {
       title: "Products",
       url: "#",
@@ -86,30 +94,111 @@ const navbarData = {
     { name: "Imprint", url: "#" },
     { name: "Sitemap", url: "#" },
   ],
-  auth: {
-    login: { text: "Log in", url: "#" },
-    signup: { text: "Sign up", url: "#" },
-  },
 };
+
+function ProtectedRoute({ children }) {
+  const { session, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-56px)]">
+        <div className="w-8 h-8 border-3 border-pink-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return children;
+}
+
+function AppContent() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isLanding = location.pathname === '/';
+  const { session, signOut } = useAuth();
+
+  const navbarData = {
+    ...navbarDataBase,
+    auth: {
+      login: { text: 'Log in', url: '/login' },
+      signup: { text: 'Sign up', url: '/signup' },
+      session: session?.user?.email
+        ? {
+          email: session.user.email,
+          onSignOut: async () => {
+            await signOut();
+            navigate('/', { replace: true });
+          },
+        }
+        : null,
+    },
+  };
+
+  return (
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      <div className="gradient-orb gradient-orb-1" />
+      <div className="gradient-orb gradient-orb-2" />
+      <div className="gradient-orb gradient-orb-3" />
+
+      <div className="relative z-10">
+        <Navbar1 {...navbarData} hideMenu={!isLanding} />
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route
+            path="/boards"
+            element={(
+              <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="/boards/:boardId"
+            element={(
+              <ProtectedRoute>
+                <BoardView />
+              </ProtectedRoute>
+            )}
+          />
+
+          <Route
+            path="/mindmap"
+            element={(
+              <ProtectedRoute>
+                <MindMapView />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="/analytics"
+            element={(
+              <ProtectedRoute>
+                <Analytics />
+              </ProtectedRoute>
+            )}
+          />
+        </Routes>
+      </div>
+    </div>
+  );
+}
 
 function App() {
   return (
     <BrowserRouter>
-      <BoardProvider>
-        <div className="min-h-screen bg-background relative overflow-hidden">
-          <div className="gradient-orb gradient-orb-1" />
-          <div className="gradient-orb gradient-orb-2" />
-          <div className="gradient-orb gradient-orb-3" />
-
-          <div className="relative z-10">
-            <Routes>
-              <Route path="/" element={<><Navbar1 {...navbarData} /><Landing /></>} />
-              <Route path="/boards" element={<Home />} />
-              <Route path="/boards/:boardId" element={<BoardView />} />
-            </Routes>
-          </div>
-        </div>
-      </BoardProvider>
+      <AuthProvider>
+        <BoardProvider>
+          <NotificationProvider>
+            <AppContent />
+          </NotificationProvider>
+        </BoardProvider>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

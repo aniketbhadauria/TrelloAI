@@ -39,6 +39,9 @@ const Icon = ({ mouseX, mouseY, iconData, index }) => {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [x, y, mouseX, mouseY]);
 
+  // Use deterministic values instead of Math.random to satisfy strict purity rules
+  const randomDuration = 5 + ((index * 123) % 50) / 10;
+
   return (
     <motion.div
       ref={ref}
@@ -54,20 +57,26 @@ const Icon = ({ mouseX, mouseY, iconData, index }) => {
       className={cn("absolute", iconData.className)}
     >
       <motion.div
-        className="flex items-center justify-center w-16 h-16 md:w-20 md:h-20 p-3 rounded-3xl shadow-xl bg-card/80 backdrop-blur-md border border-border/10"
+        className="flex items-center justify-center w-16 h-16 md:w-20 md:h-20 p-1 rounded-full shadow-xl bg-card/80 backdrop-blur-md border border-border/10"
         animate={{
           y: [0, -8, 0, 8, 0],
           x: [0, 6, 0, -6, 0],
           rotate: [0, 5, 0, -5, 0],
         }}
         transition={{
-          duration: 5 + Math.random() * 5,
+          duration: randomDuration,
           repeat: Infinity,
           repeatType: "mirror",
           ease: "easeInOut",
         }}
       >
-        <iconData.icon className="w-8 h-8 md:w-10 md:h-10 text-foreground" />
+        {typeof iconData.icon === 'function' ? (
+          <iconData.icon className="w-8 h-8 md:w-10 md:h-10 text-foreground" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center overflow-hidden rounded-full">
+            {iconData.icon}
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );

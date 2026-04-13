@@ -33,8 +33,8 @@ const GLOBE_CONFIG = {
 };
 
 function GlobeCanvas({ className, config = GLOBE_CONFIG }) {
-  let phi = 0;
-  let width = 0;
+  const phi = useRef(0);
+  const width = useRef(0);
   const canvasRef = useRef(null);
   const pointerInteracting = useRef(null);
   const pointerInteractionMovement = useRef(0);
@@ -57,17 +57,17 @@ function GlobeCanvas({ className, config = GLOBE_CONFIG }) {
 
   const onRender = useCallback(
     (state) => {
-      if (!pointerInteracting.current) phi += 0.005;
-      state.phi = phi + r;
-      state.width = width * 2;
-      state.height = width * 2;
+      if (!pointerInteracting.current) phi.current += 0.005;
+      state.phi = phi.current + r;
+      state.width = width.current * 2;
+      state.height = width.current * 2;
     },
     [r]
   );
 
   const onResize = () => {
     if (canvasRef.current) {
-      width = canvasRef.current.offsetWidth;
+      width.current = canvasRef.current.offsetWidth;
     }
   };
 
@@ -77,8 +77,8 @@ function GlobeCanvas({ className, config = GLOBE_CONFIG }) {
 
     const globe = createGlobe(canvasRef.current, {
       ...config,
-      width: width * 2,
-      height: width * 2,
+      width: width.current * 2,
+      height: width.current * 2,
       onRender,
     });
 

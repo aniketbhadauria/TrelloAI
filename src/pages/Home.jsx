@@ -59,7 +59,7 @@ export default function Home() {
             Workspace
           </span>
         </h1>
-        <p className="text-muted-foreground text-base">Organize, manage, and track your projects with ease.</p>
+        <p className="text-muted-foreground text-base text-9xl-line-height">Organize, manage, and track your projects with ease.</p>
       </div>
 
       {starredBoards.length > 0 && (
