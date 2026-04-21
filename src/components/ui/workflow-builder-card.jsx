@@ -129,9 +129,8 @@ export const WorkflowBuilderCard = ({
             ))}
           </div>
         </div>
-
-        {menuContent}
       </Card>
+      {menuContent}
     </motion.div>
   );
 };

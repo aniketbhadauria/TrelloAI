@@ -1,19 +1,35 @@
 -- Run this in your Supabase SQL Editor (Dashboard > SQL Editor > New Query)
+-- Shared workspace mode: every signed-in user reads/writes the same board row.
 
--- Drop the old auth-based table if it exists
+-- Cleanup legacy table if it exists.
 drop table if exists public.user_boards;
 
--- One row per user: id = Supabase auth user UUID (text). Legacy demo row id may be 'default'.
 create table if not exists public.app_boards (
-  id text primary key default 'default',
+  id text primary key default 'shared',
   data jsonb not null default '{"boards": []}'::jsonb,
   updated_at timestamptz not null default now()
 );
 
--- Disable RLS so anyone with the anon key can read/write (tighten later with supabase-migration-per-user-boards.sql)
+-- Keep updated_at fresh automatically.
+create or replace function public.set_app_boards_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists trg_app_boards_updated_at on public.app_boards;
+create trigger trg_app_boards_updated_at
+before update on public.app_boards
+for each row
+execute function public.set_app_boards_updated_at();
+
+-- Shared access for all clients using the anon key.
 alter table public.app_boards disable row level security;
 
--- Optional legacy seed (not used by logged-in app users; server/AI tools may still reference it)
+-- Ensure the shared row exists.
 insert into public.app_boards (id, data)
-values ('default', '{"boards": []}')
+values ('shared', '{"boards": []}')
 on conflict (id) do nothing;
+

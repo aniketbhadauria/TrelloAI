@@ -4,7 +4,7 @@ import { useBoards } from '../context/BoardContext';
 import BoardCard from '../components/BoardCard';
 import CreateBoardModal from '../components/CreateBoardModal';
 import MacOSDock from '../components/ui/mac-os-dock';
-import { Star, Plus, LayoutGrid } from 'lucide-react';
+import { Star, Plus } from 'lucide-react';
 
 const dockApps = [
   { id: 'finder', name: 'Finder', icon: 'https://cdn.jim-nielsen.com/macos/1024/finder-2021-09-10.png?rf=1024' },
@@ -12,7 +12,7 @@ const dockApps = [
   { id: 'terminal', name: 'Terminal', icon: 'https://cdn.jim-nielsen.com/macos/1024/terminal-2021-06-03.png?rf=1024' },
   { id: 'mail', name: 'Mail', icon: 'https://cdn.jim-nielsen.com/macos/1024/mail-2021-05-25.png?rf=1024' },
   { id: 'notes', name: 'Notes', icon: 'https://cdn.jim-nielsen.com/macos/1024/notes-2021-05-25.png?rf=1024' },
-  { id: 'safari', name: 'Safari', icon: 'https://cdn.jim-nielsen.com/macos/1024/safari-2021-06-02.png?rf=1024' },
+  { id: 'safari', name: 'Analytics', icon: 'https://cdn.jim-nielsen.com/macos/1024/safari-2021-06-02.png?rf=1024' },
   { id: 'photos', name: 'Photos', icon: 'https://cdn.jim-nielsen.com/macos/1024/photos-2021-05-28.png?rf=1024' },
   { id: 'music', name: 'Music', icon: 'https://cdn.jim-nielsen.com/macos/1024/music-2021-05-25.png?rf=1024' },
   { id: 'calendar', name: 'Calendar', icon: 'https://cdn.jim-nielsen.com/macos/1024/calendar-2021-04-29.png?rf=1024' },
@@ -28,6 +28,10 @@ export default function Home() {
   const handleDockAppClick = (appId) => {
     if (appId === 'finder') {
       navigate('/');
+      return;
+    }
+    if (appId === 'safari') {
+      navigate('/analytics');
       return;
     }
     if (appId === 'calendar') {
@@ -80,8 +84,8 @@ export default function Home() {
 
       <section>
         <div className="flex items-center gap-2.5 mb-5">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-pink-400 to-purple-400 flex items-center justify-center">
-            <LayoutGrid className="w-3.5 h-3.5 text-white" />
+          <div className="w-7 h-7 rounded-lg overflow-hidden">
+            <img src="/esperia.png" alt="Esperia logo" className="w-full h-full object-cover" />
           </div>
           <h2 className="text-lg font-semibold tracking-tight">All Boards</h2>
         </div>

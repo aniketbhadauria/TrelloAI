@@ -6,15 +6,29 @@ import { Label } from './ui/label';
 import { useBoards } from '../context/BoardContext';
 import { GRADIENTS } from '../data/initialData';
 
+const IMAGE_OPTIONS = [
+  {
+    id: 'emerson',
+    label: 'Emerson',
+    url: '/emerson.png',
+  },
+  {
+    id: 'esperia',
+    label: 'Esperia',
+    url: '/esperia.png',
+  },
+];
+
 export default function CreateBoardModal({ onClose }) {
   const { addBoard } = useBoards();
   const [title, setTitle] = useState('');
-  const [selectedGradient, setSelectedGradient] = useState(GRADIENTS[0]);
+  const [selectedGradient] = useState(GRADIENTS[0]);
+  const [selectedImage, setSelectedImage] = useState(IMAGE_OPTIONS[0].url);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
-    addBoard(title.trim(), selectedGradient);
+    addBoard(title.trim(), selectedGradient, selectedImage);
     onClose();
   };
 
@@ -29,7 +43,10 @@ export default function CreateBoardModal({ onClose }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className={`h-28 rounded-xl ${selectedGradient} flex items-end p-4 transition-all`}>
+          <div
+            className="h-28 rounded-xl flex items-end p-4 transition-all bg-cover bg-center"
+            style={{ backgroundImage: `url('${selectedImage}')` }}
+          >
             <p className="text-white font-semibold text-lg truncate">{title || 'Board title'}</p>
           </div>
 
@@ -40,12 +57,24 @@ export default function CreateBoardModal({ onClose }) {
 
           <div className="space-y-2">
             <Label>Background</Label>
-            <div className="grid grid-cols-4 gap-2">
-              {GRADIENTS.map((g) => (
+            <div className="grid grid-cols-2 gap-3">
+              {IMAGE_OPTIONS.map((image) => (
                 <button
-                  key={g} type="button" onClick={() => setSelectedGradient(g)}
-                  className={`h-10 rounded-lg ${g} transition-all ${selectedGradient === g ? 'ring-2 ring-primary ring-offset-2 ring-offset-card scale-105' : 'hover:scale-105'}`}
-                />
+                  key={image.id}
+                  type="button"
+                  onClick={() => setSelectedImage(image.url)}
+                  className={`rounded-lg overflow-hidden border transition-all ${
+                    selectedImage === image.url
+                      ? 'ring-2 ring-primary ring-offset-2 ring-offset-card scale-[1.02]'
+                      : 'hover:scale-[1.01] border-border/50'
+                  }`}
+                >
+                  <div
+                    className="h-16 w-full bg-cover bg-center"
+                    style={{ backgroundImage: `url('${image.url}')` }}
+                  />
+                  <div className="px-2 py-1.5 text-xs font-medium text-left">{image.label}</div>
+                </button>
               ))}
             </div>
           </div>

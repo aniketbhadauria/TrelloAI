@@ -20,6 +20,33 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const user = session?.user;
+    if (!user?.id || !user?.email) return;
+
+    const displayName =
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.user_metadata?.preferred_username ||
+      user.email.split('@')[0];
+
+    supabase
+      .from('app_users')
+      .upsert(
+        {
+          id: user.id,
+          email: user.email,
+          display_name: displayName,
+          avatar_url: user.user_metadata?.avatar_url || null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      )
+      .then(({ error }) => {
+        if (error) console.error('Failed to sync app user:', error.message);
+      });
+  }, [session]);
+
   const signIn = useCallback(async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;

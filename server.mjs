@@ -2,7 +2,6 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
-import Anthropic from '@anthropic-ai/sdk';
 import { randomUUID } from 'node:crypto';
 
 // ─── Express setup ───────────────────────────────────────────
@@ -15,14 +14,14 @@ const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
   process.env.VITE_SUPABASE_ANON_KEY,
 );
-const ROW_ID = 'default';
+const ROW_ID = process.env.SUPABASE_BOARD_ROW_ID || process.env.VITE_SUPABASE_BOARD_ROW_ID || 'shared';
 
 async function loadBoardData() {
   const { data: row, error } = await supabase
     .from('app_boards')
     .select('data')
     .eq('id', ROW_ID)
-    .single();
+    .maybeSingle();
   if (error) throw new Error(`Supabase read failed: ${error.message}`);
   return row?.data || { boards: [] };
 }
@@ -30,13 +29,11 @@ async function loadBoardData() {
 async function saveBoardData(boardData) {
   const { error } = await supabase
     .from('app_boards')
-    .update({ data: boardData, updated_at: new Date().toISOString() })
-    .eq('id', ROW_ID);
+    .upsert({ id: ROW_ID, data: boardData, updated_at: new Date().toISOString() }, { onConflict: 'id' });
   if (error) throw new Error(`Supabase write failed: ${error.message}`);
 }
 
-// ─── Anthropic client ───────────────────────────────────────
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const AI_ENABLED = false;
 
 // ─── TaskFlow tool definitions (Anthropic format) ───────────
 const TASKFLOW_TOOLS = [
@@ -445,6 +442,12 @@ async function runAgentLoop(systemPrompt, userMessage, onText) {
 
 // ─── Chat endpoint ──────────────────────────────────────────
 app.post('/api/chat', async (req, res) => {
+  if (!AI_ENABLED) {
+    return res.status(503).json({
+      error: 'AI chat is disabled. Install and configure Anthropic SDK to enable /api/chat.',
+    });
+  }
+
   const { message, boardContext, history } = req.body;
 
   res.setHeader('Content-Type', 'text/event-stream');
@@ -479,6 +482,12 @@ app.post('/api/chat', async (req, res) => {
 
 // ─── Mind Map generation endpoint ────────────────────────────
 app.post('/api/mindmap/generate', async (req, res) => {
+  if (!AI_ENABLED) {
+    return res.status(503).json({
+      error: 'AI mindmap is disabled. Install and configure Anthropic SDK to enable /api/mindmap/generate.',
+    });
+  }
+
   const { topic } = req.body;
   if (!topic) return res.status(400).json({ error: 'Topic required' });
 

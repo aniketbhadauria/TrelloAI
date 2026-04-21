@@ -56,6 +56,38 @@ function classifyList(title) {
   return 'other';
 }
 
+function toArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function getBoardLists(board) {
+  return toArray(board?.lists).length > 0 ? toArray(board.lists) : toArray(board?.columns);
+}
+
+function getListCards(list) {
+  return toArray(list?.cards).length > 0 ? toArray(list.cards) : toArray(list?.tasks);
+}
+
+function getCardMembers(card) {
+  return toArray(card?.members).length > 0 ? toArray(card.members) : toArray(card?.assignees);
+}
+
+function parseDateSafe(value) {
+  if (!value) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  if (typeof value === 'number') {
+    const asDate = new Date(value);
+    return Number.isNaN(asDate.getTime()) ? null : asDate;
+  }
+  if (typeof value === 'string') {
+    const parsedIso = parseISO(value);
+    if (!Number.isNaN(parsedIso.getTime())) return parsedIso;
+    const parsedDate = new Date(value);
+    return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+  }
+  return null;
+}
+
 /* ── Custom tooltip ──────────────────────────────────────────── */
 function GlassTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -97,20 +129,21 @@ export default function Analytics() {
 
     const allCards = [];
     const memberTasks = {};
+    const memberActiveTasks = {};
     const monthlyDelivery = {};
     const statusCounts = { todo: 0, inProgress: 0, done: 0, review: 0, other: 0 };
     const cutoffDate = subMonths(new Date(), timeRange);
 
     for (const board of filteredBoards) {
-      for (const list of board.lists || []) {
+      for (const list of getBoardLists(board)) {
         const listStatus = classifyList(list.title);
-        for (const card of list.cards || []) {
+        for (const card of getListCards(list)) {
           allCards.push({ ...card, listTitle: list.title, listStatus, boardTitle: board.title });
           statusCounts[listStatus] = (statusCounts[listStatus] || 0) + 1;
 
-          const members = card.members || [];
-          const cardDate = card.createdAt ? parseISO(card.createdAt) : null;
-          const dueDate = card.dueDate ? parseISO(card.dueDate) : null;
+          const members = getCardMembers(card);
+          const cardDate = parseDateSafe(card.createdAt || card.created_at);
+          const dueDate = parseDateSafe(card.dueDate || card.due_date);
           const isOverdue = dueDate && isBefore(dueDate, new Date()) && listStatus !== 'done';
 
           if (members.length === 0) {
@@ -119,6 +152,10 @@ export default function Analytics() {
             memberTasks['Unassigned'][listStatus]++;
             if (isOverdue) memberTasks['Unassigned'].overdue++;
             if (listStatus === 'done') memberTasks['Unassigned'].onTime++;
+            if (listStatus !== 'done') {
+              if (!memberActiveTasks.Unassigned) memberActiveTasks.Unassigned = [];
+              memberActiveTasks.Unassigned.push(card.title || 'Untitled task');
+            }
           }
 
           for (const member of members) {
@@ -128,6 +165,10 @@ export default function Analytics() {
             memberTasks[name][listStatus]++;
             if (isOverdue) memberTasks[name].overdue++;
             if (listStatus === 'done') memberTasks[name].onTime++;
+            if (listStatus !== 'done') {
+              if (!memberActiveTasks[name]) memberActiveTasks[name] = [];
+              memberActiveTasks[name].push(card.title || 'Untitled task');
+            }
 
             if (listStatus === 'done' && cardDate && isAfter(cardDate, cutoffDate)) {
               const monthKey = format(startOfMonth(cardDate), 'MMM yyyy');
@@ -152,7 +193,7 @@ export default function Analytics() {
         let status = 'available';
         if (activeTasks >= OVERLOAD_THRESHOLD * 1.5) status = 'overloaded';
         else if (activeTasks >= OVERLOAD_THRESHOLD) status = 'busy';
-        return { name, activeTasks, ...stats, status };
+        return { name, activeTasks, activeTaskTitles: memberActiveTasks[name] || [], ...stats, status };
       })
       .sort((a, b) => b.activeTasks - a.activeTasks);
 
@@ -190,7 +231,7 @@ export default function Analytics() {
     const totalMembers = uniqueMembers.length;
     const completionRate = totalCards > 0 ? Math.round((statusCounts.done / totalCards) * 100) : 0;
     const overdueCount = allCards.filter(c => {
-      const due = c.dueDate ? parseISO(c.dueDate) : null;
+      const due = parseDateSafe(c.dueDate || c.due_date);
       return due && isBefore(due, new Date()) && c.listStatus !== 'done';
     }).length;
 
@@ -501,6 +542,18 @@ function MemberCard({ member, index }) {
           <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-emerald-500" /> {member.done} done</span>
           <span className="flex items-center gap-1">{member.overdue > 0 && <AlertTriangle className="w-3 h-3 text-red-400" />}{member.overdue} overdue</span>
         </div>
+        {member.activeTaskTitles.length > 0 && (
+          <div className="mt-2 border-t border-border/40 pt-2">
+            <p className="text-[10px] font-semibold text-muted-foreground mb-1">Working on:</p>
+            <ul className="list-disc pl-4 space-y-0.5">
+              {member.activeTaskTitles.slice(0, 5).map((title, idx) => (
+                <li key={`${member.name}-${idx}`} className="text-[11px] text-foreground/80 leading-tight wrap-break-word">
+                  {title}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );

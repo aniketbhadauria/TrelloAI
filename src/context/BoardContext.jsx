@@ -6,15 +6,18 @@ import { useDebouncedCallback } from '../hooks/useDebouncedCallback';
 
 const BoardContext = createContext(null);
 
-const SHARED_ROW_ID = 'shared';
+const SHARED_BOARD_ROW_ID = import.meta.env.VITE_SUPABASE_BOARD_ROW_ID || 'shared';
 const EMPTY_DATA = { boards: [] };
 
 export function BoardProvider({ children }) {
   const { user, loading: authLoading } = useAuth();
   const isAuthenticated = !!user && !authLoading;
+  const boardRowId = SHARED_BOARD_ROW_ID;
 
   const [data, setData] = useState(EMPTY_DATA);
   const [boardsLoading, setBoardsLoading] = useState(true);
+  const [isSavingBoards, setIsSavingBoards] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
   const isInitialLoad = useRef(true);
 
   // Load shared boards
@@ -36,7 +39,7 @@ export function BoardProvider({ children }) {
       const { data: row, error } = await supabase
         .from('app_boards')
         .select('data')
-        .eq('id', SHARED_ROW_ID)
+        .eq('id', boardRowId)
         .maybeSingle();
 
       if (cancelled) return;
@@ -53,11 +56,11 @@ export function BoardProvider({ children }) {
         const { error: upsertError } = await supabase
           .from('app_boards')
           .upsert(
-            { id: SHARED_ROW_ID, data: EMPTY_DATA, updated_at: new Date().toISOString() },
+            { id: boardRowId, data: EMPTY_DATA, updated_at: new Date().toISOString() },
             { onConflict: 'id' }
           );
         if (upsertError) {
-          console.error('Failed to create shared board row:', upsertError.message);
+          console.error('Failed to create board row:', upsertError.message);
         }
         setData(EMPTY_DATA);
       } else if (row.data) {
@@ -71,7 +74,7 @@ export function BoardProvider({ children }) {
     })();
 
     return () => { cancelled = true; };
-  }, [isAuthenticated, authLoading]);
+  }, [isAuthenticated, authLoading, boardRowId]);
 
   // Realtime subscription – sync changes from other users
   useEffect(() => {
@@ -81,7 +84,7 @@ export function BoardProvider({ children }) {
       .channel('shared-boards')
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'app_boards', filter: `id=eq.${SHARED_ROW_ID}` },
+        { event: 'UPDATE', schema: 'public', table: 'app_boards', filter: `id=eq.${boardRowId}` },
         (payload) => {
           if (payload.new?.data) {
             isInitialLoad.current = true;
@@ -93,22 +96,27 @@ export function BoardProvider({ children }) {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, boardRowId]);
 
   // Save to Supabase (debounced)
   const saveToSupabase = useDebouncedCallback((boardData) => {
     supabase
       .from('app_boards')
-      .update({ data: boardData, updated_at: new Date().toISOString() })
-      .eq('id', SHARED_ROW_ID)
+      .upsert({ id: boardRowId, data: boardData, updated_at: new Date().toISOString() }, { onConflict: 'id' })
       .then(({ error }) => {
-        if (error) console.error('Failed to save boards:', error.message);
+        if (error) {
+          console.error('Failed to save boards:', error.message);
+        } else {
+          setLastSavedAt(new Date());
+        }
+        setIsSavingBoards(false);
       });
   }, 500);
 
   useEffect(() => {
     if (isInitialLoad.current) return;
     if (!isAuthenticated) return;
+    setIsSavingBoards(true);
     saveToSupabase(data);
   }, [data, saveToSupabase, isAuthenticated]);
 
@@ -116,32 +124,54 @@ export function BoardProvider({ children }) {
     const { data: row, error } = await supabase
       .from('app_boards')
       .select('data')
-      .eq('id', SHARED_ROW_ID)
+      .eq('id', boardRowId)
       .single();
     if (!error && row?.data) {
       isInitialLoad.current = true;
       setData(row.data);
       setTimeout(() => { isInitialLoad.current = false; }, 100);
     }
-  }, []);
+  }, [boardRowId]);
+
+  const persistBoardsNow = useCallback(async () => {
+    if (!isAuthenticated) return;
+    setIsSavingBoards(true);
+    const { error } = await supabase
+      .from('app_boards')
+      .upsert({ id: boardRowId, data, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    if (error) {
+      setIsSavingBoards(false);
+      console.error('Failed to persist boards immediately:', error.message);
+      throw error;
+    }
+    setLastSavedAt(new Date());
+    setIsSavingBoards(false);
+  }, [data, isAuthenticated, boardRowId]);
 
   const updateData = useCallback((updater) => {
     setData(prev => (typeof updater === 'function' ? updater(prev) : updater));
   }, []);
 
   const getBoard = useCallback((boardId) => {
-    return data.boards.find(b => b.id === boardId);
+    return data.boards.find(b => b.id === boardId && !b.archived);
   }, [data]);
 
-  const addBoard = useCallback((title, gradient) => {
+  const addBoard = useCallback((title, gradient, backgroundImage = null) => {
     updateData(prev => ({
       ...prev,
-      boards: [...prev.boards, { id: uuidv4(), title, gradient, starred: false, createdAt: new Date().toISOString(), lists: [] }],
+      boards: [...prev.boards, { id: uuidv4(), title, gradient, backgroundImage, starred: false, archived: false, createdAt: new Date().toISOString(), lists: [] }],
     }));
   }, [updateData]);
 
   const deleteBoard = useCallback((boardId) => {
-    updateData(prev => ({ ...prev, boards: prev.boards.filter(b => b.id !== boardId) }));
+    updateData(prev => ({
+      ...prev,
+      boards: prev.boards.map(b => (
+        b.id === boardId
+          ? { ...b, archived: true, archivedAt: new Date().toISOString(), starred: false }
+          : b
+      )),
+    }));
   }, [updateData]);
 
   const updateBoard = useCallback((boardId, updates) => {
@@ -229,7 +259,7 @@ export function BoardProvider({ children }) {
   }, [updateData]);
 
   return (
-    <BoardContext.Provider value={{ boards: data.boards, boardsLoading, getBoard, addBoard, deleteBoard, updateBoard, toggleStarBoard, addList, deleteList, updateListTitle, addCard, deleteCard, updateCard, handleDragEnd, refreshBoards }}>
+    <BoardContext.Provider value={{ boards: data.boards.filter(b => !b.archived), boardsLoading, isSavingBoards, lastSavedAt, getBoard, addBoard, deleteBoard, updateBoard, toggleStarBoard, addList, deleteList, updateListTitle, addCard, deleteCard, updateCard, handleDragEnd, refreshBoards, persistBoardsNow }}>
       {children}
     </BoardContext.Provider>
   );

@@ -1,4 +1,4 @@
-import { Book, Menu, Sunset, Trees, Zap, LayoutDashboard, Bell, X as XIcon } from "lucide-react";
+import { Book, Menu, Sunset, Trees, Zap, Bell, X as XIcon } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useNotifications } from "@/context/NotificationContext";
@@ -33,8 +33,8 @@ const LogoIcon = ({ src, alt }) => {
     return <img src={src} className="w-8" alt={alt} />;
   }
   return (
-    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-400 via-pink-500 to-purple-500 flex items-center justify-center shadow-md shadow-pink-500/20">
-      <LayoutDashboard className="w-4 h-4 text-white" />
+    <div className="w-8 h-8 rounded-xl overflow-hidden">
+      <img src="/esperia.png" alt={alt || "Esperia logo"} className="w-full h-full object-cover" />
     </div>
   );
 };
@@ -60,6 +60,16 @@ function getUserInitials(email) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
   return name.slice(0, 2).toUpperCase();
+}
+
+function formatSavedTime(dateStr) {
+  if (!dateStr) return '';
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (seconds < 10) return 'just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 const Navbar1 = ({
@@ -185,6 +195,15 @@ const Navbar1 = ({
             <div className="flex items-center gap-2">
               {session ? (
                 <>
+                  <span className={`text-[11px] px-2 py-1 rounded-full border ${
+                    session.saveStatus?.isSaving
+                      ? 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+                      : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
+                  }`}>
+                    {session.saveStatus?.isSaving
+                      ? 'Saving...'
+                      : `Saved${session.saveStatus?.lastSavedAt ? ` ${formatSavedTime(session.saveStatus.lastSavedAt)}` : ''}`}
+                  </span>
                   {/* Notification bell */}
                   <div className="relative">
                     <button
@@ -340,6 +359,15 @@ const Navbar1 = ({
                   <div className="flex flex-col gap-3">
                     {session ? (
                       <>
+                        <span className={`text-[11px] px-2 py-1 rounded-full border self-start ${
+                          session.saveStatus?.isSaving
+                            ? 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+                            : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
+                        }`}>
+                          {session.saveStatus?.isSaving
+                            ? 'Saving...'
+                            : `Saved${session.saveStatus?.lastSavedAt ? ` ${formatSavedTime(session.saveStatus.lastSavedAt)}` : ''}`}
+                        </span>
                         <span className="text-sm text-muted-foreground px-1 truncate" title={session.email}>
                           {session.email}
                         </span>

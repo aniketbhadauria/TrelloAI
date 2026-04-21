@@ -4,7 +4,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import KanbanList from '../components/KanbanList';
 import AddListForm from '../components/AddListForm';
 import CardDetailModal from '../components/CardDetailModal';
-import { ArrowLeft, Star, MoreHorizontal, Trash2, X, Filter, Search, Calendar, Tag, Users, CheckSquare, Clock } from 'lucide-react';
+import { ArrowLeft, Star, MoreHorizontal, X, Filter, Search, Calendar, Tag, Users, CheckSquare, Clock, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useState, useEffect, useMemo } from 'react';
 import { isPast, isToday, addDays, addWeeks, addMonths, isWithinInterval, subWeeks } from 'date-fns';
@@ -12,12 +12,13 @@ import { isPast, isToday, addDays, addWeeks, addMonths, isWithinInterval, subWee
 export default function BoardView() {
   const { boardId } = useParams();
   const navigate = useNavigate();
-  const { getBoard, boardsLoading, handleDragEnd, updateBoard, toggleStarBoard, deleteBoard, addList, deleteList, updateListTitle, addCard } = useBoards();
+  const { getBoard, boardsLoading, handleDragEnd, updateBoard, toggleStarBoard, addList, deleteList, updateListTitle, addCard, deleteBoard } = useBoards();
   const board = getBoard(boardId);
 
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState('');
   const [showMenu, setShowMenu] = useState(false);
+  const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
   const [selectedCard, setSelectedCard] = useState(null);
 
 
@@ -45,7 +46,12 @@ export default function BoardView() {
   const allMembers = useMemo(() => {
     if (!board) return [];
     const map = new Map();
-    board.lists.forEach(l => l.cards.forEach(c => (c.members || []).forEach(m => map.set(m.id, m))));
+    board.lists.forEach(l => l.cards.forEach(c => (c.members || []).forEach(m => {
+      const memberKey = getMemberFilterKey(m);
+      if (!map.has(memberKey)) {
+        map.set(memberKey, { ...m, filterKey: memberKey });
+      }
+    })));
     return [...map.values()];
   }, [board]);
 
@@ -78,9 +84,9 @@ export default function BoardView() {
           if (!inTitle && !inDesc && !inLabels && !inMembers) return false;
         }
         if (filterMembers.length) {
-          const cardMemberIds = (card.members || []).map(m => m.id);
-          if (filterMembers.includes('__none__') && cardMemberIds.length === 0) { /* pass */ }
-          else if (filterMembers.some(id => id !== '__none__' && cardMemberIds.includes(id))) { /* pass */ }
+          const cardMemberKeys = (card.members || []).map(getMemberFilterKey);
+          if (filterMembers.includes('__none__') && cardMemberKeys.length === 0) { /* pass */ }
+          else if (filterMembers.some(key => key !== '__none__' && cardMemberKeys.includes(key))) { /* pass */ }
           else return false;
         }
         if (filterLabels.length) {
@@ -249,9 +255,9 @@ export default function BoardView() {
                       />
                       {allMembers.map(m => (
                         <FilterCheckbox
-                          key={m.id}
-                          checked={filterMembers.includes(m.id)}
-                          onChange={() => toggleFilter(filterMembers, setFilterMembers, m.id)}
+                          key={m.filterKey}
+                          checked={filterMembers.includes(m.filterKey)}
+                          onChange={() => toggleFilter(filterMembers, setFilterMembers, m.filterKey)}
                           icon={<MemberAvatar name={m.name} />}
                           label={m.name}
                         />
@@ -382,8 +388,24 @@ export default function BoardView() {
           {showMenu && (
             <div className="absolute top-full right-0 mt-1 bg-popover border border-border rounded-lg shadow-xl p-1 z-10 min-w-[160px] animate-slide-down">
               <button
-                onClick={() => { deleteBoard(boardId); navigate('/boards'); }}
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                onClick={() => {
+                  setShowBackgroundPicker(true);
+                  setShowMenu(false);
+                }}
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground hover:bg-secondary/60 rounded-md transition-colors"
+              >
+                <ImageIcon className="w-4 h-4" />
+                Change background
+              </button>
+              <button
+                onClick={() => {
+                  setShowMenu(false);
+                  const confirmed = globalThis.confirm('Archive this board? You can restore it later from data if needed.');
+                  if (!confirmed) return;
+                  deleteBoard(boardId);
+                  navigate('/');
+                }}
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
                 Delete board
@@ -432,6 +454,54 @@ export default function BoardView() {
           onClose={() => setSelectedCard(null)}
         />
       )}
+
+      {showBackgroundPicker && (
+        <BoardBackgroundModal
+          selected={board.backgroundImage || '/emerson.jpg'}
+          onSelect={(imageUrl) => updateBoard(boardId, { backgroundImage: imageUrl })}
+          onClose={() => setShowBackgroundPicker(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+const BOARD_IMAGE_OPTIONS = [
+  { id: 'emerson', label: 'Emerson', url: '/emerson.jpg' },
+  { id: 'esperia', label: 'Esperia', url: '/esperia.png' },
+];
+
+function BoardBackgroundModal({ selected, onSelect, onClose }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content bg-card border border-border rounded-2xl p-5 w-full max-w-sm mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold">Change board background</h3>
+          <button onClick={onClose} className="p-1 rounded-md hover:bg-secondary transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {BOARD_IMAGE_OPTIONS.map((image) => (
+            <button
+              key={image.id}
+              type="button"
+              onClick={() => {
+                onSelect(image.url);
+                onClose();
+              }}
+              className={`rounded-lg overflow-hidden border transition-all ${
+                selected === image.url
+                  ? 'ring-2 ring-primary ring-offset-2 ring-offset-card scale-[1.02]'
+                  : 'hover:scale-[1.01] border-border/50'
+              }`}
+            >
+              <div className="h-20 w-full bg-cover bg-center" style={{ backgroundImage: `url('${image.url}')` }} />
+              <div className="px-2 py-1.5 text-xs font-medium text-left">{image.label}</div>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -478,4 +548,8 @@ function FilterCheckbox({ checked, onChange, icon, label, isLabel }) {
       )}
     </button>
   );
+}
+
+function getMemberFilterKey(member) {
+  return (member?.name || '').trim().toLowerCase();
 }

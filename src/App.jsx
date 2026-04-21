@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { BoardProvider } from './context/BoardContext';
+import { BoardProvider, useBoards } from './context/BoardContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { Navbar1 } from './components/ui/shadcnblocks-com-navbar1';
@@ -11,7 +11,7 @@ import MindMapView from './pages/MindMapView';
 import Analytics from './pages/Analytics';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import { Book, Sunset, Trees, Zap, HelpCircle, Mail, Activity, FileText, BarChart3 } from 'lucide-react';
+import { Book, Sunset, Trees, Zap, HelpCircle, Mail, Activity, FileText } from 'lucide-react';
 import './App.css';
 
 const navbarDataBase = {
@@ -120,6 +120,7 @@ function AppContent() {
   const navigate = useNavigate();
   const isLanding = location.pathname === '/';
   const { session, signOut } = useAuth();
+  const { persistBoardsNow, isSavingBoards, lastSavedAt } = useBoards();
 
   const navbarData = {
     ...navbarDataBase,
@@ -129,7 +130,16 @@ function AppContent() {
       session: session?.user?.email
         ? {
           email: session.user.email,
+          saveStatus: {
+            isSaving: isSavingBoards,
+            lastSavedAt: lastSavedAt ? lastSavedAt.toISOString() : null,
+          },
           onSignOut: async () => {
+            try {
+              await persistBoardsNow();
+            } catch (error) {
+              console.error('Unable to persist boards before sign out:', error);
+            }
             await signOut();
             navigate('/', { replace: true });
           },
