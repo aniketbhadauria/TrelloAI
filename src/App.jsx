@@ -9,6 +9,7 @@ import BoardView from './pages/BoardView';
 
 import MindMapView from './pages/MindMapView';
 import Analytics from './pages/Analytics';
+import Collaborators from './pages/Collaborators';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import { Book, Sunset, Trees, Zap, HelpCircle, Mail, Activity, FileText } from 'lucide-react';
@@ -122,8 +123,18 @@ function AppContent() {
   const { session, signOut } = useAuth();
   const { persistBoardsNow, isSavingBoards, lastSavedAt } = useBoards();
 
+  const appNav =
+    session && !isLanding
+      ? [
+          { title: 'Boards', url: '/boards' },
+          { title: 'Analytics', url: '/analytics' },
+          { title: 'Collaborators', url: '/collaborators' },
+        ]
+      : null;
+
   const navbarData = {
     ...navbarDataBase,
+    appNav,
     auth: {
       login: { text: 'Log in', url: '/login' },
       signup: { text: 'Sign up', url: '/signup' },
@@ -190,6 +201,14 @@ function AppContent() {
             element={(
               <ProtectedRoute>
                 <Analytics />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="/collaborators"
+            element={(
+              <ProtectedRoute>
+                <Collaborators />
               </ProtectedRoute>
             )}
           />

@@ -297,9 +297,9 @@ export default function Analytics() {
         <div className="space-y-5 relative z-10">
           {/* ═══ Row 1: KPI Stats inside a parent glass card ═══ */}
           <div className="glass-card shimmer-on-hover">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
               <KPICard
-                icon={<Target className="w-5 h-5" />}
+                icon={<Target className="w-4 h-4" />}
                 gradient="linear-gradient(135deg, #ec4899, #f43f5e)"
                 kpiClass="kpi-pink"
                 label="Total Tasks"
@@ -308,7 +308,7 @@ export default function Analytics() {
                 progress={null}
               />
               <KPICard
-                icon={<Users className="w-5 h-5" />}
+                icon={<Users className="w-4 h-4" />}
                 gradient="linear-gradient(135deg, #8b5cf6, #6366f1)"
                 kpiClass="kpi-purple"
                 label="Team Members"
@@ -317,7 +317,7 @@ export default function Analytics() {
                 progress={null}
               />
               <KPICard
-                icon={<CheckCircle2 className="w-5 h-5" />}
+                icon={<CheckCircle2 className="w-4 h-4" />}
                 gradient="linear-gradient(135deg, #10b981, #059669)"
                 kpiClass="kpi-green"
                 label="Completion Rate"
@@ -326,7 +326,7 @@ export default function Analytics() {
                 progress={analytics.completionRate}
               />
               <KPICard
-                icon={<AlertTriangle className="w-5 h-5" />}
+                icon={<AlertTriangle className="w-4 h-4" />}
                 gradient="linear-gradient(135deg, #f59e0b, #f97316)"
                 kpiClass="kpi-amber"
                 label="Overdue"
@@ -478,28 +478,30 @@ function SectionHeader({ icon, gradient, title, sub }) {
 
 /* ── KPI Card with radial SVG ring ───────────────────────────── */
 function KPICard({ icon, gradient, kpiClass, label, value, sub, progress }) {
-  const r = 22;
+  const r = 15;
+  const vb = 34;
   const c = 2 * Math.PI * r;
   const offset = progress != null ? c - (progress / 100) * c : c;
+  const cx = vb / 2;
 
   return (
     <div className={`glass-kpi ${kpiClass} cursor-default`}>
-      <div className="flex items-start justify-between mb-3">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-md" style={{ background: gradient }}>
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white shadow-md [&_svg]:shrink-0" style={{ background: gradient }}>
           {icon}
         </div>
         {progress != null ? (
-          <svg width="48" height="48" viewBox="0 0 52 52" className="-rotate-90">
-            <circle className="radial-progress-bg" cx="26" cy="26" r={r} strokeWidth="4" />
-            <circle className="radial-progress-fill" cx="26" cy="26" r={r} strokeWidth="4" stroke={progress >= 70 ? '#10b981' : progress >= 40 ? '#f59e0b' : '#ef4444'} strokeDasharray={c} strokeDashoffset={offset} />
+          <svg width="32" height="32" viewBox={`0 0 ${vb} ${vb}`} className="-rotate-90 shrink-0">
+            <circle className="radial-progress-bg" cx={cx} cy={cx} r={r} strokeWidth="3" />
+            <circle className="radial-progress-fill" cx={cx} cy={cx} r={r} strokeWidth="3" stroke={progress >= 70 ? '#10b981' : progress >= 40 ? '#f59e0b' : '#ef4444'} strokeDasharray={c} strokeDashoffset={offset} />
           </svg>
         ) : (
-          <ArrowUpRight className="w-4 h-4 text-muted-foreground/40" />
+          <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
         )}
       </div>
-      <p className="text-2xl font-bold tracking-tight leading-none">{value}</p>
-      <p className="text-xs font-semibold text-foreground/70 mt-1.5">{label}</p>
-      <p className="text-[10px] text-muted-foreground mt-0.5">{sub}</p>
+      <p className="text-lg sm:text-xl font-bold tracking-tight leading-none tabular-nums">{value}</p>
+      <p className="text-[11px] font-semibold text-foreground/80 mt-1 leading-tight">{label}</p>
+      <p className="text-[9px] text-muted-foreground mt-0.5 leading-snug line-clamp-2">{sub}</p>
     </div>
   );
 }
@@ -546,8 +548,8 @@ function MemberCard({ member, index }) {
           <div className="mt-2 border-t border-border/40 pt-2">
             <p className="text-[10px] font-semibold text-muted-foreground mb-1">Working on:</p>
             <ul className="list-disc pl-4 space-y-0.5">
-              {member.activeTaskTitles.slice(0, 5).map((title, idx) => (
-                <li key={`${member.name}-${idx}`} className="text-[11px] text-foreground/80 leading-tight wrap-break-word">
+              {member.activeTaskTitles.slice(0, 5).map((title) => (
+                <li key={`${member.name}-${title}`} className="text-[11px] text-foreground/80 leading-tight break-words">
                   {title}
                 </li>
               ))}

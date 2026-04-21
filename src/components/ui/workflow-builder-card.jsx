@@ -37,12 +37,12 @@ export const WorkflowBuilderCard = ({
     <motion.div
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
-      whileHover={{ y: -6 }}
+      whileHover={{ y: -3 }}
       transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
       className={cn("w-full cursor-pointer", className)}
     >
-      <Card className="overflow-hidden rounded-xl shadow-md transition-shadow duration-300 hover:shadow-xl">
-        <div className="relative h-36 w-full">
+      <Card className="overflow-hidden rounded-lg shadow-md transition-shadow duration-300 hover:shadow-xl">
+        <div className="relative h-24 w-full sm:h-28">
           {imageUrl ? (
             <img src={imageUrl} alt={title} className="h-full w-full object-cover" />
           ) : (
@@ -51,32 +51,32 @@ export const WorkflowBuilderCard = ({
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
         </div>
 
-        <div className="p-4">
-          <div className="flex items-start justify-between">
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="p-2.5 sm:p-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-muted-foreground">
                 <span>{lastUpdated}</span>
                 <span>•</span>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
                   <span
                     className={cn(
-                      "h-2 w-2 rounded-full",
+                      "h-1.5 w-1.5 rounded-full shrink-0",
                       status === "Active" ? "bg-green-500" : "bg-red-500"
                     )}
                   />
                   <span>{status}</span>
                 </div>
               </div>
-              <h3 className="mt-1 text-lg font-semibold text-card-foreground">
+              <h3 className="mt-0.5 text-sm sm:text-base font-semibold text-card-foreground leading-snug line-clamp-2">
                 {title}
               </h3>
             </div>
             {onMoreClick && (
               <button
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onMoreClick(e); }}
-                className="text-muted-foreground transition-colors hover:text-foreground"
+                className="text-muted-foreground transition-colors hover:text-foreground shrink-0 p-0.5"
               >
-                <MoreHorizontal size={20} />
+                <MoreHorizontal className="size-4" />
               </button>
             )}
           </div>
@@ -91,11 +91,11 @@ export const WorkflowBuilderCard = ({
                 variants={detailVariants}
                 className="overflow-hidden"
               >
-                <p className="text-sm text-muted-foreground">{description}</p>
+                <p className="text-xs text-muted-foreground line-clamp-2">{description}</p>
                 {tags && tags.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-2 flex flex-wrap gap-1.5">
                     {tags.map((tag) => (
-                      <Badge key={tag} variant="secondary">
+                      <Badge key={tag} variant="secondary" className="text-[10px] py-0 px-1.5 h-5">
                         {tag}
                       </Badge>
                     ))}
@@ -106,25 +106,25 @@ export const WorkflowBuilderCard = ({
           </AnimatePresence>
         </div>
 
-        <div className="flex items-center justify-between border-t border-border p-4">
-          <div className="flex -space-x-2">
+        <div className="flex items-center justify-between border-t border-border px-2.5 py-2 sm:px-3 sm:py-2.5">
+          <div className="flex -space-x-1.5">
             {users && users.map((user, index) => (
-              <Avatar key={index} className="h-7 w-7 border-2 border-card">
+              <Avatar key={index} className="h-6 w-6 border-2 border-card text-[9px]">
                 <AvatarImage src={user.src} />
                 <AvatarFallback>{user.fallback}</AvatarFallback>
               </Avatar>
             ))}
           </div>
-          <div className="flex items-center -space-x-2">
+          <div className="flex items-center -space-x-1.5">
             {actions && actions.map(({ Icon, bgColor }, index) => (
               <div
                 key={index}
                 className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded-full border-2 border-card text-white",
+                  "flex h-6 w-6 items-center justify-center rounded-full border-2 border-card text-white",
                   bgColor
                 )}
               >
-                <Icon size={14} />
+                <Icon className="size-3" />
               </div>
             ))}
           </div>

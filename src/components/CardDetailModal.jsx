@@ -27,6 +27,16 @@ function getMemberColor(name) {
   return MEMBER_COLORS[Math.abs(hash) % MEMBER_COLORS.length];
 }
 
+function sanitizeUrl(url) {
+  if (!url || typeof url !== 'string') return null;
+  try {
+    const parsed = new URL(url.trim());
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
   const { getBoard, updateCard, deleteCard, boards } = useBoards();
   const { user } = useAuth();
@@ -54,6 +64,7 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
   const [attachmentUrl, setAttachmentUrl] = useState('');
   const [attachmentText, setAttachmentText] = useState('');
   const [attachmentFileName, setAttachmentFileName] = useState('');
+  const [attachmentFileData, setAttachmentFileData] = useState('');
   const [attachmentPopupPos, setAttachmentPopupPos] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
@@ -216,13 +227,15 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
   const handleAddAttachment = () => {
     const url = attachmentUrl.trim();
     const fileName = attachmentFileName.trim();
+    const fileData = attachmentFileData.trim();
     const displayText = attachmentText.trim();
-    if (!url && !fileName) return;
+    if (!url && !fileData) return;
 
     const attachment = {
       id: uuidv4(),
-      url: url || null,
+      url: url || fileData || null,
       fileName: fileName || null,
+      fileData: fileData || null,
       text: displayText || fileName || url,
       createdAt: new Date().toISOString(),
     };
@@ -231,6 +244,7 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
     setAttachmentUrl('');
     setAttachmentText('');
     setAttachmentFileName('');
+    setAttachmentFileData('');
     setActiveSection(null);
   };
 
@@ -422,6 +436,16 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                                 if (!file) return;
                                 setAttachmentFileName(file.name);
                                 if (!attachmentText.trim()) setAttachmentText(file.name);
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                  const result = typeof reader.result === 'string' ? reader.result : '';
+                                  setAttachmentFileData(result);
+                                };
+                                reader.onerror = () => {
+                                  setAttachmentFileData('');
+                                  console.error('Failed to read selected file');
+                                };
+                                reader.readAsDataURL(file);
                               }}
                             />
                             <span className="h-9 rounded-md bg-secondary/70 hover:bg-secondary cursor-pointer flex items-center justify-center text-sm font-medium transition-colors">
@@ -434,7 +458,7 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                         </div>
 
                         <div className="border-t border-border/40 pt-3 space-y-2">
-                          <div className="text-sm font-medium">Search or paste a link *</div>
+                          <div className="text-sm font-medium">Search or paste a link</div>
                           <Input
                             value={attachmentUrl}
                             onChange={(e) => setAttachmentUrl(e.target.value)}
@@ -452,7 +476,7 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                           <Button
                             size="sm"
                             onClick={handleAddAttachment}
-                            disabled={!attachmentUrl.trim() && !attachmentFileName.trim()}
+                              disabled={!attachmentUrl.trim() && !attachmentFileData.trim()}
                           >
                             Add attachment
                           </Button>
@@ -739,25 +763,28 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
             )}
             {activeSection !== 'attachment' && attachments.length > 0 && (
               <div className="mb-4 space-y-1.5">
-                {attachments.map((attachment) => (
-                  <div key={attachment.id} className="flex items-center gap-2 text-xs rounded-lg bg-secondary/30 px-2 py-1.5">
-                    <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                    {attachment.url ? (
-                      <a href={attachment.url} target="_blank" rel="noreferrer" className="truncate text-primary hover:underline">
-                        {attachment.text || attachment.url}
-                      </a>
-                    ) : (
-                      <span className="truncate">{attachment.text || attachment.fileName}</span>
-                    )}
-                    <button
-                      onClick={() => handleRemoveAttachment(attachment.id)}
-                      className="ml-auto text-muted-foreground hover:text-destructive transition-colors"
-                      title="Remove attachment"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
+                {attachments.map((attachment) => {
+                  const safeUrl = sanitizeUrl(attachment.url);
+                  return (
+                    <div key={attachment.id} className="flex items-center gap-2 text-xs rounded-lg bg-secondary/30 px-2 py-1.5">
+                      <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      {safeUrl ? (
+                        <a href={safeUrl} target="_blank" rel="noopener noreferrer" className="truncate text-primary hover:underline">
+                          {attachment.text || safeUrl}
+                        </a>
+                      ) : (
+                        <span className="truncate">{attachment.text || attachment.fileName || attachment.url}</span>
+                      )}
+                      <button
+                        onClick={() => handleRemoveAttachment(attachment.id)}
+                        className="ml-auto text-muted-foreground hover:text-destructive transition-colors"
+                        title="Remove attachment"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
 

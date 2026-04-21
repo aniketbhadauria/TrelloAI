@@ -4,7 +4,7 @@ import { useBoards } from '../context/BoardContext';
 import BoardCard from '../components/BoardCard';
 import CreateBoardModal from '../components/CreateBoardModal';
 import MacOSDock from '../components/ui/mac-os-dock';
-import { Star, Plus } from 'lucide-react';
+import { Star, Plus, Users } from 'lucide-react';
 
 const dockApps = [
   { id: 'finder', name: 'Finder', icon: 'https://cdn.jim-nielsen.com/macos/1024/finder-2021-09-10.png?rf=1024' },
@@ -57,13 +57,25 @@ export default function Home() {
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto page-enter pb-32">
       <div className="mb-10 pt-4">
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">
-          Your{' '}
-          <span className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 bg-clip-text text-transparent">
-            Workspace
-          </span>
-        </h1>
-        <p className="text-muted-foreground text-base text-9xl-line-height">Organize, manage, and track your projects with ease.</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">
+              Your{' '}
+              <span className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 bg-clip-text text-transparent">
+                Workspace
+              </span>
+            </h1>
+            <p className="text-muted-foreground text-base text-9xl-line-height">Organize, manage, and track your projects with ease.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/collaborators')}
+            className="inline-flex items-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-sm font-medium hover:bg-secondary/50 transition-colors"
+          >
+            <Users className="w-4 h-4" />
+            Collaborators
+          </button>
+        </div>
       </div>
 
       {starredBoards.length > 0 && (
@@ -74,7 +86,7 @@ export default function Home() {
             </div>
             <h2 className="text-lg font-semibold tracking-tight">Starred Boards</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {starredBoards.map(board => (
               <BoardCard key={board.id} board={board} />
             ))}
@@ -89,16 +101,16 @@ export default function Home() {
           </div>
           <h2 className="text-lg font-semibold tracking-tight">All Boards</h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {allBoards.map(board => (
             <BoardCard key={board.id} board={board} />
           ))}
           <button
             onClick={() => setShowCreate(true)}
-            className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-pink-200/80 text-muted-foreground hover:text-pink-600 hover:border-pink-400/60 hover:bg-pink-50/30 transition-all duration-300 cursor-pointer group min-h-[280px]"
+            className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-pink-200/80 text-muted-foreground hover:text-pink-600 hover:border-pink-400/60 hover:bg-pink-50/30 transition-all duration-300 cursor-pointer group min-h-[200px] sm:min-h-[210px]"
           >
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 group-hover:from-pink-200 group-hover:to-purple-200 flex items-center justify-center transition-colors mb-3">
-              <Plus className="w-7 h-7 group-hover:scale-110 transition-transform" />
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 group-hover:from-pink-200 group-hover:to-purple-200 flex items-center justify-center transition-colors mb-2">
+              <Plus className="w-6 h-6 group-hover:scale-110 transition-transform" />
             </div>
             <span className="text-sm font-semibold">Create new board</span>
             <p className="text-xs text-muted-foreground/60 mt-1">Start a fresh project</p>

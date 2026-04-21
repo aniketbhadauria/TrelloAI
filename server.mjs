@@ -33,7 +33,23 @@ async function saveBoardData(boardData) {
   if (error) throw new Error(`Supabase write failed: ${error.message}`);
 }
 
-const AI_ENABLED = false;
+const AI_ENABLED = process.env.AI_ENABLED === 'true';
+let anthropic = null;
+
+if (AI_ENABLED) {
+  try {
+    const { default: Anthropic } = await import('@anthropic-ai/sdk');
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      throw new Error('Missing ANTHROPIC_API_KEY');
+    }
+    anthropic = new Anthropic({ apiKey });
+  } catch (error) {
+    console.error('AI disabled: failed to initialize Anthropic SDK.', error.message);
+  }
+}
+
+const AI_READY = AI_ENABLED && !!anthropic;
 
 // ─── TaskFlow tool definitions (Anthropic format) ───────────
 const TASKFLOW_TOOLS = [
@@ -442,9 +458,11 @@ async function runAgentLoop(systemPrompt, userMessage, onText) {
 
 // ─── Chat endpoint ──────────────────────────────────────────
 app.post('/api/chat', async (req, res) => {
-  if (!AI_ENABLED) {
+  if (!AI_READY) {
     return res.status(503).json({
-      error: 'AI chat is disabled. Install and configure Anthropic SDK to enable /api/chat.',
+      error: AI_ENABLED
+        ? 'AI chat is unavailable: Anthropic SDK failed to initialize. Check @anthropic-ai/sdk and ANTHROPIC_API_KEY.'
+        : 'AI chat is disabled. Set AI_ENABLED=true and configure Anthropic SDK to enable /api/chat.',
     });
   }
 
@@ -482,9 +500,11 @@ app.post('/api/chat', async (req, res) => {
 
 // ─── Mind Map generation endpoint ────────────────────────────
 app.post('/api/mindmap/generate', async (req, res) => {
-  if (!AI_ENABLED) {
+  if (!AI_READY) {
     return res.status(503).json({
-      error: 'AI mindmap is disabled. Install and configure Anthropic SDK to enable /api/mindmap/generate.',
+      error: AI_ENABLED
+        ? 'AI mindmap is unavailable: Anthropic SDK failed to initialize. Check @anthropic-ai/sdk and ANTHROPIC_API_KEY.'
+        : 'AI mindmap is disabled. Set AI_ENABLED=true and configure Anthropic SDK to enable /api/mindmap/generate.',
     });
   }
 

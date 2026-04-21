@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { GoogleMark } from '@/components/icons/GoogleMark';
 
 function formatLoginError(err) {
   const msg = err?.message || '';
@@ -12,7 +13,7 @@ function formatLoginError(err) {
     return 'Email/password sign-in is disabled in your Supabase project. In the Dashboard go to Authentication → Providers → Email and turn the Email provider on, then save.';
   }
   if (/provider is not enabled|unsupported provider/i.test(msg)) {
-    return 'GitHub sign-in is not enabled. In Supabase go to Authentication → Providers → GitHub, turn it on, and add your GitHub OAuth App Client ID and Secret.';
+    return 'This sign-in provider is not enabled. In Supabase go to Authentication → Providers, open Google or GitHub, turn the provider on, and add the Client ID and Secret from that provider’s developer console.';
   }
   return msg || 'Could not sign in';
 }
@@ -26,14 +27,15 @@ function GitHubMark({ className }) {
 }
 
 export default function Login() {
-  const { signIn, signInWithGitHub, session, loading } = useAuth();
+  const { signIn, signInWithGitHub, signInWithGoogle, session, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [githubLoading, setGithubLoading] = useState(false);
+  /** 'google' | 'github' while redirecting */
+  const [oauthProvider, setOauthProvider] = useState(null);
 
   const from = location.state?.from?.pathname || '/boards';
 
@@ -63,35 +65,60 @@ export default function Login() {
     }
   }
 
+  async function handleGoogle() {
+    setError('');
+    setOauthProvider('google');
+    try {
+      await signInWithGoogle(from);
+    } catch (err) {
+      setError(formatLoginError(err));
+      setOauthProvider(null);
+    }
+  }
+
   async function handleGitHub() {
     setError('');
-    setGithubLoading(true);
+    setOauthProvider('github');
     try {
       await signInWithGitHub(from);
     } catch (err) {
       setError(formatLoginError(err));
-      setGithubLoading(false);
+      setOauthProvider(null);
     }
   }
+
+  const oauthBusy = !!oauthProvider;
 
   return (
     <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center p-6">
       <div className="w-full max-w-md rounded-2xl border border-border/60 bg-card/40 p-8 shadow-lg backdrop-blur-sm">
         <h1 className="text-2xl font-bold tracking-tight mb-1">Sign in</h1>
         <p className="text-sm text-muted-foreground mb-6">
-          Sign in with GitHub or your email and password.
+          Sign in with Google, GitHub, or your email and password.
         </p>
 
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full h-10 gap-2 border-border/80 bg-background/80"
-          onClick={handleGitHub}
-          disabled={submitting || githubLoading}
-        >
-          <GitHubMark className="size-4 shrink-0" />
-          {githubLoading ? 'Redirecting to GitHub…' : 'Continue with GitHub'}
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-10 gap-2 border-border/80 bg-background/80"
+            onClick={handleGoogle}
+            disabled={submitting || oauthBusy}
+          >
+            <GoogleMark className="size-4 shrink-0" />
+            {oauthProvider === 'google' ? 'Redirecting to Google…' : 'Continue with Google'}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-10 gap-2 border-border/80 bg-background/80"
+            onClick={handleGitHub}
+            disabled={submitting || oauthBusy}
+          >
+            <GitHubMark className="size-4 shrink-0" />
+            {oauthProvider === 'github' ? 'Redirecting to GitHub…' : 'Continue with GitHub'}
+          </Button>
+        </div>
 
         <div className="relative my-6">
           <Separator />
@@ -130,7 +157,7 @@ export default function Login() {
               {error}
             </p>
           )}
-          <Button type="submit" className="w-full h-10" disabled={submitting || githubLoading}>
+          <Button type="submit" className="w-full h-10" disabled={submitting || oauthBusy}>
             {submitting ? 'Signing in…' : 'Log in'}
           </Button>
         </form>

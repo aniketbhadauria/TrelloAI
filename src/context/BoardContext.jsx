@@ -117,7 +117,7 @@ export function BoardProvider({ children }) {
     if (isInitialLoad.current) return;
     if (!isAuthenticated) return;
     setIsSavingBoards(true);
-    saveToSupabase(data);
+    saveToSupabase.run(data);
   }, [data, saveToSupabase, isAuthenticated]);
 
   const refreshBoards = useCallback(async () => {
@@ -135,6 +135,7 @@ export function BoardProvider({ children }) {
 
   const persistBoardsNow = useCallback(async () => {
     if (!isAuthenticated) return;
+    saveToSupabase.cancel();
     setIsSavingBoards(true);
     const { error } = await supabase
       .from('app_boards')
@@ -146,7 +147,7 @@ export function BoardProvider({ children }) {
     }
     setLastSavedAt(new Date());
     setIsSavingBoards(false);
-  }, [data, isAuthenticated, boardRowId]);
+  }, [data, isAuthenticated, boardRowId, saveToSupabase]);
 
   const updateData = useCallback((updater) => {
     setData(prev => (typeof updater === 'function' ? updater(prev) : updater));

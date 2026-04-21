@@ -1,5 +1,5 @@
 import { Book, Menu, Sunset, Trees, Zap, Bell, X as XIcon } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useNotifications } from "@/context/NotificationContext";
 
@@ -64,12 +64,39 @@ function getUserInitials(email) {
 
 function formatSavedTime(dateStr) {
   if (!dateStr) return '';
-  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  const ts = new Date(dateStr).getTime();
+  if (Number.isNaN(ts)) return '';
+  const seconds = Math.max(0, Math.floor((Date.now() - ts) / 1000));
   if (seconds < 10) return 'just now';
   if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
-  return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function appNavPathActive(currentPath, url) {
+  if (url === '/boards') {
+    return currentPath === '/boards' || currentPath.startsWith('/boards/');
+  }
+  return currentPath === url;
+}
+
+function AppNavLink({ to, currentPath, children, className }) {
+  const active = appNavPathActive(currentPath, to);
+  return (
+    <Link
+      to={to}
+      className={cn(
+        'inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-colors',
+        active
+          ? 'bg-primary/10 text-primary'
+          : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+        className,
+      )}
+    >
+      {children}
+    </Link>
+  );
 }
 
 const Navbar1 = ({
@@ -157,8 +184,11 @@ const Navbar1 = ({
     signup: { text: "Sign up", url: "#" },
     session: null,
   },
+  /** When the marketing `menu` is hidden, show these in-app links (e.g. Boards, Analytics). */
+  appNav = null,
 }) => {
   const session = auth.session;
+  const location = useLocation();
   const [showNotifs, setShowNotifs] = useState(false);
   const notifData = useNotifications();
   const { notifications: notifs, unreadCount, markAsRead, markAllAsRead } = notifData;
@@ -172,6 +202,19 @@ const Navbar1 = ({
               <LogoIcon src={logo.src} alt={logo.alt} />
               <span className="text-lg font-semibold bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 bg-clip-text text-transparent font-bold tracking-tight">{logo.title}</span>
             </Link>
+            {appNav && appNav.length > 0 && (
+              <div className="hidden sm:flex items-center gap-0.5 border-l border-border/60 pl-4 ml-1">
+                {appNav.map((item) => (
+                  <AppNavLink
+                    key={`${item.url}-${item.title}`}
+                    to={item.url}
+                    currentPath={location.pathname}
+                  >
+                    {item.title}
+                  </AppNavLink>
+                ))}
+              </div>
+            )}
             {!hideMenu && (
               <div className="flex items-center">
                 <NavigationMenu>
@@ -322,6 +365,20 @@ const Navbar1 = ({
                   </SheetTitle>
                 </SheetHeader>
                 <div className="my-6 flex flex-col gap-6">
+                  {appNav && appNav.length > 0 && (
+                    <div className="flex flex-col gap-1">
+                      {appNav.map((item) => (
+                        <AppNavLink
+                          key={`m-${item.url}-${item.title}`}
+                          to={item.url}
+                          currentPath={location.pathname}
+                          className="justify-start rounded-lg px-3 py-2.5 text-base"
+                        >
+                          {item.title}
+                        </AppNavLink>
+                      ))}
+                    </div>
+                  )}
                   {!hideMenu && (
                     <>
                       <Accordion

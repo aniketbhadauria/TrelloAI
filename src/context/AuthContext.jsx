@@ -64,15 +64,24 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   }, []);
 
-  const signInWithGitHub = useCallback(async (nextPath = '/boards') => {
+  const signInWithOAuth = useCallback(async (provider, nextPath = '/boards') => {
     const path = typeof nextPath === 'string' && nextPath.startsWith('/') ? nextPath : '/boards';
     const redirectTo = `${window.location.origin}${path}`;
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'github',
+      provider,
       options: { redirectTo },
     });
     if (error) throw error;
   }, []);
+
+  const signInWithGitHub = useCallback(
+    (nextPath) => signInWithOAuth('github', nextPath),
+    [signInWithOAuth]
+  );
+  const signInWithGoogle = useCallback(
+    (nextPath) => signInWithOAuth('google', nextPath),
+    [signInWithOAuth]
+  );
 
   const value = useMemo(
     () => ({
@@ -83,8 +92,9 @@ export function AuthProvider({ children }) {
       signUp,
       signOut,
       signInWithGitHub,
+      signInWithGoogle,
     }),
-    [session, loading, signIn, signUp, signOut, signInWithGitHub]
+    [session, loading, signIn, signUp, signOut, signInWithGitHub, signInWithGoogle]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

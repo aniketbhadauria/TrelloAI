@@ -47,7 +47,7 @@ export default function BoardView() {
     if (!board) return [];
     const map = new Map();
     board.lists.forEach(l => l.cards.forEach(c => (c.members || []).forEach(m => {
-      const memberKey = getMemberFilterKey(m);
+      const memberKey = getMemberIdentityKey(m);
       if (!map.has(memberKey)) {
         map.set(memberKey, { ...m, filterKey: memberKey });
       }
@@ -84,7 +84,7 @@ export default function BoardView() {
           if (!inTitle && !inDesc && !inLabels && !inMembers) return false;
         }
         if (filterMembers.length) {
-          const cardMemberKeys = (card.members || []).map(getMemberFilterKey);
+          const cardMemberKeys = (card.members || []).map(getMemberIdentityKey);
           if (filterMembers.includes('__none__') && cardMemberKeys.length === 0) { /* pass */ }
           else if (filterMembers.some(key => key !== '__none__' && cardMemberKeys.includes(key))) { /* pass */ }
           else return false;
@@ -163,6 +163,19 @@ export default function BoardView() {
       setTitleValue(board.title);
     }
     setEditingTitle(false);
+  };
+
+  const handleArchiveBoard = async () => {
+    const confirmed = globalThis.confirm('Archive this board? You can restore it later from data if needed.');
+    if (!confirmed) return;
+    try {
+      await Promise.resolve(deleteBoard(boardId));
+      setShowMenu(false);
+      navigate('/');
+    } catch (error) {
+      console.error('Failed to archive board:', error);
+      globalThis.alert('Unable to archive this board right now. Please try again.');
+    }
   };
 
   return (
@@ -398,17 +411,11 @@ export default function BoardView() {
                 Change background
               </button>
               <button
-                onClick={() => {
-                  setShowMenu(false);
-                  const confirmed = globalThis.confirm('Archive this board? You can restore it later from data if needed.');
-                  if (!confirmed) return;
-                  deleteBoard(boardId);
-                  navigate('/');
-                }}
+                onClick={handleArchiveBoard}
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
-                Delete board
+                Archive board
               </button>
             </div>
           )}
@@ -552,4 +559,10 @@ function FilterCheckbox({ checked, onChange, icon, label, isLabel }) {
 
 function getMemberFilterKey(member) {
   return (member?.name || '').trim().toLowerCase();
+}
+
+function getMemberIdentityKey(member) {
+  const id = (member?.id || '').trim();
+  if (id) return id;
+  return getMemberFilterKey(member);
 }

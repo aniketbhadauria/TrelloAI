@@ -10,7 +10,7 @@ const IMAGE_OPTIONS = [
   {
     id: 'emerson',
     label: 'Emerson',
-    url: '/emerson.png',
+    url: '/emerson.jpg',
   },
   {
     id: 'esperia',
@@ -22,7 +22,7 @@ const IMAGE_OPTIONS = [
 export default function CreateBoardModal({ onClose }) {
   const { addBoard } = useBoards();
   const [title, setTitle] = useState('');
-  const [selectedGradient] = useState(GRADIENTS[0]);
+  const selectedGradient = GRADIENTS[0];
   const [selectedImage, setSelectedImage] = useState(IMAGE_OPTIONS[0].url);
 
   const handleSubmit = (e) => {
