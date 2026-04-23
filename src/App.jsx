@@ -13,6 +13,7 @@ import Collaborators from './pages/Collaborators';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import { Book, Sunset, Trees, Zap, HelpCircle, Mail, Activity, FileText } from 'lucide-react';
+import AICopilot from './components/AICopilot';
 import './App.css';
 
 const navbarDataBase = {
@@ -97,6 +98,7 @@ const navbarDataBase = {
   ],
 };
 
+// eslint-disable-next-line react/prop-types
 function ProtectedRoute({ children }) {
   const { session, loading } = useAuth();
   const location = useLocation();
@@ -214,6 +216,9 @@ function AppContent() {
           />
         </Routes>
       </div>
+
+      {/* AI Copilot — visible on all authenticated pages */}
+      {session && !isLanding && <AICopilot />}
     </div>
   );
 }

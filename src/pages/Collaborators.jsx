@@ -30,6 +30,19 @@ function normName(s) {
   return (s || '').trim().toLowerCase() || null;
 }
 
+/**
+ * Single canonical key for a user from cards or directory so merges line up
+ * (id > normalized email > normalized name/display_name).
+ */
+function deriveUserKey(identity) {
+  if (!identity) return null;
+  if (identity.id) return String(identity.id);
+  const e = normEmail(identity.email);
+  if (e) return e;
+  const display = identity.name != null && String(identity.name).trim() !== '' ? identity.name : identity.display_name;
+  return normName(display);
+}
+
 /** Merge rows that share the same id, email, or name (Trello-style duplicate cleanup). */
 function dedupeCollaborators(list) {
   if (list.length < 2) return list;
@@ -72,11 +85,13 @@ function dedupeCollaborators(list) {
     const email = group.map((m) => m.email).find(Boolean) || null;
     const name =
       group.map((m) => m.name).find((n) => n && n !== 'Unknown') || group[0].name;
+    const role = group.map((m) => m.role).find((r) => r != null && String(r).trim() !== '') || null;
     return {
       key: id || normEmail(email) || normName(name) || group[0].key,
       id,
       name,
       email,
+      role,
       boardsCount,
     };
   });
@@ -114,7 +129,11 @@ export default function Collaborators() {
       for (const list of board.lists || []) {
         for (const card of list.cards || []) {
           for (const member of card.members || []) {
-            const key = member.id || (member.name || '').trim().toLowerCase();
+            const key = deriveUserKey({
+              id: member.id,
+              email: member.email,
+              name: member.name,
+            });
             if (!key) continue;
             if (!stats.has(key)) {
               stats.set(key, {
@@ -122,6 +141,7 @@ export default function Collaborators() {
                 id: member.id || null,
                 name: member.name || 'Unknown',
                 email: member.email || null,
+                role: member.role ?? null,
                 boardsCount: 0,
               });
             }
@@ -139,19 +159,21 @@ export default function Collaborators() {
   const collaborators = useMemo(() => {
     const merged = new Map(boardMemberStats);
     for (const usr of directoryUsers) {
-      const key = usr.id || usr.email || (usr.display_name || '').trim().toLowerCase();
+      const key = deriveUserKey(usr);
       if (!key) continue;
       const existing = merged.get(key);
       if (existing) {
         existing.id = existing.id || usr.id || null;
         existing.email = existing.email || usr.email || null;
         existing.name = existing.name || usr.display_name || usr.email || 'Unknown';
+        existing.role = existing.role || usr.role || null;
       } else {
         merged.set(key, {
           key,
           id: usr.id || null,
           email: usr.email || null,
           name: usr.display_name || usr.email || 'Unknown',
+          role: usr.role ?? null,
           boardsCount: 0,
         });
       }
@@ -179,8 +201,15 @@ export default function Collaborators() {
             Collaborators
             <span className="text-sm text-muted-foreground font-medium">{collaborators.length}</span>
           </h1>
-          <Button type="button" className="gap-2">
-            <UserPlus className="w-4 h-4" />
+          {/* TODO: implement invite flow (modal, email, or share link) */}
+          <Button
+            type="button"
+            className="gap-2"
+            disabled
+            aria-disabled="true"
+            title="Invite is not available yet"
+          >
+            <UserPlus className="w-4 h-4" aria-hidden />
             Invite Workspace members
           </Button>
         </div>
@@ -203,6 +232,8 @@ export default function Collaborators() {
         <div className="divide-y divide-border/40">
           {collaborators.map((member) => {
             const isCurrentUser = !!(user?.id && member.id === user.id);
+            const roleText =
+              typeof member.role === 'string' && member.role.trim() !== '' ? member.role.trim() : null;
             return (
               <div key={member.key} className="flex items-center gap-4 px-4 py-3">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: getColor(member.id || member.email || member.name) }}>
@@ -219,7 +250,7 @@ export default function Collaborators() {
                   Boards ({member.boardsCount})
                 </div>
                 <div className="text-xs rounded-md bg-secondary/60 px-2 py-1 min-w-[72px] text-center">
-                  Admin
+                  {roleText ?? 'Member'}
                 </div>
               </div>
             );

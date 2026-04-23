@@ -5,6 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+    --color-destructive-foreground: var(--destructive-foreground);
     --font-heading: var(--font-sans);
     --font-sans: 'Poppins', sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
@@ -48,6 +49,7 @@
 }
 
 :root {
+    --destructive-foreground: oklch(1 0 0);
     --background: oklch(0.955 0.018 350);
     --foreground: oklch(0.22 0.015 350);
     --card: oklch(0.99 0.006 350);
@@ -83,6 +85,7 @@
 }
 
 .dark {
+    --destructive-foreground: oklch(1 0 0);
     --background: oklch(0.14 0.02 350);
     --foreground: oklch(0.93 0.01 350);
     --card: oklch(0.18 0.018 350);

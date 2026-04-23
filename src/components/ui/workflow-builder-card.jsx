@@ -4,7 +4,6 @@ import { MoreHorizontal } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 const detailVariants = {
@@ -106,29 +105,6 @@ export const WorkflowBuilderCard = ({
           </AnimatePresence>
         </div>
 
-        <div className="flex items-center justify-between border-t border-border px-2.5 py-2 sm:px-3 sm:py-2.5">
-          <div className="flex -space-x-1.5">
-            {users && users.map((user, index) => (
-              <Avatar key={index} className="h-6 w-6 border-2 border-card text-[9px]">
-                <AvatarImage src={user.src} />
-                <AvatarFallback>{user.fallback}</AvatarFallback>
-              </Avatar>
-            ))}
-          </div>
-          <div className="flex items-center -space-x-1.5">
-            {actions && actions.map(({ Icon, bgColor }, index) => (
-              <div
-                key={index}
-                className={cn(
-                  "flex h-6 w-6 items-center justify-center rounded-full border-2 border-card text-white",
-                  bgColor
-                )}
-              >
-                <Icon className="size-3" />
-              </div>
-            ))}
-          </div>
-        </div>
       </Card>
       {menuContent}
     </motion.div>

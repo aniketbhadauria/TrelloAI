@@ -28,8 +28,20 @@ execute function public.set_app_boards_updated_at();
 -- Shared access for all clients using the anon key.
 alter table public.app_boards disable row level security;
 
+-- Migrate legacy default row to shared row when safe.
+update public.app_boards
+set id = 'shared'
+where id = 'default'
+  and not exists (
+    select 1
+    from public.app_boards
+    where id = 'shared'
+  );
+
 -- Ensure the shared row exists.
 insert into public.app_boards (id, data)
 values ('shared', '{"boards": []}')
 on conflict (id) do nothing;
+
+alter table public.app_users disable row level security;
 

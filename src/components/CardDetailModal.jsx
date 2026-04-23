@@ -317,14 +317,9 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
               in list <span className="font-medium text-foreground/80">{list?.title}</span>
             </p>
           </div>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2" onClick={handleDelete}>
-              <Trash2 className="w-4 h-4" />
-            </Button>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Two-column body */}
@@ -908,6 +903,19 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-border/50 px-6 py-3 flex justify-end shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
+            onClick={handleDelete}
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete card
+          </Button>
         </div>
 
       </div>

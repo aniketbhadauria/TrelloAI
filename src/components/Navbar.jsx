@@ -9,8 +9,8 @@ export default function Navbar() {
   return (
     <nav className="h-14 border-b border-border/40 bg-background/60 backdrop-blur-xl flex items-center px-5 gap-4 sticky top-0 z-40">
       <Link to="/" className="flex items-center gap-2.5 font-semibold text-lg">
-        <div className="w-8 h-8 rounded-xl overflow-hidden shadow-md shadow-pink-500/20">
-          <img src="/esperia.png" alt="Esperia logo" className="w-full h-full object-cover" />
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-400 via-pink-500 to-purple-500 flex items-center justify-center shadow-md shadow-pink-500/20">
+          <LayoutDashboard className="w-4 h-4 text-white" />
         </div>
         <span className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 bg-clip-text text-transparent font-bold tracking-tight">
           TaskFlow
