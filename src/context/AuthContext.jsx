@@ -20,6 +20,33 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const user = session?.user;
+    if (!user?.id || !user?.email) return;
+
+    const displayName =
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.user_metadata?.preferred_username ||
+      user.email.split('@')[0];
+
+    supabase
+      .from('app_users')
+      .upsert(
+        {
+          id: user.id,
+          email: user.email,
+          display_name: displayName,
+          avatar_url: user.user_metadata?.avatar_url || null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      )
+      .then(({ error }) => {
+        if (error) console.error('Failed to sync app user:', error.message);
+      });
+  }, [session]);
+
   const signIn = useCallback(async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
@@ -37,15 +64,24 @@ export function AuthProvider({ children }) {
     if (error) throw error;
   }, []);
 
-  const signInWithGitHub = useCallback(async (nextPath = '/boards') => {
+  const signInWithOAuth = useCallback(async (provider, nextPath = '/boards') => {
     const path = typeof nextPath === 'string' && nextPath.startsWith('/') ? nextPath : '/boards';
     const redirectTo = `${window.location.origin}${path}`;
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'github',
+      provider,
       options: { redirectTo },
     });
     if (error) throw error;
   }, []);
+
+  const signInWithGitHub = useCallback(
+    (nextPath) => signInWithOAuth('github', nextPath),
+    [signInWithOAuth]
+  );
+  const signInWithGoogle = useCallback(
+    (nextPath) => signInWithOAuth('google', nextPath),
+    [signInWithOAuth]
+  );
 
   const value = useMemo(
     () => ({
@@ -56,8 +92,9 @@ export function AuthProvider({ children }) {
       signUp,
       signOut,
       signInWithGitHub,
+      signInWithGoogle,
     }),
-    [session, loading, signIn, signUp, signOut, signInWithGitHub]
+    [session, loading, signIn, signUp, signOut, signInWithGitHub, signInWithGoogle]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

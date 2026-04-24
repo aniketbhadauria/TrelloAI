@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { BoardProvider } from './context/BoardContext';
+import { BoardProvider, useBoards } from './context/BoardContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { Navbar1 } from './components/ui/shadcnblocks-com-navbar1';
@@ -9,9 +9,11 @@ import BoardView from './pages/BoardView';
 
 import MindMapView from './pages/MindMapView';
 import Analytics from './pages/Analytics';
+import Collaborators from './pages/Collaborators';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import { Book, Sunset, Trees, Zap, HelpCircle, Mail, Activity, FileText, BarChart3 } from 'lucide-react';
+import { Book, Sunset, Trees, Zap, HelpCircle, Mail, Activity, FileText } from 'lucide-react';
+import AICopilot from './components/AICopilot';
 import './App.css';
 
 const navbarDataBase = {
@@ -96,6 +98,7 @@ const navbarDataBase = {
   ],
 };
 
+// eslint-disable-next-line react/prop-types
 function ProtectedRoute({ children }) {
   const { session, loading } = useAuth();
   const location = useLocation();
@@ -120,16 +123,36 @@ function AppContent() {
   const navigate = useNavigate();
   const isLanding = location.pathname === '/';
   const { session, signOut } = useAuth();
+  const { persistBoardsNow, isSavingBoards, lastSavedAt } = useBoards();
+
+  const appNav =
+    session && !isLanding
+      ? [
+          { title: 'Boards', url: '/boards' },
+          { title: 'Analytics', url: '/analytics' },
+          { title: 'Collaborators', url: '/collaborators' },
+        ]
+      : null;
 
   const navbarData = {
     ...navbarDataBase,
+    appNav,
     auth: {
       login: { text: 'Log in', url: '/login' },
       signup: { text: 'Sign up', url: '/signup' },
       session: session?.user?.email
         ? {
           email: session.user.email,
+          saveStatus: {
+            isSaving: isSavingBoards,
+            lastSavedAt: lastSavedAt ? lastSavedAt.toISOString() : null,
+          },
           onSignOut: async () => {
+            try {
+              await persistBoardsNow();
+            } catch (error) {
+              console.error('Unable to persist boards before sign out:', error);
+            }
             await signOut();
             navigate('/', { replace: true });
           },
@@ -183,8 +206,19 @@ function AppContent() {
               </ProtectedRoute>
             )}
           />
+          <Route
+            path="/collaborators"
+            element={(
+              <ProtectedRoute>
+                <Collaborators />
+              </ProtectedRoute>
+            )}
+          />
         </Routes>
       </div>
+
+      {/* AI Copilot — visible on all authenticated pages */}
+      {session && !isLanding && <AICopilot />}
     </div>
   );
 }

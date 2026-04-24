@@ -2,7 +2,6 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
-import Anthropic from '@anthropic-ai/sdk';
 import { randomUUID } from 'node:crypto';
 
 // ─── Express setup ───────────────────────────────────────────
@@ -15,14 +14,14 @@ const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
   process.env.VITE_SUPABASE_ANON_KEY,
 );
-const ROW_ID = 'default';
+const ROW_ID = process.env.SUPABASE_BOARD_ROW_ID || process.env.VITE_SUPABASE_BOARD_ROW_ID || 'shared';
 
 async function loadBoardData() {
   const { data: row, error } = await supabase
     .from('app_boards')
     .select('data')
     .eq('id', ROW_ID)
-    .single();
+    .maybeSingle();
   if (error) throw new Error(`Supabase read failed: ${error.message}`);
   return row?.data || { boards: [] };
 }
@@ -30,13 +29,27 @@ async function loadBoardData() {
 async function saveBoardData(boardData) {
   const { error } = await supabase
     .from('app_boards')
-    .update({ data: boardData, updated_at: new Date().toISOString() })
-    .eq('id', ROW_ID);
+    .upsert({ id: ROW_ID, data: boardData, updated_at: new Date().toISOString() }, { onConflict: 'id' });
   if (error) throw new Error(`Supabase write failed: ${error.message}`);
 }
 
-// ─── Anthropic client ───────────────────────────────────────
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const AI_ENABLED = process.env.AI_ENABLED === 'true';
+let anthropic = null;
+
+if (AI_ENABLED) {
+  try {
+    const { default: Anthropic } = await import('@anthropic-ai/sdk');
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      throw new Error('Missing ANTHROPIC_API_KEY');
+    }
+    anthropic = new Anthropic({ apiKey });
+  } catch (error) {
+    console.error('AI disabled: failed to initialize Anthropic SDK.', error.message);
+  }
+}
+
+const AI_READY = AI_ENABLED && !!anthropic;
 
 // ─── TaskFlow tool definitions (Anthropic format) ───────────
 const TASKFLOW_TOOLS = [
@@ -389,11 +402,23 @@ You can directly modify the user's Kanban board using your tools:
 
 IMPORTANT: The board snapshot is provided in the conversation context with IDs inline like [boardId:...], [listId:...], [cardId:...]. Use those IDs directly when calling tools. If you need more details, call taskflow_get_board.
 
+CURRENT BOARD CONTEXT:
+- If "Active board: [boardId:...]" is given, treat that as the user's current board. Default all add/edit/delete/move operations to that board unless the user clearly names a different one.
+- If no active board is given and the user's request is ambiguous ("add a card called X"), either pick the most obviously matching board from the snapshot or ask a brief clarifying question.
+- When the user says "this board", "here", "the current list", resolve it against the active board.
+
+CARD OPERATIONS:
+- To add a card: use taskflow_add_card with boardId + listId. If the list name is given but not the ID, look it up in the snapshot.
+- To edit a card: use taskflow_update_card. Only pass the fields you're changing.
+- To delete a card: use taskflow_delete_card. Confirm destructive actions briefly in your reply but don't ask permission again if the user already asked to delete it.
+- To move a card: use taskflow_move_card.
+- Always call the tool — do NOT just describe what you would do.
+
 Guidelines:
 - Be concise, helpful, and friendly
 - Use markdown formatting for readability
 - When referring to lists or cards, use their exact names in quotes
-- After making board changes, briefly confirm what you did
+- After making board changes, briefly confirm what you did (e.g. Added "Fix login bug" to **To Do**.)
 - If the user asks to create cards with specific details (labels, due dates, members), include all those details
 - Available label colors: #ef4444 (red), #f97316 (orange), #f59e0b (yellow), #10b981 (green), #3b82f6 (blue), #8b5cf6 (purple), #ec4899 (pink), #06b6d4 (cyan)`;
 
@@ -445,7 +470,15 @@ async function runAgentLoop(systemPrompt, userMessage, onText) {
 
 // ─── Chat endpoint ──────────────────────────────────────────
 app.post('/api/chat', async (req, res) => {
-  const { message, boardContext, history } = req.body;
+  if (!AI_READY) {
+    return res.status(503).json({
+      error: AI_ENABLED
+        ? 'AI chat is unavailable: Anthropic SDK failed to initialize. Check @anthropic-ai/sdk and ANTHROPIC_API_KEY.'
+        : 'AI chat is disabled. Set AI_ENABLED=true and configure Anthropic SDK to enable /api/chat.',
+    });
+  }
+
+  const { message, boardContext, history, currentBoardId } = req.body;
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -458,6 +491,7 @@ app.post('/api/chat', async (req, res) => {
       .join('\n');
 
     const userMessage = [
+      currentBoardId ? `Active board: [boardId:${currentBoardId}] — default all card/list operations to this board unless the user clearly targets another one.\n` : '',
       boardContext ? `Current board snapshot:\n${boardContext}\n` : '',
       historyContext ? `Conversation so far:\n${historyContext}\n` : '',
       `User request: ${message}`,
@@ -471,7 +505,33 @@ app.post('/api/chat', async (req, res) => {
     res.end();
   } catch (err) {
     console.error('Chat error:', err);
-    res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+
+    // Classify known error shapes so the UI can render them nicely.
+    const status = err?.status || err?.response?.status;
+    const headers = err?.headers || {};
+    const isRateLimit =
+      status === 429 ||
+      err?.name === 'RateLimitError' ||
+      err?.error?.error?.type === 'rate_limit_error';
+
+    let payload;
+    if (isRateLimit) {
+      const retryAfterSec = Number(headers['retry-after']) || null;
+      const tokensResetAt = headers['anthropic-ratelimit-input-tokens-reset'] || null;
+      const requestsResetAt = headers['anthropic-ratelimit-requests-reset'] || null;
+      const limit = headers['anthropic-ratelimit-input-tokens-limit'] || null;
+      payload = {
+        error: 'Rate limit reached for the AI provider.',
+        code: 'rate_limit',
+        retryAfter: retryAfterSec,
+        resetAt: tokensResetAt || requestsResetAt || null,
+        limit,
+      };
+    } else {
+      payload = { error: err.message || 'Unknown AI error.' };
+    }
+
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
     res.write('data: [DONE]\n\n');
     res.end();
   }
@@ -479,6 +539,14 @@ app.post('/api/chat', async (req, res) => {
 
 // ─── Mind Map generation endpoint ────────────────────────────
 app.post('/api/mindmap/generate', async (req, res) => {
+  if (!AI_READY) {
+    return res.status(503).json({
+      error: AI_ENABLED
+        ? 'AI mindmap is unavailable: Anthropic SDK failed to initialize. Check @anthropic-ai/sdk and ANTHROPIC_API_KEY.'
+        : 'AI mindmap is disabled. Set AI_ENABLED=true and configure Anthropic SDK to enable /api/mindmap/generate.',
+    });
+  }
+
   const { topic } = req.body;
   if (!topic) return res.status(400).json({ error: 'Topic required' });
 

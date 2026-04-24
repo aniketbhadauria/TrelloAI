@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef } from 'react';
-import { X, Calendar, Tag, Trash2, AlignLeft, CheckSquare, Users, MessageSquare, Plus, Send, Zap, Puzzle, Circle, Paperclip, Settings2 } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { X, Calendar, Tag, Trash2, AlignLeft, CheckSquare, Users, MessageSquare, Plus, Send, Circle, Paperclip, Settings2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
@@ -15,6 +15,7 @@ const MEMBER_COLORS = [
   '#8b5cf6', '#3b82f6', '#06b6d4', '#10b981',
   '#f59e0b', '#f97316', '#ef4444', '#ec4899',
 ];
+const RECENT_MEMBER_NAMES_KEY = 'recent_member_names';
 
 function getInitials(name) {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -24,6 +25,16 @@ function getMemberColor(name) {
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
   return MEMBER_COLORS[Math.abs(hash) % MEMBER_COLORS.length];
+}
+
+function sanitizeUrl(url) {
+  if (!url || typeof url !== 'string') return null;
+  try {
+    const parsed = new URL(url.trim());
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
 }
 
 export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
@@ -44,11 +55,30 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
   const [newComment, setNewComment] = useState('');
   const [activeSection, setActiveSection] = useState(null);
   const [showDetails, setShowDetails] = useState(true);
-  const [bottomTab, setBottomTab] = useState('comments');
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestionIndex, setSuggestionIndex] = useState(-1);
   const suggestionsRef = useRef(null);
+  const attachmentBtnRef = useRef(null);
+  const [recentMemberNames, setRecentMemberNames] = useState([]);
+  const [attachmentUrl, setAttachmentUrl] = useState('');
+  const [attachmentText, setAttachmentText] = useState('');
+  const [attachmentFileName, setAttachmentFileName] = useState('');
+  const [attachmentFileData, setAttachmentFileData] = useState('');
+  const [attachmentPopupPos, setAttachmentPopupPos] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(RECENT_MEMBER_NAMES_KEY);
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        setRecentMemberNames(parsed.filter(Boolean));
+      }
+    } catch {
+      // Ignore malformed local storage data
+    }
+  }, []);
 
   // Collect all unique member names across every board
   const allBoardMembers = useMemo(() => {
@@ -65,21 +95,36 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
     return [...nameSet].sort((a, b) => a.localeCompare(b));
   }, [boards]);
 
-  if (!card) return null;
-
-  const checklist = card.checklist || [];
-  const members = card.members || [];
-  const comments = card.comments || [];
+  const checklist = card?.checklist || [];
+  const members = card?.members || [];
+  const comments = card?.comments || [];
+  const attachments = card?.attachments || [];
   const completedCount = checklist.filter(i => i.completed).length;
   const checklistProgress = checklist.length > 0 ? Math.round((completedCount / checklist.length) * 100) : 0;
 
   // Filtered suggestions: matching typed text, excluding already-assigned
   const assignedNames = new Set(members.map(m => m.name.toLowerCase()));
+  const candidateMemberNames = useMemo(() => {
+    const set = new Set(allBoardMembers);
+    for (const name of recentMemberNames) set.add(name);
+    if (user?.email) set.add(user.email);
+    return [...set];
+  }, [allBoardMembers, recentMemberNames, user?.email]);
+
   const filteredSuggestions = newMemberName.trim().length > 0
-    ? allBoardMembers.filter(name =>
-        name.toLowerCase().includes(newMemberName.trim().toLowerCase()) &&
-        !assignedNames.has(name.toLowerCase())
-      )
+    ? candidateMemberNames
+        .filter(name =>
+          name.toLowerCase().includes(newMemberName.trim().toLowerCase()) &&
+          !assignedNames.has(name.toLowerCase())
+        )
+        .sort((a, b) => {
+          const q = newMemberName.trim().toLowerCase();
+          const aStarts = a.toLowerCase().startsWith(q) ? 0 : 1;
+          const bStarts = b.toLowerCase().startsWith(q) ? 0 : 1;
+          if (aStarts !== bStarts) return aStarts - bStarts;
+          return a.localeCompare(b);
+        })
+        .slice(0, 8)
     : [];
 
   const toggleSection = (section) => setActiveSection(prev => prev === section ? null : section);
@@ -137,6 +182,14 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
     const member = { id: uuidv4(), name: memberName };
     updateCard(boardId, listId, cardId, { members: [...members, member] });
     setNewMemberName('');
+    setShowSuggestions(false);
+    setSuggestionIndex(-1);
+
+    setRecentMemberNames(prev => {
+      const deduped = [memberName, ...prev.filter(n => n.toLowerCase() !== memberName.toLowerCase())].slice(0, 20);
+      localStorage.setItem(RECENT_MEMBER_NAMES_KEY, JSON.stringify(deduped));
+      return deduped;
+    });
 
     // Send notification if the member name looks like an email
     const emailToNotify = memberName.includes('@') ? memberName : null;
@@ -171,6 +224,65 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
     updateCard(boardId, listId, cardId, { comments: comments.filter(c => c.id !== commentId) });
   };
 
+  const handleAddAttachment = () => {
+    const url = attachmentUrl.trim();
+    const fileName = attachmentFileName.trim();
+    const fileData = attachmentFileData.trim();
+    const displayText = attachmentText.trim();
+    if (!url && !fileData) return;
+
+    const attachment = {
+      id: uuidv4(),
+      url: url || fileData || null,
+      fileName: fileName || null,
+      fileData: fileData || null,
+      text: displayText || fileName || url,
+      createdAt: new Date().toISOString(),
+    };
+
+    updateCard(boardId, listId, cardId, { attachments: [...attachments, attachment] });
+    setAttachmentUrl('');
+    setAttachmentText('');
+    setAttachmentFileName('');
+    setAttachmentFileData('');
+    setActiveSection(null);
+  };
+
+  const handleRemoveAttachment = (attachmentId) => {
+    updateCard(boardId, listId, cardId, {
+      attachments: attachments.filter((attachment) => attachment.id !== attachmentId),
+    });
+  };
+
+  const updateAttachmentPopupPosition = () => {
+    if (!attachmentBtnRef.current) return;
+    const rect = attachmentBtnRef.current.getBoundingClientRect();
+    setAttachmentPopupPos({
+      top: rect.bottom + 8,
+      left: rect.left,
+    });
+  };
+
+  const toggleAttachmentPopup = () => {
+    if (activeSection === 'attachment') {
+      setActiveSection(null);
+      return;
+    }
+    updateAttachmentPopupPosition();
+    setActiveSection('attachment');
+  };
+
+  useEffect(() => {
+    if (activeSection !== 'attachment') return;
+    const handleReposition = () => updateAttachmentPopupPosition();
+    window.addEventListener('resize', handleReposition);
+    window.addEventListener('scroll', handleReposition, true);
+    return () => {
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition, true);
+    };
+  }, [activeSection]);
+
   const handleDelete = () => {
     deleteCard(boardId, listId, cardId);
     onClose();
@@ -182,6 +294,8 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
         ? 'bg-primary/15 border-primary/40 text-primary'
         : 'bg-secondary/40 border-border/50 text-muted-foreground hover:text-foreground hover:border-border'
     }`;
+
+  if (!card) return null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -203,14 +317,9 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
               in list <span className="font-medium text-foreground/80">{list?.title}</span>
             </p>
           </div>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2" onClick={handleDelete}>
-              <Trash2 className="w-4 h-4" />
-            </Button>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Two-column body */}
@@ -251,7 +360,7 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                         <button
                           key={item.id}
                           onClick={() => {
-                            if (['labels', 'dates', 'checklist', 'members'].includes(item.id)) {
+                            if (['labels', 'dates', 'checklist', 'members', 'attachment'].includes(item.id)) {
                               setActiveSection(item.id);
                             }
                             setShowAddMenu(false);
@@ -287,6 +396,91 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                   <span className="w-4.5 h-4.5 rounded-full bg-primary/20 text-[10px] flex items-center justify-center">{completedCount}/{checklist.length}</span>
                 )}
               </button>
+              <div className="relative">
+                <button ref={attachmentBtnRef} className={actionBtnClass('attachment')} onClick={toggleAttachmentPopup}>
+                  <Paperclip className="w-3.5 h-3.5" />
+                  Attachment
+                  {attachments.length > 0 && (
+                    <span className="w-4.5 h-4.5 rounded-full bg-primary/20 text-[10px] flex items-center justify-center">{attachments.length}</span>
+                  )}
+                </button>
+                {activeSection === 'attachment' && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setActiveSection(null)} />
+                    <div
+                      className="fixed w-[420px] max-w-[calc(100vw-3rem)] bg-card border border-border/60 rounded-2xl p-4 shadow-2xl z-50 animate-slide-down"
+                      style={{ top: attachmentPopupPos.top, left: attachmentPopupPos.left }}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-lg font-semibold">Attach</h4>
+                        <button onClick={() => setActiveSection(null)} className="p-1 rounded hover:bg-secondary transition-colors">
+                          <X className="w-4 h-4 text-muted-foreground" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm font-medium mb-1">Attach a file from your computer</p>
+                          <p className="text-xs text-muted-foreground mb-2">You can also drag and drop files to upload them.</p>
+                          <label className="block">
+                            <input
+                              type="file"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                setAttachmentFileName(file.name);
+                                if (!attachmentText.trim()) setAttachmentText(file.name);
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                  const result = typeof reader.result === 'string' ? reader.result : '';
+                                  setAttachmentFileData(result);
+                                };
+                                reader.onerror = () => {
+                                  setAttachmentFileData('');
+                                  console.error('Failed to read selected file');
+                                };
+                                reader.readAsDataURL(file);
+                              }}
+                            />
+                            <span className="h-9 rounded-md bg-secondary/70 hover:bg-secondary cursor-pointer flex items-center justify-center text-sm font-medium transition-colors">
+                              Choose a file
+                            </span>
+                          </label>
+                          {attachmentFileName && (
+                            <p className="text-xs text-muted-foreground mt-1 truncate">{attachmentFileName}</p>
+                          )}
+                        </div>
+
+                        <div className="border-t border-border/40 pt-3 space-y-2">
+                          <div className="text-sm font-medium">Search or paste a link</div>
+                          <Input
+                            value={attachmentUrl}
+                            onChange={(e) => setAttachmentUrl(e.target.value)}
+                            placeholder="Find recent links or paste a new link"
+                            className="h-9 text-sm bg-background/60"
+                          />
+                          <div className="text-sm font-medium">Display text (optional)</div>
+                          <Input
+                            value={attachmentText}
+                            onChange={(e) => setAttachmentText(e.target.value)}
+                            placeholder="Text to display"
+                            className="h-9 text-sm bg-background/60"
+                          />
+                          <p className="text-xs text-muted-foreground">Give this link a title or description</p>
+                          <Button
+                            size="sm"
+                            onClick={handleAddAttachment}
+                              disabled={!attachmentUrl.trim() && !attachmentFileData.trim()}
+                          >
+                            Add attachment
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
               <button className={actionBtnClass('members')} onClick={() => toggleSection('members')}>
                 <Users className="w-3.5 h-3.5" />
                 Members
@@ -562,6 +756,32 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                 )}
               </div>
             )}
+            {activeSection !== 'attachment' && attachments.length > 0 && (
+              <div className="mb-4 space-y-1.5">
+                {attachments.map((attachment) => {
+                  const safeUrl = sanitizeUrl(attachment.url);
+                  return (
+                    <div key={attachment.id} className="flex items-center gap-2 text-xs rounded-lg bg-secondary/30 px-2 py-1.5">
+                      <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      {safeUrl ? (
+                        <a href={safeUrl} target="_blank" rel="noopener noreferrer" className="truncate text-primary hover:underline">
+                          {attachment.text || safeUrl}
+                        </a>
+                      ) : (
+                        <span className="truncate">{attachment.text || attachment.fileName || attachment.url}</span>
+                      )}
+                      <button
+                        onClick={() => handleRemoveAttachment(attachment.id)}
+                        className="ml-auto text-muted-foreground hover:text-destructive transition-colors"
+                        title="Remove attachment"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Description */}
             <div>
@@ -685,47 +905,19 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
           )}
         </div>
 
-        {/* Bottom tab bar */}
-        <div className="flex border-t border-border/30 shrink-0">
-          <button
-            onClick={() => setBottomTab('powerups')}
-            className={`flex items-center gap-1.5 px-5 py-3 text-xs font-medium transition-colors border-b-2 ${
-              bottomTab === 'powerups'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
+        {/* Footer */}
+        <div className="border-t border-border/50 px-6 py-3 flex justify-end shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
+            onClick={handleDelete}
           >
-            <Puzzle className="w-3.5 h-3.5" />
-            Power-ups
-          </button>
-          <button
-            onClick={() => setBottomTab('automations')}
-            className={`flex items-center gap-1.5 px-5 py-3 text-xs font-medium transition-colors border-b-2 ${
-              bottomTab === 'automations'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Zap className="w-3.5 h-3.5" />
-            Automations
-          </button>
-          <button
-            onClick={() => { setBottomTab('comments'); setShowDetails(d => !d); }}
-            className={`flex items-center gap-1.5 px-5 py-3 text-xs font-medium transition-colors border-b-2 ${
-              bottomTab === 'comments'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            Comments
-            {comments.length > 0 && (
-              <span className="bg-primary/20 text-primary text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                {comments.length}
-              </span>
-            )}
-          </button>
+            <Trash2 className="w-4 h-4" />
+            Delete card
+          </Button>
         </div>
+
       </div>
     </div>
   );
