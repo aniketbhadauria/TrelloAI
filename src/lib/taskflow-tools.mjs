@@ -7,9 +7,9 @@ import { randomUUID } from 'node:crypto';
 
 // ── Supabase ──────────────────────────────────────────────────
 export function makeSupabaseClient() {
-  const url = process.env.VITE_SUPABASE_URL;
-  const key = process.env.VITE_SUPABASE_ANON_KEY;
-  if (!url || !key) throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY');
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY');
   return createClient(url, key);
 }
 
