@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // Hard cap so we never blow the LLM's input rate limit. Trim the description
 // and only keep a few cards per list in the full-detail serialization; the

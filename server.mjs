@@ -157,8 +157,9 @@ Rules:
 });
 
 // ─── Start server ───────────────────────────────────────────
-const PORT = 3001;
+// Railway (and most PaaS) injects PORT; fall back to 3001 for local dev.
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`TaskFlow AI server running on http://localhost:${PORT}`);
+  console.log(`TaskFlow AI server running on port ${PORT}`);
   console.log('Endpoints: /api/chat, /api/mindmap/generate');
 });
