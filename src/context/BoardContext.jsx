@@ -6,7 +6,7 @@ import { useDebouncedCallback } from '../hooks/useDebouncedCallback';
 
 const BoardContext = createContext(null);
 
-const SHARED_BOARD_ROW_ID = import.meta.env.VITE_SUPABASE_BOARD_ROW_ID || 'shared';
+const SHARED_BOARD_ROW_ID = import.meta.env.SUPABASE_BOARD_ROW_ID || 'shared';
 const EMPTY_DATA = { boards: [] };
 
 export function BoardProvider({ children }) {

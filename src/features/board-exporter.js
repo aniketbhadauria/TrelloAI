@@ -6,9 +6,9 @@
  * touches React context, the router, or any existing component.
  */
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const ROW_ID = import.meta.env.VITE_SUPABASE_BOARD_ROW_ID || 'shared';
+const SUPABASE_URL = import.meta.env.SUPABASE_URL;
+const SUPABASE_KEY = import.meta.env.SUPABASE_ANON_KEY;
+const ROW_ID = import.meta.env.SUPABASE_BOARD_ROW_ID || 'shared';
 
 // ── Lifecycle ──────────────────────────────────────────────────
 if (document.readyState === 'loading') {
