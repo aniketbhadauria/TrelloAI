@@ -7,15 +7,19 @@ import { randomUUID } from 'node:crypto';
 
 // ── Supabase ──────────────────────────────────────────────────
 export function makeSupabaseClient() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_ANON_KEY;
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY');
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error(
+      'Missing Supabase URL or anon key. Set SUPABASE_URL and SUPABASE_ANON_KEY, or VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.',
+    );
+  }
   return createClient(url, key);
 }
 
 const ROW_ID = () =>
   process.env.SUPABASE_BOARD_ROW_ID ||
-  process.env.SUPABASE_BOARD_ROW_ID ||
+  process.env.VITE_SUPABASE_BOARD_ROW_ID ||
   'shared';
 
 export async function loadBoardData(supabase) {
