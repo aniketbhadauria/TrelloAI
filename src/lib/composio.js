@@ -66,53 +66,52 @@ function buildContext(boards, currentBoardId) {
   return `BOARDS INDEX (call taskflow_get_board to inspect any of these):\n${arr.map(serializeBoardIndex).join('\n')}`;
 }
 
+/**
+ * Parse one SSE line. Returns true when the stream should stop (DONE or error).
+ */
+function processSSELine(line, onChunk, onDone, onError) {
+  if (!line.startsWith('data: ')) return false;
+  const data = line.slice(6).trim();
+  if (data === '[DONE]') { onDone?.(); return true; }
+  try {
+    const parsed = JSON.parse(data);
+    if (parsed.error) { onError?.(parsed.error, parsed); return true; }
+    if (parsed.text) onChunk?.(parsed.text);
+  } catch {
+    // skip malformed chunks
+  }
+  return false;
+}
+
+/**
+ * Consume a ReadableStream of SSE data, forwarding events to the callbacks.
+ */
+async function consumeStream(reader, decoder, onChunk, onDone, onError) {
+  let buffer = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    for (const line of lines) {
+      if (processSSELine(line, onChunk, onDone, onError)) return;
+    }
+  }
+  onDone?.();
+}
+
 export async function streamChat(message, board, history, onChunk, onDone, onError, options = {}) {
   const { currentBoardId = null } = options;
   const boardContext = buildContext(board, currentBoardId);
-
   try {
     const res = await fetch(`${API_URL}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, boardContext, history, currentBoardId }),
     });
-
     if (!res.ok) throw new Error(`Server error: ${res.status}`);
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const data = line.slice(6).trim();
-        if (data === '[DONE]') {
-          onDone?.();
-          return;
-        }
-        try {
-          const parsed = JSON.parse(data);
-          if (parsed.error) {
-            onError?.(parsed.error, parsed);
-            return;
-          }
-          if (parsed.text) {
-            onChunk?.(parsed.text);
-          }
-        } catch {
-          // skip malformed chunks
-        }
-      }
-    }
-    onDone?.();
+    await consumeStream(res.body.getReader(), new TextDecoder(), onChunk, onDone, onError);
   } catch (err) {
     onError?.(err.message, null);
   }
