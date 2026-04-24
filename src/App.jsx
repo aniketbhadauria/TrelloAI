@@ -10,6 +10,7 @@ import BoardView from './pages/BoardView';
 import MindMapView from './pages/MindMapView';
 import Analytics from './pages/Analytics';
 import Collaborators from './pages/Collaborators';
+import ArchivePage from './pages/Archive';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import { Book, Sunset, Trees, Zap, HelpCircle, Mail, Activity, FileText } from 'lucide-react';
@@ -123,7 +124,7 @@ function AppContent() {
   const navigate = useNavigate();
   const isLanding = location.pathname === '/';
   const { session, signOut } = useAuth();
-  const { persistBoardsNow, isSavingBoards, lastSavedAt } = useBoards();
+  const { persistBoardsNow } = useBoards();
 
   const appNav =
     session && !isLanding
@@ -131,6 +132,7 @@ function AppContent() {
           { title: 'Boards', url: '/boards' },
           { title: 'Analytics', url: '/analytics' },
           { title: 'Collaborators', url: '/collaborators' },
+          { title: 'Archive', url: '/archive' },
         ]
       : null;
 
@@ -143,10 +145,6 @@ function AppContent() {
       session: session?.user?.email
         ? {
           email: session.user.email,
-          saveStatus: {
-            isSaving: isSavingBoards,
-            lastSavedAt: lastSavedAt ? lastSavedAt.toISOString() : null,
-          },
           onSignOut: async () => {
             try {
               await persistBoardsNow();
@@ -211,6 +209,14 @@ function AppContent() {
             element={(
               <ProtectedRoute>
                 <Collaborators />
+              </ProtectedRoute>
+            )}
+          />
+          <Route
+            path="/archive"
+            element={(
+              <ProtectedRoute>
+                <ArchivePage />
               </ProtectedRoute>
             )}
           />

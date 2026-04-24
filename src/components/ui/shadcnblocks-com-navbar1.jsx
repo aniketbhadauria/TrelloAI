@@ -62,17 +62,6 @@ function getUserInitials(email) {
   return name.slice(0, 2).toUpperCase();
 }
 
-function formatSavedTime(dateStr) {
-  if (!dateStr) return '';
-  const ts = new Date(dateStr).getTime();
-  if (Number.isNaN(ts)) return '';
-  const seconds = Math.max(0, Math.floor((Date.now() - ts) / 1000));
-  if (seconds < 10) return 'just now';
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
 
 function appNavPathActive(currentPath, url) {
   if (url === '/boards') {
@@ -238,15 +227,6 @@ const Navbar1 = ({
             <div className="flex items-center gap-2">
               {session ? (
                 <>
-                  <span className={`text-[11px] px-2 py-1 rounded-full border ${
-                    session.saveStatus?.isSaving
-                      ? 'bg-amber-500/10 text-amber-600 border-amber-500/30'
-                      : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
-                  }`}>
-                    {session.saveStatus?.isSaving
-                      ? 'Saving...'
-                      : `Saved${session.saveStatus?.lastSavedAt ? ` ${formatSavedTime(session.saveStatus.lastSavedAt)}` : ''}`}
-                  </span>
                   {/* Notification bell */}
                   <div className="relative">
                     <button
@@ -416,15 +396,6 @@ const Navbar1 = ({
                   <div className="flex flex-col gap-3">
                     {session ? (
                       <>
-                        <span className={`text-[11px] px-2 py-1 rounded-full border self-start ${
-                          session.saveStatus?.isSaving
-                            ? 'bg-amber-500/10 text-amber-600 border-amber-500/30'
-                            : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
-                        }`}>
-                          {session.saveStatus?.isSaving
-                            ? 'Saving...'
-                            : `Saved${session.saveStatus?.lastSavedAt ? ` ${formatSavedTime(session.saveStatus.lastSavedAt)}` : ''}`}
-                        </span>
                         <span className="text-sm text-muted-foreground px-1 truncate" title={session.email}>
                           {session.email}
                         </span>

@@ -1,0 +1,11 @@
+{
+    "mcpServers":  {
+                       "taskflow":  {
+                                        "args":  [
+                                                     "scripts/mcp-server.mjs"
+                                                 ],
+                                        "command":  "node",
+                                        "cwd":  "C:\\Users\\Admin\\OneDrive\\Desktop\\SaaS MVP\\Trello app"
+                                    }
+                   }
+}

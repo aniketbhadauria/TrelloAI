@@ -131,7 +131,9 @@ export function BoardProvider({ children }) {
       .from('app_boards')
       .update({ data: boardData, updated_at: newUpdatedAt })
       .eq('id', boardRowId);
-    if (guard) query = query.eq('updated_at', guard);
+    query = guard !== null
+      ? query.eq('updated_at', guard)
+      : query.is('updated_at', null);
 
     const { data: updated, error } = await query.select('updated_at').maybeSingle();
 
@@ -145,11 +147,16 @@ export function BoardProvider({ children }) {
       // Someone else wrote first. Refetch latest and drop our in-flight save;
       // realtime will also sync us, but an explicit pull avoids races.
       console.warn('Board save skipped: stale timestamp, pulling latest.');
-      const { data: fresh } = await supabase
+      const { data: fresh, error: fetchError } = await supabase
         .from('app_boards')
         .select('data, updated_at')
         .eq('id', boardRowId)
         .maybeSingle();
+      if (fetchError) {
+        console.error('Failed to refetch boards after stale save:', fetchError.message);
+        setIsSavingBoards(false);
+        return;
+      }
       if (fresh?.data) {
         isInitialLoad.current = true;
         lastServerUpdatedAtRef.current = fresh.updated_at || null;
@@ -204,7 +211,9 @@ export function BoardProvider({ children }) {
       .from('app_boards')
       .update({ data, updated_at: newUpdatedAt })
       .eq('id', boardRowId);
-    if (guard) query = query.eq('updated_at', guard);
+    query = guard !== null
+      ? query.eq('updated_at', guard)
+      : query.is('updated_at', null);
 
     const { data: updated, error } = await query.select('updated_at').maybeSingle();
 
@@ -232,7 +241,15 @@ export function BoardProvider({ children }) {
   }, []);
 
   const getBoard = useCallback((boardId) => {
-    return data.boards.find(b => b.id === boardId && !b.archived);
+    const board = data.boards.find(b => b.id === boardId && !b.archived);
+    if (!board) return null;
+    return {
+      ...board,
+      lists: board.lists.map(l => ({
+        ...l,
+        cards: l.cards.filter(c => !c.archived),
+      })),
+    };
   }, [data]);
 
   const addBoard = useCallback((title, gradient, backgroundImage = null) => {
@@ -292,11 +309,55 @@ export function BoardProvider({ children }) {
     }));
   }, [updateData]);
 
-  const deleteCard = useCallback((boardId, listId, cardId) => {
+  const archiveCard = useCallback((boardId, listId, cardId) => {
     updateData(prev => ({
       ...prev,
       boards: prev.boards.map(b => b.id !== boardId ? b : {
-        ...b, lists: b.lists.map(l => l.id !== listId ? l : { ...l, cards: l.cards.filter(c => c.id !== cardId) }),
+        ...b, lists: b.lists.map(l => l.id !== listId ? l : {
+          ...l, cards: l.cards.map(c => c.id === cardId
+            ? { ...c, archived: true, archivedAt: new Date().toISOString() }
+            : c),
+        }),
+      }),
+    }));
+  }, [updateData]);
+
+  const restoreBoard = useCallback((boardId) => {
+    updateData(prev => ({
+      ...prev,
+      boards: prev.boards.map(b => b.id === boardId
+        ? { ...b, archived: false, archivedAt: null }
+        : b),
+    }));
+  }, [updateData]);
+
+  const restoreCard = useCallback((boardId, listId, cardId) => {
+    updateData(prev => ({
+      ...prev,
+      boards: prev.boards.map(b => b.id !== boardId ? b : {
+        ...b, lists: b.lists.map(l => l.id !== listId ? l : {
+          ...l, cards: l.cards.map(c => c.id === cardId
+            ? { ...c, archived: false, archivedAt: null }
+            : c),
+        }),
+      }),
+    }));
+  }, [updateData]);
+
+  const deleteBoardPermanently = useCallback((boardId) => {
+    updateData(prev => ({
+      ...prev,
+      boards: prev.boards.filter(b => b.id !== boardId),
+    }));
+  }, [updateData]);
+
+  const deleteCardPermanently = useCallback((boardId, listId, cardId) => {
+    updateData(prev => ({
+      ...prev,
+      boards: prev.boards.map(b => b.id !== boardId ? b : {
+        ...b, lists: b.lists.map(l => l.id !== listId ? l : {
+          ...l, cards: l.cards.filter(c => c.id !== cardId),
+        }),
       }),
     }));
   }, [updateData]);
@@ -337,8 +398,37 @@ export function BoardProvider({ children }) {
     });
   }, [updateData]);
 
+  const activeBoards = data.boards
+    .filter(b => !b.archived)
+    .map(b => ({
+      ...b,
+      lists: b.lists.map(l => ({ ...l, cards: l.cards.filter(c => !c.archived) })),
+    }));
+
+  const archivedBoards = data.boards.filter(b => b.archived);
+
+  const archivedCards = data.boards
+    .filter(b => !b.archived)
+    .flatMap(b =>
+      b.lists.flatMap(l =>
+        l.cards
+          .filter(c => c.archived)
+          .map(c => ({ ...c, boardId: b.id, boardTitle: b.title, listId: l.id, listTitle: l.title }))
+      )
+    );
+
   return (
-    <BoardContext.Provider value={{ boards: data.boards.filter(b => !b.archived), boardsLoading, isSavingBoards, lastSavedAt, getBoard, addBoard, deleteBoard, updateBoard, toggleStarBoard, addList, deleteList, updateListTitle, addCard, deleteCard, updateCard, handleDragEnd, refreshBoards, persistBoardsNow }}>
+    <BoardContext.Provider value={{
+      boards: activeBoards,
+      archivedBoards,
+      archivedCards,
+      boardsLoading, isSavingBoards, lastSavedAt,
+      getBoard, addBoard, deleteBoard, updateBoard, toggleStarBoard,
+      addList, deleteList, updateListTitle,
+      addCard, archiveCard, updateCard, handleDragEnd,
+      restoreBoard, restoreCard, deleteBoardPermanently, deleteCardPermanently,
+      refreshBoards, persistBoardsNow,
+    }}>
       {children}
     </BoardContext.Provider>
   );
