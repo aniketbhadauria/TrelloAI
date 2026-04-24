@@ -10,6 +10,9 @@ const __dirname = dirname(__filename)
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Expose VITE_ *and* SUPABASE_ env vars to the client (import.meta.env)
+  // so server-style names in .env work for local dev and deployed builds.
+  envPrefix: ['VITE_', 'SUPABASE_'],
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
