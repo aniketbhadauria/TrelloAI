@@ -15,7 +15,7 @@ export function makeSupabaseClient() {
 
 const ROW_ID = () =>
   process.env.SUPABASE_BOARD_ROW_ID ||
-  process.env.VITE_SUPABASE_BOARD_ROW_ID ||
+  process.env.SUPABASE_BOARD_ROW_ID ||
   'shared';
 
 export async function loadBoardData(supabase) {
