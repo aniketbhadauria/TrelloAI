@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useBoards } from '../context/BoardContext';
 import {
   // eslint-disable-next-line sonarjs/deprecation
@@ -572,15 +572,50 @@ function KPICard({ icon, gradient, kpiClass, label, value, sub, progress }) {
 
 /* ── Member Tasks Modal ──────────────────────────────────────── */
 function MemberTasksModal({ member, onClose }) {
+  const dialogRef = useRef(null);
+
+  // Open as native modal (focus-trapping, backdrop, Escape) when available.
+  useEffect(() => {
+    const el = dialogRef.current;
+    if (!el) return;
+    if (typeof el.showModal === 'function') {
+      el.showModal();
+    }
+    return () => {
+      if (typeof el.close === 'function') el.close();
+    };
+  }, []);
+
+  // Close on Escape for browsers that don't fire the native cancel event.
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
 
+  // Focus-trap fallback for browsers without showModal support.
+  const handleKeyDown = useCallback((e) => {
+    if (e.key !== 'Tab' || !dialogRef.current) return;
+    const focusable = Array.from(
+      dialogRef.current.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((el) => !el.disabled);
+    if (!focusable.length) { e.preventDefault(); return; }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }, []);
+
   return (
     <dialog
-      open
+      ref={dialogRef}
+      onKeyDown={handleKeyDown}
+      onCancel={onClose}
       className="modal-overlay z-50 bg-transparent p-0 m-0 max-w-none max-h-none w-full h-full inset-0"
       aria-labelledby="member-tasks-title"
     >
