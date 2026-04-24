@@ -49,7 +49,9 @@ function formatStatusLabel(key) {
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 function getInitials(name) {
-  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  const str = String(name ?? '').trim();
+  if (!str) return '';
+  return str.split(/\s+/).map(w => w[0] ?? '').join('').toUpperCase().slice(0, 2);
 }
 
 function getMemberColor(name, idx) {
@@ -209,7 +211,8 @@ export default function Analytics() {
           }
 
           for (const member of members) {
-            const name = member.name;
+            const name = member?.name;
+            if (!name) continue;
             if (!memberTasks[name]) memberTasks[name] = emptyMemberStats();
             memberTasks[name].total++;
             memberTasks[name][listStatus]++;

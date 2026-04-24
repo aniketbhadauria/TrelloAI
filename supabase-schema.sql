@@ -1,47 +1,45 @@
 -- Run this in your Supabase SQL Editor (Dashboard > SQL Editor > New Query)
--- Shared workspace mode: every signed-in user reads/writes the same board row.
 
--- Cleanup legacy table if it exists.
-drop table if exists public.user_boards;
+-- Drop old tables if they exist
+DROP TABLE IF EXISTS public.user_boards;
 
-create table if not exists public.app_boards (
-  id text primary key default 'shared',
-  data jsonb not null default '{"boards": []}'::jsonb,
-  updated_at timestamptz not null default now()
+-- Create optimized app_boards table
+CREATE TABLE IF NOT EXISTS public.app_boards (
+  id TEXT PRIMARY KEY DEFAULT 'default',
+  data JSONB NOT NULL DEFAULT '{"boards": []}'::JSONB,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Keep updated_at fresh automatically.
-create or replace function public.set_app_boards_updated_at()
-returns trigger as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$ language plpgsql;
+-- Create index for better query performance
+CREATE INDEX IF NOT EXISTS idx_app_boards_updated_at ON public.app_boards(updated_at);
 
-drop trigger if exists trg_app_boards_updated_at on public.app_boards;
-create trigger trg_app_boards_updated_at
-before update on public.app_boards
-for each row
-execute function public.set_app_boards_updated_at();
+-- Add comment for documentation
+COMMENT ON TABLE public.app_boards IS 'Stores user board configurations';
+COMMENT ON COLUMN public.app_boards.id IS 'User ID from Supabase auth (UUID) or ''default'' for legacy';
+COMMENT ON COLUMN public.app_boards.data IS 'JSON structure containing user''s boards array';
 
--- Shared access for all clients using the anon key.
-alter table public.app_boards disable row level security;
+-- Disable RLS for now (will tighten later)
+ALTER TABLE public.app_boards DISABLE ROW LEVEL SECURITY;
 
--- Migrate legacy default row to shared row when safe.
-update public.app_boards
-set id = 'shared'
-where id = 'default'
-  and not exists (
-    select 1
-    from public.app_boards
-    where id = 'shared'
-  );
+-- Insert default record efficiently
+-- INSERT INTO public.app_boards (id, data)
+-- VALUES ('default', '{"boards": []}'::JSONB)
+-- ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.app_boards (id, data, updated_at)
+VALUES ('shared', '{"boards": []}', NOW())
+ON CONFLICT (id) DO NOTHING;
 
--- Ensure the shared row exists.
-insert into public.app_boards (id, data)
-values ('shared', '{"boards": []}')
-on conflict (id) do nothing;
+-- Optional: Add a trigger to automatically update updated_at
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-alter table public.app_users disable row level security;
-
+DROP TRIGGER IF EXISTS update_app_boards_updated_at ON public.app_boards;
+CREATE TRIGGER update_app_boards_updated_at
+  BEFORE UPDATE ON public.app_boards
+  FOR EACH ROW
+  EXECUTE FUNCTION public.update_updated_at_column();

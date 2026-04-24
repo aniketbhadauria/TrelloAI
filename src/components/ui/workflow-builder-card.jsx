@@ -74,8 +74,9 @@ export const WorkflowBuilderCard = ({
               <button
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onMoreClick(e); }}
                 className="text-muted-foreground transition-colors hover:text-foreground shrink-0 p-0.5"
+                aria-label="More actions"
               >
-                <MoreHorizontal className="size-4" />
+                <MoreHorizontal className="size-4" aria-hidden="true" />
               </button>
             )}
           </div>

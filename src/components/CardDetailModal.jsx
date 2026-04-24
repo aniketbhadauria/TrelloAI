@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { X, Calendar, Tag, Trash2, AlignLeft, CheckSquare, Users, MessageSquare, Plus, Send, Circle, Paperclip, Settings2 } from 'lucide-react';
+import { X, Calendar, Tag, Archive, AlignLeft, CheckSquare, Users, MessageSquare, Plus, Send, Circle, Paperclip, Settings2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
@@ -38,7 +38,7 @@ function sanitizeUrl(url) {
 }
 
 export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
-  const { getBoard, updateCard, deleteCard, boards } = useBoards();
+  const { getBoard, updateCard, archiveCard, boards } = useBoards();
   const { user } = useAuth();
   const board = getBoard(boardId);
   const list = board?.lists.find(l => l.id === listId);
@@ -284,7 +284,7 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
   }, [activeSection]);
 
   const handleDelete = () => {
-    deleteCard(boardId, listId, cardId);
+    archiveCard(boardId, listId, cardId);
     onClose();
   };
 
@@ -913,8 +913,8 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
             className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
             onClick={handleDelete}
           >
-            <Trash2 className="w-4 h-4" />
-            Delete card
+            <Archive className="w-4 h-4" />
+            Archive card
           </Button>
         </div>
 

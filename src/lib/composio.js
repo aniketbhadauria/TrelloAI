@@ -25,7 +25,8 @@ function serializeCard(c) {
 
 function serializeBoardFull(board) {
   if (!board) return '';
-  const listsDescription = board.lists.map((list) => {
+  const lists = board.lists || [];
+  const listsDescription = lists.map((list) => {
     const cards = list.cards || [];
     const shown = cards.slice(0, MAX_CARDS_PER_LIST).map(serializeCard).join('\n') || '  (no cards)';
     const truncated = cards.length > MAX_CARDS_PER_LIST
@@ -34,7 +35,7 @@ function serializeBoardFull(board) {
     return `List [listId:${list.id}]: "${list.title}" (${cards.length} cards)\n${shown}${truncated}`;
   }).join('\n\n');
 
-  return `Board [boardId:${board.id}]: "${board.title}"\nLists: ${board.lists.length}\nCards: ${board.lists.reduce((s, l) => s + (l.cards?.length || 0), 0)}\n\n${listsDescription}`;
+  return `Board [boardId:${board.id}]: "${board.title}"\nLists: ${lists.length}\nCards: ${lists.reduce((s, l) => s + (l.cards?.length || 0), 0)}\n\n${listsDescription}`;
 }
 
 function serializeBoardIndex(board) {
