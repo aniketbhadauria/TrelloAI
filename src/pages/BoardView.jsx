@@ -4,7 +4,9 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import KanbanList from '../components/KanbanList';
 import AddListForm from '../components/AddListForm';
 import CardDetailModal from '../components/CardDetailModal';
-import { ArrowLeft, Star, MoreHorizontal, X, Filter, Search, Calendar, Tag, Users, CheckSquare, Clock, Image as ImageIcon, Trash2 } from 'lucide-react';
+import BoardMembersPanel from '../components/BoardMembersPanel';
+import InviteMemberModal from '../components/InviteMemberModal';
+import { ArrowLeft, Star, MoreHorizontal, X, Filter, Search, Calendar, Tag, Users, CheckSquare, Clock, Image as ImageIcon, Trash2, UserPlus } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useState, useEffect, useMemo } from 'react';
 import { isPast, isToday, addDays, addWeeks, addMonths, isWithinInterval, subWeeks } from 'date-fns';
@@ -12,13 +14,18 @@ import { isPast, isToday, addDays, addWeeks, addMonths, isWithinInterval, subWee
 export default function BoardView() {
   const { boardId } = useParams();
   const navigate = useNavigate();
-  const { getBoard, boardsLoading, handleDragEnd, updateBoard, toggleStarBoard, addList, deleteList, updateListTitle, addCard, deleteBoard } = useBoards();
+  const { getBoard, getBoardRole, boardsLoading, handleDragEnd, updateBoard, toggleStarBoard, addList, deleteList, updateListTitle, addCard, deleteBoard } = useBoards();
   const board = getBoard(boardId);
+  const role = getBoardRole(boardId);
+  const canEdit = role === 'owner' || role === 'admin' || role === 'member';
+  const canManageMembers = role === 'owner' || role === 'admin';
 
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState('');
   const [showMenu, setShowMenu] = useState(false);
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
+  const [showMembersPanel, setShowMembersPanel] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedCard, setSelectedCard] = useState(null);
 
 
@@ -166,6 +173,7 @@ export default function BoardView() {
   };
 
   const handleArchiveBoard = async () => {
+    if (role !== 'owner') return;
     const confirmed = globalThis.confirm('Archive this board? You can restore it later from data if needed.');
     if (!confirmed) return;
     try {
@@ -200,7 +208,7 @@ export default function BoardView() {
             autoFocus
           />
         ) : (
-          <h1 className="text-lg font-bold cursor-pointer hover:bg-secondary/30 px-2 py-1 rounded-lg transition-colors" onClick={() => setEditingTitle(true)}>
+          <h1 className="text-lg font-bold cursor-pointer hover:bg-secondary/30 px-2 py-1 rounded-lg transition-colors" onClick={() => canEdit && setEditingTitle(true)}>
             {board.title}
           </h1>
         )}
@@ -210,6 +218,30 @@ export default function BoardView() {
         </button>
 
         <div className="flex-1" />
+
+        {/* Members + Invite */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowMembersPanel(true)}
+            className="gap-1.5"
+          >
+            <Users className="w-4 h-4" />
+            Members
+          </Button>
+          {canManageMembers && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowInviteModal(true)}
+              className="gap-1.5 text-xs h-8"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              Invite
+            </Button>
+          )}
+        </div>
 
         <div className="relative">
           <Button
@@ -401,6 +433,13 @@ export default function BoardView() {
           {showMenu && (
             <div className="absolute top-full right-0 mt-1 bg-popover border border-border rounded-lg shadow-xl p-1 z-10 min-w-[160px] animate-slide-down">
               <button
+                onClick={() => { setShowMembersPanel(true); setShowMenu(false); }}
+                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground hover:bg-secondary/60 rounded-md transition-colors"
+              >
+                <Users className="w-4 h-4" />
+                Members
+              </button>
+              <button
                 onClick={() => {
                   setShowBackgroundPicker(true);
                   setShowMenu(false);
@@ -467,6 +506,26 @@ export default function BoardView() {
           selected={board.backgroundImage || '/emerson.jpg'}
           onSelect={(imageUrl) => updateBoard(boardId, { backgroundImage: imageUrl })}
           onClose={() => setShowBackgroundPicker(false)}
+        />
+      )}
+
+      {showMembersPanel && (
+        <BoardMembersPanel
+          boardId={boardId}
+          ownerId={board.ownerId}
+          ownerName={board.ownerName}
+          currentUserRole={role}
+          onClose={() => setShowMembersPanel(false)}
+          onMembersChange={() => {}}
+        />
+      )}
+
+      {showInviteModal && (
+        <InviteMemberModal
+          boardId={boardId}
+          existingMemberIds={[board.ownerId]}
+          onClose={() => setShowInviteModal(false)}
+          onInvited={() => setShowInviteModal(false)}
         />
       )}
     </div>
