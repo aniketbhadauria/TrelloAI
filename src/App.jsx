@@ -13,7 +13,6 @@ import { Navbar1 } from "./components/ui/shadcnblocks-com-navbar1";
 import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import BoardView from "./pages/BoardView";
-
 import ArchivePage from "./pages/Archive";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -39,7 +38,6 @@ const navbarDataBase = {
   menu: [
     { title: "Home", url: "/" },
     { title: "Boards", url: "/boards" },
-    { title: "Analytics", url: "/analytics" },
     {
       title: "Products",
       url: "#",
@@ -143,8 +141,6 @@ function AppContent() {
     session && !isLanding
       ? [
           { title: "Boards", url: "/boards" },
-          { title: "Analytics", url: "/analytics" },
-          { title: "Collaborators", url: "/collaborators" },
           { title: "Archive", url: "/archive" },
         ]
       : null;
@@ -204,30 +200,6 @@ function AppContent() {
             }
           />
 
-          {/* <Route
-            path="/mindmap"
-            element={(
-              <ProtectedRoute>
-                <MindMapView />
-              </ProtectedRoute>
-            )}
-          />
-          <Route
-            path="/analytics"
-            element={(
-              <ProtectedRoute>
-                <Analytics />
-              </ProtectedRoute>
-            )}
-          />
-          <Route
-            path="/collaborators"
-            element={(
-              <ProtectedRoute>
-                <Collaborators />
-              </ProtectedRoute>
-            )}
-          /> */}
           <Route
             path="/archive"
             element={
@@ -238,9 +210,6 @@ function AppContent() {
           />
         </Routes>
       </div>
-
-      {/* AI Copilot — visible on all authenticated pages */}
-      {/* {session && !isLanding && <AICopilot />} */}
     </div>
   );
 }
