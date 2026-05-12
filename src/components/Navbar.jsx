@@ -13,7 +13,7 @@ export default function Navbar() {
           <LayoutDashboard className="w-4 h-4 text-white" />
         </div>
         <span className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 bg-clip-text text-transparent font-bold tracking-tight">
-          TaskFlow
+          Esperia Trello
         </span>
       </Link>
 

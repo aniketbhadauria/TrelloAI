@@ -1,16 +1,81 @@
-# React + Vite
+# Esperia Trello
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern Kanban board with AI-powered workflows, built on React + Vite + Supabase.
 
-Currently, two official plugins are available:
+**Live:** https://esperia-trello.pages.dev
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Stack
 
-## React Compiler
+| Layer | Tech |
+|---|---|
+| Frontend | React 19, Vite 8, Tailwind CSS v4, Radix UI, Framer Motion |
+| Backend | Node.js + Express (`server.mjs`) — Slack bot integration |
+| Database & Auth | Supabase (Postgres + Row Level Security) |
+| AI | Anthropic Claude — chat copilot + mind map generation |
+| Error Logging | Axiom |
+| Deployment | Cloudflare Pages (frontend), Railway (backend) |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Getting Started
 
-## Expanding the ESLint configuration
+### 1. Install dependencies
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm install
+```
+
+### 2. Configure environment
+
+Copy `.env.example` to `.env` and fill in the values:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Description |
+|---|---|
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon/public key |
+| `ANTHROPIC_API_KEY` | Anthropic API key (required if `AI_ENABLED=true`) |
+| `AI_ENABLED` | Set to `true` to enable AI chat + mind map features |
+| `VITE_AXIOM_TOKEN` | Axiom token for frontend error logging |
+| `AXIOM_TOKEN` | Axiom token for server error logging |
+| `SLACK_BOT_TOKEN` | Slack bot token (optional) |
+| `SLACK_APP_TOKEN` | Slack app-level token for Socket Mode (optional) |
+| `SLACK_SIGNING_SECRET` | Slack signing secret (optional) |
+
+### 3. Run locally
+
+```bash
+# Frontend (http://localhost:5173)
+npm run dev
+
+# Backend AI/Slack server (http://localhost:3001)
+npm run server
+```
+
+## Deployment
+
+### Frontend → Cloudflare Pages
+
+```bash
+npm run build
+npx wrangler pages deploy dist --project-name esperia-trello --branch main --commit-dirty=true
+```
+
+> First-time: run `npx wrangler login` before deploying.
+
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the Cloudflare Pages project environment variables.
+
+### Backend → Railway
+
+Push to the connected Railway service. The `PORT` env var is injected automatically.
+
+## Features
+
+- **Kanban boards** — drag-and-drop cards across lists
+- **Multi-board** — create and switch between multiple boards
+- **AI Copilot** — chat interface to manage cards hands-free (requires `AI_ENABLED=true`)
+- **Mind Map** — AI-generated mind maps from a topic
+- **Slack integration** — `/taskflow` slash command + @mention + DMs
+- **Error boundary** — frontend errors reported to Axiom with a user-facing report form
+- **Supabase Realtime** — live board updates across sessions

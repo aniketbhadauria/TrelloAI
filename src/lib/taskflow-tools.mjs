@@ -169,7 +169,7 @@ export const TASKFLOW_TOOLS = [
         listId:  { type: 'string', description: 'The list ID containing the card' },
         cardId:  { type: 'string', description: 'The card ID' },
         text:    { type: 'string', description: 'Comment text' },
-        author:  { type: 'string', description: 'Author name (defaults to "TaskFlow AI")' },
+        author:  { type: 'string', description: 'Author name (defaults to "Esperia Trello AI")' },
       },
       required: ['boardId', 'listId', 'cardId', 'text'],
     },
@@ -326,7 +326,7 @@ export function makeToolHandlers(supabase) {
       const card = list.cards.find(c => c.id === cardId);
       if (!card) return { error: 'Card not found' };
       if (!card.comments) card.comments = [];
-      const comment = { id: randomUUID(), text, author: author || 'TaskFlow AI', createdAt: new Date().toISOString() };
+      const comment = { id: randomUUID(), text, author: author || 'Esperia Trello AI', createdAt: new Date().toISOString() };
       card.comments.push(comment);
       await saveBoardData(supabase, data);
       return { success: true, commentId: comment.id };
@@ -378,7 +378,7 @@ export async function executeTool(handlers, name, input) {
 }
 
 // ── System prompt (shared by HTTP server and Slack bot) ───────
-export const SYSTEM_PROMPT = `You are TaskFlow AI, a smart assistant embedded inside a Kanban board app called TaskFlow.
+export const SYSTEM_PROMPT = `You are Esperia Trello AI, a smart assistant embedded inside a Kanban board app called Esperia Trello.
 
 You can directly modify the user's Kanban board using your tools:
 - taskflow_list_boards — List all boards

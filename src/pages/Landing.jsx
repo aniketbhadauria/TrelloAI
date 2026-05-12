@@ -13,8 +13,8 @@ export default function Landing() {
       {/* Hero */}
       <FloatingIconsHero
         title="Organize your work, effortlessly"
-        subtitle="TaskFlow helps teams move work forward. Collaborate, manage projects, and reach new productivity peaks with boards, lists, and cards."
-        ctaText="Open TaskFlow"
+        subtitle="Esperia Trello helps teams move work forward. Collaborate, manage projects, and reach new productivity peaks with boards, lists, and cards."
+        ctaText="Open Esperia Trello"
         ctaHref="/boards"
         icons={defaultHeroIcons}
         badge={
@@ -32,8 +32,8 @@ export default function Landing() {
       <section id="features" className="px-4 py-20 md:py-28">
         <div className="max-w-6xl mx-auto">
           <GlobeFeatureSection
-            title={<>Build with <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500">TaskFlow</span></>}
-            description="Empower your team with fast, elegant, and scalable project management. TaskFlow brings simplicity and performance to your modern workflow — from anywhere in the world."
+            title={<>Build with <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500">Esperia Trello</span></>}
+            description="Empower your team with fast, elegant, and scalable project management. Esperia Trello brings simplicity and performance to your modern workflow — from anywhere in the world."
             ctaText="Get Started"
             ctaHref="/boards"
           />
@@ -69,7 +69,7 @@ export default function Landing() {
             <LayoutDashboard className="w-4 h-4 text-white" />
           </div>
         }
-        brandName="TaskFlow"
+        brandName="Esperia Trello"
         socialLinks={[
           { icon: <MessageCircle className="h-5 w-5" />, href: "https://twitter.com", label: "Twitter" },
           { icon: <Globe className="h-5 w-5" />, href: "https://github.com", label: "GitHub" },
@@ -87,7 +87,7 @@ export default function Landing() {
           { href: "#", label: "Terms of Service" },
         ]}
         copyright={{
-          text: `© ${new Date().getFullYear()} TaskFlow`,
+          text: `© ${new Date().getFullYear()} Esperia Trello`,
           license: "All rights reserved",
         }}
       />

@@ -313,7 +313,7 @@ export default function AICopilot() {
           } else {
             updated[updated.length - 1] = {
               ...last,
-              text: `Sorry, I ran into an error: ${err}\n\nMake sure the TaskFlow AI server is running (\`npm run server\`).`,
+              text: `Sorry, I ran into an error: ${err}\n\nMake sure the Esperia Trello AI server is running (\`npm run server\`).`,
             };
           }
           return updated;
@@ -381,7 +381,7 @@ export default function AICopilot() {
                   <BrainCog className="w-4 h-4 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white leading-tight">TaskFlow AI</p>
+                  <p className="text-sm font-semibold text-white leading-tight">Esperia Trello AI</p>
                   <p className="text-[10px] text-gray-500 leading-tight">
                     <HeaderStatus
                       isLoading={isLoading}
