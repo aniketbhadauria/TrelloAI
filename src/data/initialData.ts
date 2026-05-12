@@ -1,11 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
+export { GRADIENTS } from '../utils/gradients';
 
-export const GRADIENTS = [
-  'gradient-1', 'gradient-2', 'gradient-3', 'gradient-4',
-  'gradient-5', 'gradient-6', 'gradient-7', 'gradient-8',
-];
+export interface LabelColor {
+  name: string;
+  value: string;
+}
 
-export const LABEL_COLORS = [
+export const LABEL_COLORS: LabelColor[] = [
   { name: 'Purple', value: '#8b5cf6' },
   { name: 'Blue', value: '#3b82f6' },
   { name: 'Cyan', value: '#06b6d4' },
