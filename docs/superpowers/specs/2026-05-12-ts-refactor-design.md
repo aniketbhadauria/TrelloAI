@@ -157,8 +157,11 @@ src/
     members/
       BoardMembersPanel.tsx
       InviteMemberModal.tsx
+  layouts/
+    AuthenticatedLayout.tsx    ← auth guard + Navbar + <Outlet>
+    PublicLayout.tsx           ← bare shell for landing/login/signup
   routes/
-    index.tsx                  ← all <Route> definitions + ProtectedRoute
+    index.tsx                  ← all <Route> definitions, no auth logic here
   components/
     ui/                        ← shadcn components converted to .tsx
     ErrorBoundary.tsx
@@ -204,28 +207,58 @@ export default function App() {
 
 ---
 
-## 5. Routes
+## 5. Layouts & Routes
 
-**`src/routes/index.tsx`** owns all routing logic:
-
+### `src/layouts/AuthenticatedLayout.tsx`
+Handles auth guard and shared authenticated UI:
 ```tsx
-function ProtectedRoute({ children }: { children: React.ReactNode }) { ... }
+export default function AuthenticatedLayout() {
+  const { session, loading } = useAuth();
+  const location = useLocation();
 
+  if (loading) return <Spinner />;
+  if (!session) return <Navigate to="/login" state={{ from: location }} replace />;
+
+  return (
+    <>
+      <Navbar />
+      <Outlet />
+    </>
+  );
+}
+```
+
+### `src/layouts/PublicLayout.tsx`
+Bare shell — landing, login, signup share no persistent UI:
+```tsx
+export default function PublicLayout() {
+  return <Outlet />;
+}
+```
+
+### `src/routes/index.tsx`
+Clean route tree — no auth logic, no per-route wrappers:
+```tsx
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
-      <Route path="/boards" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-      <Route path="/boards/:boardId" element={<ProtectedRoute><BoardViewPage /></ProtectedRoute>} />
-      <Route path="/archive" element={<ProtectedRoute><ArchivePage /></ProtectedRoute>} />
+      <Route element={<PublicLayout />}>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+      </Route>
+
+      <Route element={<AuthenticatedLayout />}>
+        <Route path="/boards" element={<HomePage />} />
+        <Route path="/boards/:boardId" element={<BoardViewPage />} />
+        <Route path="/archive" element={<ArchivePage />} />
+      </Route>
     </Routes>
   );
 }
 ```
 
-Adding a new page = add one `<Route>` here. `App.tsx` never changes for routing.
+Adding a new authenticated page = one `<Route>` inside the `AuthenticatedLayout` group. `App.tsx` never changes for routing.
 
 ---
 
@@ -373,6 +406,7 @@ Migrate bottom-up (leaves before consumers):
 12. `src/features/members/` — BoardMembersPanel, InviteMemberModal
 13. `src/features/cards/` — split CardDetailModal + sub-components
 14. `src/features/board-view/` — split BoardViewPage + sub-components
-15. `src/routes/index.tsx` — route definitions
-16. `src/App.tsx` + `src/main.tsx` — thin shell
-17. `vite.config.ts` — rename + TypeScript config
+15. `src/layouts/` — AuthenticatedLayout, PublicLayout
+16. `src/routes/index.tsx` — route definitions
+17. `src/App.tsx` + `src/main.tsx` — thin shell
+18. `vite.config.ts` — rename + TypeScript config
