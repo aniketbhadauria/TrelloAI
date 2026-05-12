@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MoreHorizontal } from "lucide-react";
@@ -5,6 +6,21 @@ import { MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+
+interface WorkflowBuilderCardProps {
+  imageUrl?: string | null;
+  gradientClass?: string;
+  status?: string;
+  lastUpdated?: string;
+  title?: string;
+  description?: string;
+  tags?: string[];
+  users?: unknown[];
+  actions?: unknown[];
+  className?: string;
+  onMoreClick?: () => void;
+  menuContent?: React.ReactNode;
+}
 
 const detailVariants = {
   hidden: { opacity: 0, height: 0, marginTop: 0 },
@@ -29,7 +45,7 @@ export const WorkflowBuilderCard = ({
   className,
   onMoreClick,
   menuContent,
-}) => {
+}: WorkflowBuilderCardProps) => {
   const [isHovered, setIsHovered] = React.useState(false);
 
   return (

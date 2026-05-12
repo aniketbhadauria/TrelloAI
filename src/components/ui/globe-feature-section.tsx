@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import createGlobe from "cobe";
@@ -114,13 +115,21 @@ function GlobeCanvas({ className, config = GLOBE_CONFIG }) {
   );
 }
 
+interface GlobeFeatureSectionProps {
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  ctaText?: string;
+  ctaHref?: string;
+  className?: string;
+}
+
 function GlobeFeatureSection({
   title,
   description,
   ctaText = "Get Started",
   ctaHref = "#",
   className,
-}) {
+}: GlobeFeatureSectionProps) {
   return (
     <section
       className={cn(

@@ -1,5 +1,5 @@
 import { Axiom } from '@axiomhq/js';
-import { Logger, AxiomJSTransport, ConsoleTransport } from '@axiomhq/logging';
+import { Logger, AxiomJSTransport, ConsoleTransport, type Transport } from '@axiomhq/logging';
 
 const token = import.meta.env.VITE_AXIOM_TOKEN as string | undefined;
 const dataset = import.meta.env.VITE_AXIOM_DATASET as string | undefined;
@@ -18,7 +18,7 @@ export interface LogContext {
   [key: string]: unknown;
 }
 
-const transports: (AxiomJSTransport | ConsoleTransport)[] = [];
+const transports: Transport[] = [];
 
 if (token && dataset) {
   const axiom = new Axiom({ token });
@@ -27,7 +27,7 @@ if (token && dataset) {
 
 transports.push(new ConsoleTransport({ prettyPrint: import.meta.env.DEV as boolean }));
 
-export const logger = new Logger({ transports });
+export const logger = new Logger({ transports: transports as [Transport, ...Transport[]] });
 
 export const logDebug = (event: string, ctx?: LogContext): void =>
   logger.debug(event, ctx as Record<string, unknown>);

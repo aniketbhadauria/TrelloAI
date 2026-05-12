@@ -119,7 +119,7 @@ export default function BoardView() {
     filterStatus.length ||
     filterActivity.length;
 
-  const toggleFilter = (arr: string[], setArr: React.Dispatch<React.SetStateAction<string[]>>, val: string) =>
+  const toggleFilter = (_arr: string[], setArr: React.Dispatch<React.SetStateAction<string[]>>, val: string) =>
     setArr((prev) =>
       prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val],
     );
@@ -712,7 +712,7 @@ export default function BoardView() {
 
       {selectedCard && (
         <CardDetailModal
-          boardId={boardId}
+          boardId={boardId!}
           listId={selectedCard.listId}
           cardId={selectedCard.cardId}
           onClose={() => setSelectedCard(null)}
@@ -734,7 +734,7 @@ export default function BoardView() {
           boardId={boardId!}
           ownerId={board.ownerId}
           ownerName={board.ownerName}
-          currentUserRole={role}
+          currentUserRole={role ?? undefined}
           onClose={() => setShowMembersPanel(false)}
           onMembersChange={() => {}}
         />

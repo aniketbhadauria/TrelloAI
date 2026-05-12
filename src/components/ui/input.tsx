@@ -1,13 +1,17 @@
-import * as React from "react"
-import { Input as InputPrimitive } from "@base-ui/react/input"
+import { Input as InputPrimitive, type InputProps as InputPrimitiveProps } from "@base-ui/react/input"
 
 import { cn } from "@/lib/utils"
+
+interface InputProps extends Omit<InputPrimitiveProps, 'className'> {
+  className?: string;
+  type?: string;
+}
 
 function Input({
   className,
   type,
   ...props
-}) {
+}: InputProps) {
   return (
     <InputPrimitive
       type={type}

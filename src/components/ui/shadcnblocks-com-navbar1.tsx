@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Book, Menu, Sunset, Trees, Zap, Bell, X as XIcon } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";

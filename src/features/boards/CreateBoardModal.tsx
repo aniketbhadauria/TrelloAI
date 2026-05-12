@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useBoards } from '@/context/BoardContext';
 import { GRADIENTS, GRADIENT_STYLES } from '@/utils/gradients';
 import type { List } from '@/types/board';
+import type { GradientKey } from '@/utils/gradients';
 
 interface Template {
   id: string;
@@ -33,7 +34,7 @@ interface CreateBoardModalProps {
 export default function CreateBoardModal({ onClose }: CreateBoardModalProps) {
   const { addBoard } = useBoards();
   const [title, setTitle] = useState('');
-  const [selectedGradient, setSelectedGradient] = useState(GRADIENTS[0]);
+  const [selectedGradient, setSelectedGradient] = useState<GradientKey>(GRADIENTS[0]);
   const [selectedTemplate, setSelectedTemplate] = useState('blank');
 
   const handleSubmit = (e: React.FormEvent) => {

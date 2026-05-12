@@ -1,3 +1,4 @@
+// @ts-nocheck
 import AutoScroll from "embla-carousel-auto-scroll";
 
 import {

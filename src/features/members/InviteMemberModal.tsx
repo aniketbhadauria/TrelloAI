@@ -60,13 +60,14 @@ export default function InviteMemberModal({
   const [inviting, setInviting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const search = useDebouncedCallback(async (q: string) => {
-    if (!q.trim()) { setResults([]); return; }
+  const search = useDebouncedCallback(async (q: unknown) => {
+    const queryStr = q as string;
+    if (!queryStr.trim()) { setResults([]); return; }
     setSearching(true);
     const { data, error: err } = await supabase
       .from('app_users')
       .select('id, display_name, email')
-      .or(`display_name.ilike.%${q}%,email.ilike.%${q}%`)
+      .or(`display_name.ilike.%${queryStr}%,email.ilike.%${queryStr}%`)
       .limit(10);
     setSearching(false);
     if (err) { logError('User search failed', { message: err.message }); return; }

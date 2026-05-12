@@ -110,7 +110,7 @@ async function fetchAllBoards(userId: string): Promise<FetchResult> {
     return { ownerId: row.owner_id as string, memberRole: 'owner' as BoardRole, ownerName: null, ...(row.data as object), id: row.id as string } as Board;
   });
 
-  const sharedRows = (sharedResult.data || []).filter((m: Record<string, unknown>) => m.boards) as Array<{
+  const sharedRows = ((sharedResult.data || []).filter((m: Record<string, unknown>) => m.boards) as unknown) as Array<{
     board_id: string;
     role: BoardRole;
     boards: { id: string; owner_id: string; data: Partial<Board> };

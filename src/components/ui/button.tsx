@@ -1,5 +1,5 @@
-import { Button as ButtonPrimitive } from "@base-ui/react/button"
-import { cva } from "class-variance-authority";
+import { Button as ButtonPrimitive, type ButtonProps as ButtonPrimitiveProps } from "@base-ui/react/button"
+import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils"
 
@@ -40,12 +40,16 @@ const buttonVariants = cva(
   }
 )
 
+interface ButtonProps extends Omit<ButtonPrimitiveProps, 'className'>, VariantProps<typeof buttonVariants> {
+  className?: string;
+}
+
 function Button({
   className,
   variant = "default",
   size = "default",
   ...props
-}) {
+}: ButtonProps) {
   return (
     <ButtonPrimitive
       data-slot="button"

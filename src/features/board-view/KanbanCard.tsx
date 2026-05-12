@@ -1,5 +1,4 @@
 import { AlignLeft, Calendar, CheckSquare, MessageSquare } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { format, isPast, isToday } from 'date-fns';
 import type { Card } from '@/types/board';
 import { getMemberColor, getInitials } from '@/utils/board';

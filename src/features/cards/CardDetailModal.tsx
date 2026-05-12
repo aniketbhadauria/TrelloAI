@@ -118,9 +118,7 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }: Ca
   const comments = card.comments ?? [];
   const attachments = card.attachments ?? [];
   const completedCount = checklist.filter((i) => i.completed).length;
-  const checklistProgress = checklist.length > 0 ? Math.round((completedCount / checklist.length) * 100) : 0;
-
-  const assignedNames = new Set(members.map((m) => m.name.toLowerCase()));
+const assignedNames = new Set(members.map((m) => m.name.toLowerCase()));
   const candidateMemberNames = useMemo(() => {
     const set = new Set(allBoardMembers);
     for (const name of recentMemberNames) set.add(name);

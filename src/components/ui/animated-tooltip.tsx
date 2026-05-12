@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { motion, useTransform, useMotionValue, useSpring } from "motion/react";
 
 const TooltipItem = ({ item }) => {

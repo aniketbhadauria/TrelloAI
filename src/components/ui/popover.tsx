@@ -1,20 +1,30 @@
 "use client"
 
-import * as React from "react"
-import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
+import { Popover as PopoverPrimitive, type PopoverPositionerProps } from "@base-ui/react/popover"
 
 import { cn } from "@/lib/utils"
 
+type Side = PopoverPositionerProps['side'];
+type Align = PopoverPositionerProps['align'];
+
 function Popover({
   ...props
-}) {
+}: React.ComponentProps<typeof PopoverPrimitive.Root>) {
   return <PopoverPrimitive.Root data-slot="popover" {...props} />;
 }
 
 function PopoverTrigger({
   ...props
-}) {
+}: React.ComponentProps<typeof PopoverPrimitive.Trigger>) {
   return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
+}
+
+interface PopoverContentProps extends Omit<React.ComponentProps<typeof PopoverPrimitive.Popup>, 'className'> {
+  className?: string;
+  align?: Align;
+  alignOffset?: number;
+  side?: Side;
+  sideOffset?: number;
 }
 
 function PopoverContent({
@@ -24,7 +34,7 @@ function PopoverContent({
   side = "bottom",
   sideOffset = 4,
   ...props
-}) {
+}: PopoverContentProps) {
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Positioner
@@ -48,7 +58,7 @@ function PopoverContent({
 function PopoverHeader({
   className,
   ...props
-}) {
+}: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       data-slot="popover-header"
@@ -60,11 +70,11 @@ function PopoverHeader({
 function PopoverTitle({
   className,
   ...props
-}) {
+}: React.ComponentProps<typeof PopoverPrimitive.Title>) {
   return (
     <PopoverPrimitive.Title
       data-slot="popover-title"
-      className={cn("font-heading font-medium", className)}
+      className={cn("font-heading font-medium", className as string | undefined)}
       {...props} />
   );
 }
@@ -72,11 +82,11 @@ function PopoverTitle({
 function PopoverDescription({
   className,
   ...props
-}) {
+}: React.ComponentProps<typeof PopoverPrimitive.Description>) {
   return (
     <PopoverPrimitive.Description
       data-slot="popover-description"
-      className={cn("text-muted-foreground", className)}
+      className={cn("text-muted-foreground", className as string | undefined)}
       {...props} />
   );
 }
