@@ -21,6 +21,7 @@ export default function Navbar() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
           <Input
+            type="text"
             placeholder="Search boards..."
             className="pl-9 bg-white/50 border-border/40 h-9 text-sm rounded-xl placeholder:text-muted-foreground/50 focus:bg-white/80 transition-colors"
           />
