@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { logError } from '../lib/logger';
+import { logError, logInfo } from '../lib/logger';
 
 interface AuthContextValue {
   session: Session | null;
@@ -26,8 +26,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       .catch(err => logError('getSession failed', err));
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
+      if (event === 'SIGNED_IN') logInfo('auth_signed_in', { userId: s?.user.id });
+      if (event === 'SIGNED_OUT') logInfo('auth_signed_out');
+      if (event === 'TOKEN_REFRESHED') logInfo('auth_token_refreshed', { userId: s?.user.id });
     });
 
     return () => subscription.unsubscribe();
@@ -56,24 +59,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       )
       .then(({ error }) => {
         if (error) logError('Failed to sync app_user', { message: error.message });
+        else logInfo('app_user_synced', { userId: user.id });
       });
   }, [session]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    if (error) { logError('sign_in_failed', { message: error.message }); throw error; }
+    logInfo('sign_in_success', { userId: data.user?.id });
     return data;
   }, []);
 
   const signUp = useCallback(async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) throw error;
+    if (error) { logError('sign_up_failed', { message: error.message }); throw error; }
+    logInfo('sign_up_success', { userId: data.user?.id });
     return data;
   }, []);
 
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    if (error) { logError('sign_out_failed', { message: error.message }); throw error; }
+    logInfo('sign_out_success');
   }, []);
 
   const value = useMemo(

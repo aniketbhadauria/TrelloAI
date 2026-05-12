@@ -4,7 +4,7 @@ import type { DropResult } from '@hello-pangea/dnd';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useDebouncedCallback } from '../hooks/useDebouncedCallback';
-import { logError } from '../lib/logger';
+import { logError, logInfo } from '../lib/logger';
 import type { Board, List, Card, ArchivedCard, BoardRole } from '../types/board';
 
 interface BoardContextValue {
@@ -184,6 +184,7 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
       setMembershipMap(map);
       setBoardsLoading(false);
       isInitialLoad.current = false;
+      logInfo('boards_loaded', { userId: user.id, count: allBoards.length });
     })();
 
     return () => { cancelled = true; };
@@ -232,8 +233,9 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
         .from('boards')
         .update({ data: boardData, updated_at: new Date().toISOString() })
         .eq('id', board.id);
-      if (error) { logError('Failed to save board', { boardId: board.id, message: error.message }); return; }
+      if (error) { logError('board_save_failed', { boardId: board.id, message: error.message }); return; }
       lastSavedRef.current[board.id] = JSON.stringify(boardData);
+      logInfo('board_saved', { boardId: board.id });
     }));
 
     setLastSavedAt(new Date());
@@ -276,8 +278,10 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
       id, owner_id: user!.id, data: boardData, created_at: now, updated_at: now,
     });
 
-    if (error) {
-      logError('Failed to create board', { message: error.message });
+    if (!error) {
+      logInfo('board_created', { boardId: id, userId: user!.id });
+    } else {
+      logError('board_create_failed', { message: error.message });
       setBoards(prev => prev.filter(b => b.id !== id));
       setMembershipMap(prev => { const n = { ...prev }; delete n[id]; return n; });
       delete lastSavedRef.current[id];
@@ -294,7 +298,8 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
   const deleteBoardPermanently = useCallback(async (boardId: string): Promise<void> => {
     if (membershipMap[boardId] !== 'owner') return;
     const { error } = await supabase.from('boards').delete().eq('id', boardId);
-    if (error) { logError('Failed to delete board', { message: error.message }); return; }
+    if (error) { logError('board_delete_failed', { boardId, message: error.message }); return; }
+    logInfo('board_deleted', { boardId });
     delete lastSavedRef.current[boardId];
     setMembershipMap(prev => { const n = { ...prev }; delete n[boardId]; return n; });
     setBoards(prev => prev.filter(b => b.id !== boardId));
@@ -433,8 +438,12 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
         .from('boards')
         .update({ data: boardData, updated_at: new Date().toISOString() })
         .eq('id', board.id);
-      if (!error) lastSavedRef.current[board.id] = JSON.stringify(boardData);
-      if (error) logError('Failed to persist board immediately', { message: error.message });
+      if (!error) {
+        lastSavedRef.current[board.id] = JSON.stringify(boardData);
+        logInfo('board_saved', { boardId: board.id });
+      } else {
+        logError('board_save_failed', { boardId: board.id, message: error.message });
+      }
     }));
     setLastSavedAt(new Date());
     setIsSavingBoards(false);

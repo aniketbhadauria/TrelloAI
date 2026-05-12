@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/lib/supabase';
-import { logError } from '@/lib/logger';
+import { logError, logInfo } from '@/lib/logger';
 import type { Profile } from '@/types/profile';
 
 interface ProfileContextValue {
@@ -28,7 +28,9 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         .eq('id', user!.id)
         .single();
       if (error && error.code !== 'PGRST116') {
-        logError('profile_fetch_failed', { message: error.message });
+        logError('profile_fetch_failed', { message: error.message, userId: user!.id });
+      } else if (data) {
+        logInfo('profile_fetched', { userId: user!.id });
       }
       return (data as Profile) ?? null;
     },
@@ -44,9 +46,10 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         .update({ ...data, updated_at: new Date().toISOString() })
         .eq('id', user.id);
       if (error) {
-        logError('profile_save_failed', { message: error.message });
+        logError('profile_save_failed', { message: error.message, userId: user.id });
         throw error;
       }
+      logInfo('profile_saved', { userId: user.id });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['profile', user?.id] }),
   });
@@ -59,10 +62,11 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       .from('avatars')
       .upload(path, file, { upsert: true, contentType: file.type });
     if (error) {
-      logError('avatar_upload_failed', { message: error.message });
+      logError('avatar_upload_failed', { message: error.message, userId: user.id });
       throw error;
     }
     const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+    logInfo('avatar_uploaded', { userId: user.id, path });
     return data.publicUrl;
   }, [user?.id]);
 

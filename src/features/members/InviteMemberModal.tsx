@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { logError } from '@/lib/logger';
+import { logError, logInfo } from '@/lib/logger';
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 import type { BoardRole } from '@/types/board';
 
@@ -70,7 +70,8 @@ export default function InviteMemberModal({
       .or(`display_name.ilike.%${queryStr}%,email.ilike.%${queryStr}%`)
       .limit(10);
     setSearching(false);
-    if (err) { logError('User search failed', { message: err.message }); return; }
+    if (err) { logError('member_search_failed', { message: err.message }); return; }
+    logInfo('member_search', { query: queryStr, resultCount: (data || []).length });
     setResults(data || []);
   }, 300);
 
@@ -98,9 +99,10 @@ export default function InviteMemberModal({
     setInviting(false);
     if (err) {
       setError(err.message);
-      logError('Failed to invite member', { message: err.message });
+      logError('member_invite_failed', { boardId, userId: selected.id, message: err.message });
       return;
     }
+    logInfo('member_invited', { boardId, userId: selected.id, role });
     onInvited?.({ ...selected, role });
     onClose();
   };
