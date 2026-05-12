@@ -14,6 +14,9 @@ export default defineConfig({
   // so server-style names in .env work for local dev and deployed builds.
   envPrefix: ['VITE_', 'SUPABASE_'],
   plugins: [react(), tailwindcss()],
+  server: {
+    open: true,
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
