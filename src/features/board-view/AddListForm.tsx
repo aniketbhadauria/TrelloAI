@@ -27,7 +27,7 @@ export default function AddListForm({ onAdd }: Props) {
     return (
       <button
         onClick={() => setIsAdding(true)}
-        className="min-w-[280px] h-11 rounded-xl border border-white/20 flex items-center justify-center gap-2 text-white/70 hover:text-white hover:bg-white/10 hover:border-white/30 transition-all text-sm font-medium flex-shrink-0 cursor-pointer"
+        className="min-w-[280px] h-11 rounded-xl border border-white/20 flex items-center justify-center gap-2 text-white/70 hover:text-white hover:bg-white/10 hover:border-white/30 transition-all text-sm font-medium shrink-0 cursor-pointer"
       >
         <Plus className="w-4 h-4" />
         Add another list
@@ -36,7 +36,7 @@ export default function AddListForm({ onAdd }: Props) {
   }
 
   return (
-    <div className="min-w-[280px] flex-shrink-0 animate-slide-down">
+    <div className="min-w-[280px] shrink-0 animate-slide-down">
       <div className="bg-black/30 border border-white/10 rounded-xl p-3">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
           <input

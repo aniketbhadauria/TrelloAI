@@ -8,14 +8,15 @@ import AddCardForm from './AddCardForm';
 
 interface KanbanListProps {
   list: List;
+  boardKey?: string;
   onDeleteList: (listId: string) => void;
   onUpdateListTitle: (listId: string, title: string) => void;
   onAddCard: (listId: string, title: string) => void;
-  onCardClick: (listId: string, cardId: string) => void;
+  onCardClick: (listId: string, cardId: string, cardNumber?: number) => void;
   dragHandleProps: DraggableProvidedDragHandleProps | null;
 }
 
-export default function KanbanList({ list, onDeleteList, onUpdateListTitle, onAddCard, onCardClick, dragHandleProps }: KanbanListProps) {
+export default function KanbanList({ list, boardKey, onDeleteList, onUpdateListTitle, onAddCard, onCardClick, dragHandleProps }: KanbanListProps) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(list.title);
   const [showMenu, setShowMenu] = useState(false);
@@ -64,15 +65,18 @@ export default function KanbanList({ list, onDeleteList, onUpdateListTitle, onAd
             <MoreHorizontal className="w-4 h-4" />
           </button>
           {showMenu && (
-            <div className="absolute top-full right-0 mt-1 bg-popover border border-border rounded-lg p-1 z-10 min-w-[140px] animate-slide-down">
-              <button
-                onClick={() => { onDeleteList(list.id); setShowMenu(false); }}
-                className="flex items-center gap-2 w-full px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-md transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete list
-              </button>
-            </div>
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setShowMenu(false)} />
+              <div className="absolute top-full right-0 mt-1 bg-popover border border-border rounded-lg p-1 z-40 min-w-[140px] animate-slide-down">
+                <button
+                  onClick={() => { onDeleteList(list.id); setShowMenu(false); }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete list
+                </button>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -94,8 +98,9 @@ export default function KanbanList({ list, onDeleteList, onUpdateListTitle, onAd
                   >
                     <KanbanCard
                       card={card}
+                      boardKey={boardKey}
                       isDragging={snapshot.isDragging}
-                      onClick={() => onCardClick(list.id, card.id)}
+                      onClick={() => onCardClick(list.id, card.id, card.number)}
                     />
                   </div>
                 )}

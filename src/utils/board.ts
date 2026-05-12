@@ -1,3 +1,8 @@
+export function generateBoardKey(title: string): string {
+  const clean = title.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return clean.slice(0, 8) || 'BOARD';
+}
+
 export function resolveBoardImageUrl(imageUrl: string | null | undefined): string | null {
   if (!imageUrl) return null;
   if (imageUrl.startsWith('file:///')) {

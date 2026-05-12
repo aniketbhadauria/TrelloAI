@@ -12,6 +12,7 @@ import {
   apiDeleteBoard,
 } from '@/api/boards';
 import type { Board, List, Card, ArchivedCard, BoardRole } from '../types/board';
+import { generateBoardKey } from '@/utils/board';
 
 interface BoardContextValue {
   boards: Board[];
@@ -23,7 +24,7 @@ interface BoardContextValue {
   lastSavedAt: Date | null;
   getBoardRole: (boardId: string) => BoardRole | null;
   getBoard: (boardId: string) => Board | null;
-  addBoard: (title: string, gradient: string, backgroundImage?: string | null, lists?: List[]) => Promise<void>;
+  addBoard: (title: string, gradient: string, backgroundImage?: string | null, lists?: List[], key?: string) => Promise<void>;
   deleteBoard: (boardId: string) => void;
   updateBoard: (boardId: string, updates: Partial<Board>) => void;
   toggleStarBoard: (boardId: string) => void;
@@ -85,9 +86,14 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
       await apiRunMigrationIfNeeded(user.id);
       if (cancelled) return;
 
-      const { boards: allBoards, membershipMap: map } = await apiFetchAllBoards(user.id);
+      const { boards: rawBoards, membershipMap: map } = await apiFetchAllBoards(user.id);
       if (cancelled) return;
 
+      const allBoards = rawBoards.map(b => ({
+        ...b,
+        key: b.key || generateBoardKey(b.title),
+        nextCardNumber: b.nextCardNumber ?? 0,
+      }));
       allBoards.forEach(b => {
         lastSavedRef.current[b.id] = JSON.stringify(extractBoardData(b));
       });
@@ -172,10 +178,11 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     };
   }, [boards]);
 
-  const addBoard = useCallback(async (title: string, gradient: string, backgroundImage: string | null = null, lists: List[] = []): Promise<void> => {
+  const addBoard = useCallback(async (title: string, gradient: string, backgroundImage: string | null = null, lists: List[] = [], key?: string): Promise<void> => {
     const id = uuidv4();
     const now = new Date().toISOString();
-    const boardData: Board = { id, title, gradient, backgroundImage, starred: false, archived: false, archivedAt: null, createdAt: now, lists };
+    const boardKey = key || generateBoardKey(title);
+    const boardData: Board = { id, key: boardKey, title, gradient, backgroundImage, starred: false, archived: false, archivedAt: null, createdAt: now, lists, nextCardNumber: 0 };
     const newBoard: Board = { ownerId: user!.id, memberRole: 'owner', ownerName: null, ...boardData };
 
     // Optimistic add
@@ -243,22 +250,29 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
   }, [updateData]);
 
   const addCard = useCallback((boardId: string, listId: string, title: string) => {
-    const newCard: Card = {
-      id: uuidv4(),
-      title,
-      description: '',
-      labels: [],
-      checklist: [],
-      members: [],
-      comments: [],
-      attachments: [],
-      dueDate: null,
-      archived: false,
-      archivedAt: null,
-      createdAt: new Date().toISOString(),
-    };
-    updateData(prev => prev.map(b => b.id !== boardId ? b : {
-      ...b, lists: b.lists.map(l => l.id !== listId ? l : { ...l, cards: [...l.cards, newCard] }),
+    updateData(prev => prev.map(b => {
+      if (b.id !== boardId) return b;
+      const nextNum = (b.nextCardNumber ?? 0) + 1;
+      const newCard: Card = {
+        id: uuidv4(),
+        number: nextNum,
+        title,
+        description: '',
+        labels: [],
+        checklist: [],
+        members: [],
+        comments: [],
+        attachments: [],
+        dueDate: null,
+        archived: false,
+        archivedAt: null,
+        createdAt: new Date().toISOString(),
+      };
+      return {
+        ...b,
+        nextCardNumber: nextNum,
+        lists: b.lists.map(l => l.id !== listId ? l : { ...l, cards: [...l.cards, newCard] }),
+      };
     }));
   }, [updateData]);
 
@@ -323,7 +337,12 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
   const refreshBoards = useCallback(async (): Promise<void> => {
     if (!user?.id) return;
     isInitialLoad.current = true;
-    const { boards: allBoards, membershipMap: map } = await apiFetchAllBoards(user.id);
+    const { boards: rawBoards, membershipMap: map } = await apiFetchAllBoards(user.id);
+    const allBoards = rawBoards.map(b => ({
+      ...b,
+      key: b.key || generateBoardKey(b.title),
+      nextCardNumber: b.nextCardNumber ?? 0,
+    }));
     allBoards.forEach(b => { lastSavedRef.current[b.id] = JSON.stringify(extractBoardData(b)); });
     setBoards(allBoards);
     setMembershipMap(map);

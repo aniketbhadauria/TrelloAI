@@ -35,6 +35,7 @@ export interface Attachment {
 
 export interface Card {
   id: string;
+  number?: number;
   title: string;
   description: string;
   labels: Label[];
@@ -56,6 +57,7 @@ export interface List {
 
 export interface Board {
   id: string;
+  key?: string;
   title: string;
   gradient: string;
   backgroundImage: string | null;
@@ -64,6 +66,7 @@ export interface Board {
   archivedAt: string | null;
   createdAt: string;
   lists: List[];
+  nextCardNumber?: number;
   ownerId?: string;
   memberRole?: BoardRole;
   ownerName?: string | null;

@@ -1,29 +1,24 @@
 import { AlignLeft, Calendar, CheckSquare, MessageSquare } from 'lucide-react';
 import { format, isPast, isToday } from 'date-fns';
 import type { Card } from '@/types/board';
-import { getMemberColor, getInitials } from '@/utils/board';
-
-const MEMBER_COLORS = [
-  '#8b5cf6', '#3b82f6', '#06b6d4', '#10b981',
-  '#f59e0b', '#f97316', '#ef4444', '#ec4899',
-];
 
 interface KanbanCardProps {
   card: Card;
+  boardKey?: string;
   onClick: () => void;
   isDragging: boolean;
 }
 
-export default function KanbanCard({ card, onClick, isDragging }: KanbanCardProps) {
+export default function KanbanCard({ card, boardKey, onClick, isDragging }: KanbanCardProps) {
   const hasDueDate = !!card.dueDate;
   const dueDate = hasDueDate ? new Date(card.dueDate!) : null;
   const isOverdue = dueDate && isPast(dueDate) && !isToday(dueDate);
   const isDueToday = dueDate && isToday(dueDate);
 
   const checklist = card.checklist || [];
-  const members = card.members || [];
   const comments = card.comments || [];
   const completedCount = checklist.filter(i => i.completed).length;
+  const cardRef = card.number ? (boardKey ? `${boardKey}-${card.number}` : `#${card.number}`) : null;
 
   return (
     <div
@@ -79,24 +74,8 @@ export default function KanbanCard({ card, onClick, isDragging }: KanbanCardProp
           )}
         </div>
 
-        {members.length > 0 && (
-          <div className="flex items-center -space-x-1.5">
-            {members.slice(0, 3).map((member) => (
-              <div
-                key={member.id}
-                className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white ring-2 ring-card"
-                style={{ backgroundColor: getMemberColor(member.name, MEMBER_COLORS) }}
-                title={member.name}
-              >
-                {getInitials(member.name)}
-              </div>
-            ))}
-            {members.length > 3 && (
-              <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-[9px] font-medium text-muted-foreground ring-2 ring-card">
-                +{members.length - 3}
-              </div>
-            )}
-          </div>
+        {cardRef && (
+          <span className="text-[10px] font-mono text-muted-foreground/60 shrink-0">{cardRef}</span>
         )}
       </div>
     </div>

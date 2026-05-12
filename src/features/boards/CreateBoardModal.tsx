@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { X, Check } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useBoards } from '@/context/BoardContext';
 import { GRADIENTS, GRADIENT_STYLES } from '@/utils/gradients';
+import { generateBoardKey } from '@/utils/board';
 import type { List } from '@/types/board';
 import type { GradientKey } from '@/utils/gradients';
 
@@ -36,14 +37,27 @@ export default function CreateBoardModal({ onClose }: CreateBoardModalProps) {
   const { addBoard } = useBoards();
   const [selectedGradient, setSelectedGradient] = useState<GradientKey>(GRADIENTS[0]);
   const [selectedTemplate, setSelectedTemplate] = useState('blank');
+  const [boardKey, setBoardKey] = useState('');
+  const [keyTouched, setKeyTouched] = useState(false);
 
   const { register, handleSubmit, watch, formState: { isDirty } } = useForm<{ title: string }>();
   const title = watch('title', '');
 
+  useEffect(() => {
+    if (!keyTouched) {
+      setBoardKey(generateBoardKey(title));
+    }
+  }, [title, keyTouched]);
+
+  const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setKeyTouched(true);
+    setBoardKey(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8));
+  };
+
   const onSubmit = ({ title }: { title: string }) => {
     if (!title.trim()) return;
     const template = TEMPLATES.find(t => t.id === selectedTemplate);
-    addBoard(title.trim(), selectedGradient, null, buildLists(template!.lists));
+    addBoard(title.trim(), selectedGradient, null, buildLists(template!.lists), boardKey || generateBoardKey(title));
     onClose();
   };
 
@@ -66,21 +80,39 @@ export default function CreateBoardModal({ onClose }: CreateBoardModalProps) {
             className="h-28 rounded-xl flex items-end p-4 transition-all duration-300"
             style={{ background: GRADIENT_STYLES[selectedGradient] }}
           >
-            <p className="text-white font-semibold text-lg truncate drop-shadow">
-              {title || 'Board title'}
-            </p>
+            <div>
+              <p className="text-white font-semibold text-lg truncate drop-shadow">
+                {title || 'Board title'}
+              </p>
+              {boardKey && (
+                <p className="text-white/60 text-xs font-mono mt-0.5">{boardKey}-1, {boardKey}-2…</p>
+              )}
+            </div>
           </div>
 
-          {/* Board title */}
-          <div className="space-y-2">
-            <Label htmlFor="board-title">Board title</Label>
-            <Input
-              id="board-title"
-              placeholder="Enter board title..."
-              autoFocus
-              className="bg-secondary/50"
-              {...register('title', { required: true })}
-            />
+          {/* Board title + key row */}
+          <div className="grid grid-cols-[1fr_auto] gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="board-title">Board title</Label>
+              <Input
+                id="board-title"
+                placeholder="Enter board title..."
+                autoFocus
+                className="bg-secondary/50"
+                {...register('title', { required: true })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="board-key">Key</Label>
+              <Input
+                id="board-key"
+                value={boardKey}
+                onChange={handleKeyChange}
+                placeholder="KEY"
+                className="bg-secondary/50 w-24 font-mono uppercase text-sm"
+                maxLength={8}
+              />
+            </div>
           </div>
 
           {/* Template picker */}
