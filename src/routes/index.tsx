@@ -23,6 +23,7 @@ export default function AppRoutes() {
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/boards" element={<HomePage />} />
         <Route path="/boards/:boardId" element={<BoardViewPage />} />
+        <Route path="/boards/:boardId/:cardNumber" element={<BoardViewPage />} />
         <Route path="/archive" element={<ArchivePage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>

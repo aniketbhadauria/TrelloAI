@@ -1,4 +1,4 @@
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useBoards } from '@/context/BoardContext';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import KanbanList from './KanbanList';
@@ -26,9 +26,8 @@ interface SelectedCard {
 type BoardMember = Awaited<ReturnType<typeof apiFetchBoardMembers>>[number] & { display_name: string | null; email: string | null };
 
 export default function BoardView() {
-  const { boardId: boardSlug } = useParams<{ boardId: string }>();
+  const { boardId: boardSlug, cardNumber: cardNumberParam } = useParams<{ boardId: string; cardNumber?: string }>();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const {
     getBoard, getBoardRole, boardsLoading,
     handleDragEnd, updateBoard, toggleStarBoard,
@@ -52,17 +51,13 @@ export default function BoardView() {
     setKeyword, setLabels, setDueDate, setStatus, setActivity, clear: clearAllFilters,
   } = useBoardFilters(board);
 
-  // Open card from ?card=N URL param
+  // Open card from /boards/KEY/N URL param
   useEffect(() => {
-    const cardNum = searchParams.get('card');
-    if (!cardNum || !board) return;
-    const num = parseInt(cardNum, 10);
+    if (!cardNumberParam || !board) return;
+    const num = parseInt(cardNumberParam, 10);
     for (const list of board.lists) {
       const card = list.cards.find(c => c.number === num);
-      if (card) {
-        setSelectedCard({ listId: list.id, cardId: card.id });
-        return;
-      }
+      if (card) { setSelectedCard({ listId: list.id, cardId: card.id }); return; }
     }
   }, [board?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -91,8 +86,7 @@ export default function BoardView() {
   // Redirect UUID URLs to key-based URLs
   if (UUID_RE.test(boardSlug!)) {
     const keySlug = board.key || generateBoardKey(board.title);
-    const qs = searchParams.toString();
-    navigate(`/boards/${keySlug}${qs ? `?${qs}` : ''}`, { replace: true });
+    navigate(`/boards/${keySlug}${cardNumberParam ? `/${cardNumberParam}` : ''}`, { replace: true });
     return null;
   }
 
@@ -100,14 +94,16 @@ export default function BoardView() {
     ? { backgroundImage: `url('${board.backgroundImage}')`, backgroundSize: 'cover', backgroundPosition: 'center' }
     : { backgroundColor: GRADIENT_STYLES[board.gradient as GradientKey] ?? '#475569' };
 
+  const boardPath = `/boards/${board.key || generateBoardKey(board.title)}`;
+
   const handleCardOpen = (listId: string, cardId: string, cardNumber?: number) => {
     setSelectedCard({ listId, cardId });
-    if (cardNumber) setSearchParams({ card: String(cardNumber) }, { replace: true });
+    if (cardNumber) navigate(`${boardPath}/${cardNumber}`, { replace: true });
   };
 
   const handleCardClose = () => {
     setSelectedCard(null);
-    setSearchParams({}, { replace: true });
+    navigate(boardPath, { replace: true });
   };
 
   const handleArchive = async () => {

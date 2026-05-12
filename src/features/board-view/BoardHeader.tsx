@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Star, MoreHorizontal, Filter, Image as ImageIcon, Trash2, Pencil, Check, X, UserPlus, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -71,6 +71,9 @@ export default function BoardHeader({
   const [keyValue, setKeyValue] = useState(board.key ?? '');
   const [showMenu, setShowMenu] = useState(false);
   const [showMembersPanel, setShowMembersPanel] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const membersRef = useRef<HTMLDivElement>(null);
+  const filterRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setTitleValue(board.title); }, [board.title]);
   useEffect(() => { setKeyValue(board.key ?? ''); }, [board.key]);
@@ -85,6 +88,27 @@ export default function BoardHeader({
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [showMenu, showMembersPanel, filterOpen, onFilterClose]);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const handler = (e: MouseEvent) => { if (!menuRef.current?.contains(e.target as Node)) setShowMenu(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showMenu]);
+
+  useEffect(() => {
+    if (!showMembersPanel) return;
+    const handler = (e: MouseEvent) => { if (!membersRef.current?.contains(e.target as Node)) setShowMembersPanel(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showMembersPanel]);
+
+  useEffect(() => {
+    if (!filterOpen) return;
+    const handler = (e: MouseEvent) => { if (!filterRef.current?.contains(e.target as Node)) onFilterClose(); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [filterOpen, onFilterClose]);
 
   const handleTitleSubmit = () => {
     const val = titleValue.trim();
@@ -204,7 +228,7 @@ export default function BoardHeader({
       </Button>
 
       {/* Members panel */}
-      <div className="relative">
+      <div className="relative" ref={membersRef}>
         <Button
           variant="ghost"
           size="sm"
@@ -218,8 +242,6 @@ export default function BoardHeader({
           )}
         </Button>
         {showMembersPanel && (
-          <>
-            <div className="fixed inset-0 z-50" onClick={() => setShowMembersPanel(false)} />
             <div className="absolute top-full right-0 mt-1 w-64 bg-card border border-border rounded-xl shadow-2xl z-50 animate-slide-down text-foreground overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
                 <span className="text-sm font-semibold">Members ({members.length})</span>
@@ -248,11 +270,10 @@ export default function BoardHeader({
                 <p className="text-xs text-muted-foreground px-4 py-4">No members yet. Invite someone!</p>
               )}
             </div>
-          </>
         )}
       </div>
 
-      <div className="relative">
+      <div className="relative" ref={filterRef}>
         <Button
           variant="ghost"
           size="sm"
@@ -280,7 +301,7 @@ export default function BoardHeader({
         )}
       </div>
 
-      <div className="relative">
+      <div className="relative" ref={menuRef}>
         <Button
           variant="ghost"
           size="sm"
@@ -290,9 +311,7 @@ export default function BoardHeader({
           <MoreHorizontal className="w-4 h-4" />
         </Button>
         {showMenu && (
-          <>
-            <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-            <div className="absolute top-full right-0 mt-1 bg-popover border border-border rounded-lg shadow-xl p-1 z-20 min-w-[220px] animate-slide-down">
+          <div className="absolute top-full right-0 mt-1 bg-popover border border-border rounded-lg shadow-xl p-1 z-50 min-w-[220px] animate-slide-down">
               <button
                 onClick={() => { onBackgroundPicker(); setShowMenu(false); }}
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm text-foreground hover:bg-secondary/60 rounded-md transition-colors"
@@ -310,7 +329,6 @@ export default function BoardHeader({
                 </button>
               )}
             </div>
-          </>
         )}
       </div>
 

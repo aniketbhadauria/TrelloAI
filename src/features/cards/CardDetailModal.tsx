@@ -103,7 +103,7 @@ export default function CardDetailModal({ boardId, listId, cardId, boardMembers 
 
   const boardSlug = board?.key ?? boardId;
   const shareUrl = card.number
-    ? `${window.location.origin}/boards/${boardSlug}?card=${card.number}`
+    ? `${window.location.origin}/boards/${boardSlug}/${card.number}`
     : null;
 
   const handleCopyLink = async () => {
