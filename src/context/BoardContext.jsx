@@ -6,13 +6,12 @@ import { useDebouncedCallback } from '../hooks/useDebouncedCallback';
 
 const BoardContext = createContext(null);
 
-const SHARED_BOARD_ROW_ID = import.meta.env.SUPABASE_BOARD_ROW_ID || 'shared';
 const EMPTY_DATA = { boards: [] };
 
 export function BoardProvider({ children }) {
   const { user, loading: authLoading } = useAuth();
   const isAuthenticated = !!user && !authLoading;
-  const boardRowId = SHARED_BOARD_ROW_ID;
+  const boardRowId = user?.id ?? null;
 
   const [data, setData] = useState(EMPTY_DATA);
   const [boardsLoading, setBoardsLoading] = useState(true);
@@ -28,7 +27,7 @@ export function BoardProvider({ children }) {
   useEffect(() => {
     if (authLoading) return;
 
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !boardRowId) {
       isInitialLoad.current = true;
       setData(EMPTY_DATA);
       setBoardsLoading(false);
