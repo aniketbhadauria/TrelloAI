@@ -17,7 +17,7 @@ const ROLES: { value: BoardRole; label: string }[] = [
   { value: 'observer', label: 'Observer' },
 ];
 
-const MEMBER_COLORS = ['#8b5cf6','#3b82f6','#06b6d4','#10b981','#f59e0b','#f97316','#ef4444','#ec4899'];
+const MEMBER_COLORS = ['#8b5cf6', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#f97316', '#ef4444', '#ec4899'];
 
 function avatarColor(id: string) {
   let h = 0;
@@ -104,13 +104,12 @@ export default function InviteMemberModal({ boardId, ownerId, onClose }: Props) 
                   key={u.id}
                   disabled={isExisting}
                   onClick={() => setSelectedId(isSelected ? null : u.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
-                    isExisting
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${isExisting
                       ? 'opacity-50 cursor-not-allowed bg-secondary/20'
                       : isSelected
-                      ? 'bg-primary/10'
-                      : 'hover:bg-secondary/40'
-                  }`}
+                        ? 'bg-primary/10'
+                        : 'hover:bg-secondary/40'
+                    }`}
                 >
                   <div
                     className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
@@ -138,11 +137,10 @@ export default function InviteMemberModal({ boardId, ownerId, onClose }: Props) 
                 <button
                   key={r.value}
                   onClick={() => setRole(r.value)}
-                  className={`px-2.5 py-1 text-xs rounded-full border transition-all ${
-                    role === r.value
+                  className={`px-2.5 py-1 text-xs rounded-full border transition-all ${role === r.value
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'border-border hover:border-primary/50 text-muted-foreground'
-                  }`}
+                    }`}
                 >
                   {r.label}
                 </button>
@@ -158,7 +156,7 @@ export default function InviteMemberModal({ boardId, ownerId, onClose }: Props) 
         )}
 
         <div className="flex gap-2">
-          <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" className="flex-1 text-black" onClick={onClose}>Cancel</Button>
           <Button className="flex-1" disabled={!selectedId || loading} onClick={handleInvite}>
             {loading ? 'Inviting…' : 'Invite'}
           </Button>

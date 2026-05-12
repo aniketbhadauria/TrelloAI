@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useBoards } from '@/context/BoardContext';
 import BoardCard from './BoardCard';
 import CreateBoardModal from './CreateBoardModal';
@@ -9,7 +8,6 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 export default function Home() {
   const { boards, boardsLoading } = useBoards();
   const [showCreate, setShowCreate] = useState(false);
-  const navigate = useNavigate();
   usePageTitle('My Boards');
 
   if (boardsLoading) {
@@ -45,14 +43,6 @@ export default function Home() {
               Organize, manage, and track your projects with ease.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/collaborators')}
-            className="inline-flex items-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-sm font-medium hover:bg-secondary/50 transition-colors"
-          >
-            <Users className="w-4 h-4" />
-            Collaborators
-          </button>
         </div>
       </div>
 
