@@ -26,7 +26,6 @@ import {
   Activity,
   FileText,
 } from "lucide-react";
-import "./App.css";
 
 const navbarDataBase = {
   logo: {
