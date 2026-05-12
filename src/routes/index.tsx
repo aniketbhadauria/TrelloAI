@@ -7,6 +7,7 @@ import OnboardingPage from '@/features/onboarding/OnboardingPage';
 import HomePage from '@/features/boards/HomePage';
 import BoardViewPage from '@/features/board-view/BoardViewPage';
 import ArchivePage from '@/features/boards/ArchivePage';
+import ProfilePage from '@/features/profile/ProfilePage';
 
 export default function AppRoutes() {
   return (
@@ -23,6 +24,7 @@ export default function AppRoutes() {
         <Route path="/boards" element={<HomePage />} />
         <Route path="/boards/:boardId" element={<BoardViewPage />} />
         <Route path="/archive" element={<ArchivePage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Route>
     </Routes>
   );

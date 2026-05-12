@@ -25,7 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useMemo } from "react";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { GRADIENT_STYLES } from "@/utils/gradients";
+import { GRADIENTS, GRADIENT_STYLES } from "@/utils/gradients";
 import type { GradientKey } from "@/utils/gradients";
 import {
   isPast,
@@ -291,12 +291,14 @@ export default function BoardView() {
     }
   };
 
-  const boardBg = GRADIENT_STYLES[board.gradient as GradientKey] ?? "#475569";
+  const boardStyle: React.CSSProperties = board.backgroundImage
+    ? { backgroundImage: `url('${board.backgroundImage}')`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    : { backgroundColor: GRADIENT_STYLES[board.gradient as GradientKey] ?? '#475569' };
 
   return (
     <div
       className="h-[calc(100vh-56px)] flex flex-col page-enter"
-      style={{ backgroundColor: boardBg }}
+      style={boardStyle}
     >
       <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-black/25 backdrop-blur-md shrink-0 relative z-20 text-white">
         <Button
@@ -730,10 +732,10 @@ export default function BoardView() {
 
       {showBackgroundPicker && (
         <BoardBackgroundModal
-          selected={board.backgroundImage || "/emerson.jpg"}
-          onSelect={(imageUrl) =>
-            updateBoard(boardId!, { backgroundImage: imageUrl })
-          }
+          currentGradient={board.gradient}
+          currentBackgroundImage={board.backgroundImage}
+          onSelectGradient={(g) => updateBoard(boardId!, { gradient: g, backgroundImage: null })}
+          onSelectImage={(url) => updateBoard(boardId!, { backgroundImage: url })}
           onClose={() => setShowBackgroundPicker(false)}
         />
       )}
@@ -745,7 +747,7 @@ export default function BoardView() {
           ownerName={board.ownerName}
           currentUserRole={role ?? undefined}
           onClose={() => setShowMembersPanel(false)}
-          onMembersChange={() => {}}
+          onMembersChange={() => { }}
         />
       )}
 
@@ -761,57 +763,48 @@ export default function BoardView() {
   );
 }
 
-const BOARD_IMAGE_OPTIONS = [
-  { id: "emerson", label: "Emerson", url: "/emerson.jpg" },
-  { id: "esperia", label: "Esperia", url: "/esperia.png" },
-];
-
 interface BoardBackgroundModalProps {
-  selected: string;
-  onSelect: (imageUrl: string) => void;
+  currentGradient: string;
+  currentBackgroundImage: string | null;
+  onSelectGradient: (g: string) => void;
+  onSelectImage: (url: string) => void;
   onClose: () => void;
 }
 
-function BoardBackgroundModal({ selected, onSelect, onClose }: BoardBackgroundModalProps) {
+function BoardBackgroundModal({ currentGradient, currentBackgroundImage, onSelectGradient, onSelectImage, onClose }: BoardBackgroundModalProps) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
         className="modal-content bg-card border border-border rounded-2xl p-5 w-full max-w-sm mx-4 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-semibold">Change board background</h3>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-md hover:bg-secondary transition-colors"
-          >
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-base font-semibold">Board Background</h3>
+          <button onClick={onClose} className="p-1 rounded-md hover:bg-secondary transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          {BOARD_IMAGE_OPTIONS.map((image) => (
-            <button
-              key={image.id}
-              type="button"
-              onClick={() => {
-                onSelect(image.url);
-                onClose();
-              }}
-              className={`rounded-lg overflow-hidden border transition-all ${
-                selected === image.url
-                  ? "ring-2 ring-primary ring-offset-2 ring-offset-card scale-[1.02]"
-                  : "hover:scale-[1.01] border-border/50"
-              }`}
-            >
-              <div
-                className="h-20 w-full bg-cover bg-center"
-                style={{ backgroundImage: `url('${image.url}')` }}
-              />
-              <div className="px-2 py-1.5 text-xs font-medium text-left">
-                {image.label}
-              </div>
-            </button>
-          ))}
+
+        <div className="space-y-5">
+          <div>
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2.5">Colors</p>
+            <div className="grid grid-cols-4 gap-2">
+              {GRADIENTS.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => { onSelectGradient(g); onClose(); }}
+                  className={`h-10 rounded-lg transition-all ${!currentBackgroundImage && currentGradient === g
+                    ? 'ring-2 ring-primary ring-offset-2 ring-offset-card scale-[1.06]'
+                    : 'hover:scale-[1.04] opacity-80 hover:opacity-100'
+                    }`}
+                  style={{ backgroundColor: GRADIENT_STYLES[g] }}
+                />
+              ))}
+            </div>
+          </div>
+
+
         </div>
       </div>
     </div>
@@ -868,11 +861,10 @@ function FilterCheckbox({ checked, onChange, icon, label, isLabel }: FilterCheck
       className="w-full flex items-center gap-2.5 px-1 py-1.5 rounded-lg hover:bg-secondary/40 transition-colors text-left"
     >
       <div
-        className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
-          checked
-            ? "bg-primary border-primary text-primary-foreground"
-            : "border-border"
-        }`}
+        className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${checked
+          ? "bg-primary border-primary text-primary-foreground"
+          : "border-border"
+          }`}
       >
         {checked && (
           <svg
