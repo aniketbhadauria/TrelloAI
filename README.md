@@ -12,8 +12,19 @@ A modern Kanban board with AI-powered workflows, built on React + Vite + Supabas
 | Backend | Node.js + Express (`server.mjs`) — Slack bot integration |
 | Database & Auth | Supabase (Postgres + Row Level Security) |
 | AI | Anthropic Claude — chat copilot + mind map generation |
-| Error Logging | Axiom |
+| Error Logging | Axiom (frontend + server, with user-facing report form) |
 | Deployment | Cloudflare Pages (frontend), Railway (backend) |
+
+## Features
+
+- **Kanban boards** — drag-and-drop cards across lists
+- **Multi-board** — create and switch between multiple boards, isolated per user via Supabase RLS
+- **Auth** — restricted to `@esperiastudio.com` domain accounts only
+- **AI Copilot** — chat interface to manage cards hands-free (requires `AI_ENABLED=true`)
+- **Mind Map** — AI-generated mind maps from a topic
+- **Slack integration** — `/taskflow` slash command + @mention + DMs
+- **Error boundary** — frontend crashes reported to Axiom with a user-facing report form
+- **Supabase Realtime** — live board updates across sessions
 
 ## Getting Started
 
@@ -70,12 +81,17 @@ Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the Cloudflare Pages pro
 
 Push to the connected Railway service. The `PORT` env var is injected automatically.
 
-## Features
+## Recent Changelog
 
-- **Kanban boards** — drag-and-drop cards across lists
-- **Multi-board** — create and switch between multiple boards
-- **AI Copilot** — chat interface to manage cards hands-free (requires `AI_ENABLED=true`)
-- **Mind Map** — AI-generated mind maps from a topic
-- **Slack integration** — `/taskflow` slash command + @mention + DMs
-- **Error boundary** — frontend errors reported to Axiom with a user-facing report form
-- **Supabase Realtime** — live board updates across sessions
+### May 12, 2026
+- Rebranded from **TaskFlow → Esperia Trello** across all UI, AI prompts, and meta tags
+- Deployed frontend to **Cloudflare Pages** (https://esperia-trello.pages.dev)
+- Added `CLAUDE.md` and rewrote `README.md` with full project docs
+
+### May 11, 2026
+- Added **Axiom error logging** on both frontend and server with structured `logError` helper
+- Built **error boundary report form** — users can submit a report when the app crashes; sent to Axiom
+- Fixed auth to restrict signups to `@esperiastudio.com` domain only
+- Isolated boards per user with **Supabase RLS** (row-level security keyed on `user.id`)
+- Added `.env.example` covering all required and optional environment variables
+- Added Cloudflare and Axiom MCP servers to `.mcp.json` for AI-assisted ops
