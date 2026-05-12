@@ -16,7 +16,7 @@ function timeAgo(dateStr) {
   return `${months}mo ago`;
 }
 
-export default function BoardCard({ board }) {
+export default function BoardCard({ board, sharedBy }) {
   const totalCards = board.lists.reduce((acc, l) => acc + l.cards.length, 0);
   const listNames = board.lists.map(l => l.title).slice(0, 3);
 
@@ -26,7 +26,7 @@ export default function BoardCard({ board }) {
         imageUrl={resolveBoardImageUrl(board.backgroundImage)}
         gradientClass={board.gradient}
         status="Active"
-        lastUpdated={timeAgo(board.createdAt)}
+        lastUpdated={sharedBy ? `Shared by ${sharedBy}` : timeAgo(board.createdAt)}
         title={board.title}
         description={`${board.lists.length} ${board.lists.length === 1 ? 'list' : 'lists'} · ${totalCards} ${totalCards === 1 ? 'card' : 'cards'}`}
         tags={listNames}

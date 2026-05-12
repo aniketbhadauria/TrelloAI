@@ -51,8 +51,13 @@ export default function Home() {
     );
   }
 
-  const starredBoards = boards.filter(b => b.starred);
-  const allBoards = [...boards].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const starredBoards = boards.filter(b => b.starred && b.memberRole === 'owner');
+  const ownedBoards = boards
+    .filter(b => b.memberRole === 'owner')
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const sharedBoards = boards
+    .filter(b => b.memberRole !== 'owner')
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto page-enter pb-32">
@@ -94,15 +99,15 @@ export default function Home() {
         </section>
       )}
 
-      <section>
+      <section className="mb-10">
         <div className="flex items-center gap-2.5 mb-5">
           <div className="w-7 h-7 rounded-lg overflow-hidden">
             <img src="/esperia.png" alt="Esperia logo" className="w-full h-full object-cover" />
           </div>
-          <h2 className="text-lg font-semibold tracking-tight">All Boards</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Your Boards</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {allBoards.map(board => (
+          {ownedBoards.map(board => (
             <BoardCard key={board.id} board={board} />
           ))}
           <button
@@ -117,6 +122,22 @@ export default function Home() {
           </button>
         </div>
       </section>
+
+      {sharedBoards.length > 0 && (
+        <section>
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+              <Users className="w-3.5 h-3.5 text-white" />
+            </div>
+            <h2 className="text-lg font-semibold tracking-tight">Shared with You</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {sharedBoards.map(board => (
+              <BoardCard key={board.id} board={board} sharedBy={board.ownerName} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {showCreate && <CreateBoardModal onClose={() => setShowCreate(false)} />}
 
