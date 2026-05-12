@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
 import AuthPageLayout from '@/layouts/AuthPageLayout';
 import LoginPage from '@/features/auth/LoginPage';
 import SignupPage from '@/features/auth/SignupPage';
+import OnboardingPage from '@/features/onboarding/OnboardingPage';
 import HomePage from '@/features/boards/HomePage';
 import BoardViewPage from '@/features/board-view/BoardViewPage';
 import ArchivePage from '@/features/boards/ArchivePage';
@@ -18,6 +19,7 @@ export default function AppRoutes() {
       </Route>
 
       <Route element={<AuthenticatedLayout />}>
+        <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/boards" element={<HomePage />} />
         <Route path="/boards/:boardId" element={<BoardViewPage />} />
         <Route path="/archive" element={<ArchivePage />} />
