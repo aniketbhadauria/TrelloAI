@@ -6,6 +6,7 @@ import AddListForm from './AddListForm';
 import CardDetailModal from '@/features/cards/CardDetailModal';
 import BoardHeader from './BoardHeader';
 import BoardBackgroundModal from './BoardBackgroundModal';
+import InviteMemberModal from '@/features/members/InviteMemberModal';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -36,6 +37,7 @@ export default function BoardView() {
   const [selectedCard, setSelectedCard] = useState<SelectedCard | null>(null);
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
 
   const {
     filters, hasActiveFilters, allLabels, filteredLists,
@@ -111,6 +113,7 @@ export default function BoardView() {
         onTitleSave={(title) => updateBoard(boardId!, { title })}
         onKeySave={(key) => updateBoard(boardId!, { key })}
         onStar={() => toggleStarBoard(boardId!)}
+        onInvite={() => setShowInvite(true)}
         onBackgroundPicker={() => setShowBackgroundPicker(true)}
         onArchive={handleArchive}
         filterKeyword={filters.keyword} setFilterKeyword={setKeyword}
@@ -166,6 +169,14 @@ export default function BoardView() {
           onSelectGradient={(g) => updateBoard(boardId!, { gradient: g, backgroundImage: null })}
           onSelectImage={(url) => updateBoard(boardId!, { backgroundImage: url })}
           onClose={() => setShowBackgroundPicker(false)}
+        />
+      )}
+
+      {showInvite && (
+        <InviteMemberModal
+          boardId={boardId!}
+          ownerId={board.ownerId}
+          onClose={() => setShowInvite(false)}
         />
       )}
     </div>
