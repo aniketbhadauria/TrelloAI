@@ -1,25 +1,23 @@
 import { AlignLeft, Calendar, CheckSquare, MessageSquare } from 'lucide-react';
-import { Badge } from './ui/badge';
+import { Badge } from '@/components/ui/badge';
 import { format, isPast, isToday } from 'date-fns';
+import type { Card } from '@/types/board';
+import { getMemberColor, getInitials } from '@/utils/board';
 
 const MEMBER_COLORS = [
   '#8b5cf6', '#3b82f6', '#06b6d4', '#10b981',
   '#f59e0b', '#f97316', '#ef4444', '#ec4899',
 ];
 
-function getMemberColor(name) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return MEMBER_COLORS[Math.abs(hash) % MEMBER_COLORS.length];
+interface KanbanCardProps {
+  card: Card;
+  onClick: () => void;
+  isDragging: boolean;
 }
 
-function getInitials(name) {
-  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-}
-
-export default function KanbanCard({ card, onClick, isDragging }) {
+export default function KanbanCard({ card, onClick, isDragging }: KanbanCardProps) {
   const hasDueDate = !!card.dueDate;
-  const dueDate = hasDueDate ? new Date(card.dueDate) : null;
+  const dueDate = hasDueDate ? new Date(card.dueDate!) : null;
   const isOverdue = dueDate && isPast(dueDate) && !isToday(dueDate);
   const isDueToday = dueDate && isToday(dueDate);
 
@@ -50,7 +48,7 @@ export default function KanbanCard({ card, onClick, isDragging }) {
 
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-3 flex-wrap">
-          {hasDueDate && (
+          {hasDueDate && dueDate && (
             <div className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded ${
               isOverdue ? 'bg-destructive/20 text-destructive' : isDueToday ? 'bg-yellow-500/20 text-yellow-400' : 'text-muted-foreground'
             }`}>
@@ -88,7 +86,7 @@ export default function KanbanCard({ card, onClick, isDragging }) {
               <div
                 key={member.id}
                 className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white ring-2 ring-card"
-                style={{ backgroundColor: getMemberColor(member.name) }}
+                style={{ backgroundColor: getMemberColor(member.name, MEMBER_COLORS) }}
                 title={member.name}
               >
                 {getInitials(member.name)}

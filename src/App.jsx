@@ -10,10 +10,10 @@ import { BoardProvider, useBoards } from "./context/BoardContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { Navbar1 } from "./components/ui/shadcnblocks-com-navbar1";
-import Landing from "./pages/Landing";
+import Landing from "./features/boards/LandingPage";
 import Home from "./features/boards/HomePage";
-import BoardView from "./pages/BoardView";
-import ArchivePage from "./pages/Archive";
+import BoardView from "./features/board-view/BoardViewPage";
+import ArchivePage from "./features/boards/ArchivePage";
 import Login from "./features/auth/LoginPage";
 import Signup from "./features/auth/SignupPage";
 import {

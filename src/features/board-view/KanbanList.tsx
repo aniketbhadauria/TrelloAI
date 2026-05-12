@@ -1,14 +1,25 @@
 import { useState, useRef } from 'react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
 import { MoreHorizontal, Trash2 } from 'lucide-react';
+import type { List } from '@/types/board';
+import type { DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
 import KanbanCard from './KanbanCard';
 import AddCardForm from './AddCardForm';
 
-export default function KanbanList({ list, onDeleteList, onUpdateListTitle, onAddCard, onCardClick, dragHandleProps }) {
+interface KanbanListProps {
+  list: List;
+  onDeleteList: (listId: string) => void;
+  onUpdateListTitle: (listId: string, title: string) => void;
+  onAddCard: (listId: string, title: string) => void;
+  onCardClick: (listId: string, cardId: string) => void;
+  dragHandleProps: DraggableProvidedDragHandleProps | null;
+}
+
+export default function KanbanList({ list, onDeleteList, onUpdateListTitle, onAddCard, onCardClick, dragHandleProps }: KanbanListProps) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(list.title);
   const [showMenu, setShowMenu] = useState(false);
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleTitleSubmit = () => {
     if (titleValue.trim() && titleValue !== list.title) {
@@ -21,7 +32,7 @@ export default function KanbanList({ list, onDeleteList, onUpdateListTitle, onAd
 
   return (
     <div className="kanban-list">
-      <div className="flex items-center justify-between px-3 pt-3 pb-2" {...dragHandleProps}>
+      <div className="flex items-center justify-between px-3 pt-3 pb-2" {...(dragHandleProps ?? {})}>
         {editingTitle ? (
           <input
             ref={inputRef}

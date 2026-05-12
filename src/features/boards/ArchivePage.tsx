@@ -1,22 +1,17 @@
 import { useState } from 'react';
-import { useBoards } from '../context/BoardContext';
+import { useBoards } from '@/context/BoardContext';
 import { Archive, RotateCcw, Trash2, LayoutGrid, CreditCard, ChevronDown, ChevronUp } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
+import { timeAgo } from '@/utils/date';
 
-function timeAgo(dateStr) {
-  if (!dateStr) return '';
-  const diffMs = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  return `${Math.floor(days / 30)}mo ago`;
+interface ConfirmButtonProps {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  onConfirm: () => void;
+  variant?: 'danger' | 'primary';
 }
 
-function ConfirmButton({ label, icon: Icon, onConfirm, variant = 'danger' }) {
+function ConfirmButton({ label, icon: Icon, onConfirm, variant = 'danger' }: ConfirmButtonProps) {
   const [confirming, setConfirming] = useState(false);
 
   if (confirming) {
@@ -55,7 +50,7 @@ function ConfirmButton({ label, icon: Icon, onConfirm, variant = 'danger' }) {
   );
 }
 
-function ArchivedBoardCard({ board, onRestore, onDelete }) {
+function ArchivedBoardCard({ board, onRestore, onDelete }: { board: { id: string; title: string; lists?: { cards?: unknown[] }[]; gradient?: string; archivedAt?: string | null }; onRestore: () => void; onDelete: () => void }) {
   const totalCards = board.lists?.reduce((s, l) => s + (l.cards?.length ?? 0), 0) ?? 0;
 
   return (
@@ -82,7 +77,7 @@ function ArchivedBoardCard({ board, onRestore, onDelete }) {
   );
 }
 
-function ArchivedCardRow({ card, onRestore, onDelete }) {
+function ArchivedCardRow({ card, onRestore, onDelete }: { card: { id: string; title?: string; boardTitle?: string; listTitle?: string; archivedAt?: string | null }; onRestore: () => void; onDelete: () => void }) {
   return (
     <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-card px-4 py-3 hover:border-border transition-colors">
       <div className="min-w-0">
@@ -99,7 +94,15 @@ function ArchivedCardRow({ card, onRestore, onDelete }) {
   );
 }
 
-function Section({ title, icon: Icon, count, children, emptyMessage }) {
+interface SectionProps {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  count: number;
+  children?: React.ReactNode;
+  emptyMessage: string;
+}
+
+function Section({ title, icon: Icon, count, children, emptyMessage }: SectionProps) {
   const [open, setOpen] = useState(true);
 
   return (

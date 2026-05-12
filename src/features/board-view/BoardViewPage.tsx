@@ -1,9 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useBoards } from "../context/BoardContext";
+import { useBoards } from "@/context/BoardContext";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import KanbanList from "../components/KanbanList";
-import AddListForm from "../components/AddListForm";
-import CardDetailModal from "../components/CardDetailModal";
+import KanbanList from "./KanbanList";
+import AddListForm from "./AddListForm";
+import CardDetailModal from "@/components/CardDetailModal";
 import BoardMembersPanel from "@/features/members/BoardMembersPanel";
 import InviteMemberModal from "@/features/members/InviteMemberModal";
 import {
@@ -22,7 +22,7 @@ import {
   Trash2,
   UserPlus,
 } from "lucide-react";
-import { Button } from "../components/ui/button";
+import { Button } from "@/components/ui/button";
 import { useState, useEffect, useMemo } from "react";
 import {
   isPast,
@@ -34,8 +34,19 @@ import {
   subWeeks,
 } from "date-fns";
 
+interface SelectedCard {
+  listId: string;
+  cardId: string;
+}
+
+function getMemberIdentityKey(m: { id?: string; name: string }): string {
+  const id = (m?.id || "").trim();
+  if (id) return id;
+  return (m?.name || "").trim().toLowerCase();
+}
+
 export default function BoardView() {
-  const { boardId } = useParams();
+  const { boardId } = useParams<{ boardId: string }>();
   const navigate = useNavigate();
   const {
     getBoard,
@@ -50,8 +61,8 @@ export default function BoardView() {
     addCard,
     deleteBoard,
   } = useBoards();
-  const board = getBoard(boardId);
-  const role = getBoardRole(boardId);
+  const board = getBoard(boardId!);
+  const role = getBoardRole(boardId!);
   const canEdit = role === "owner" || role === "admin" || role === "member";
   const canManageMembers = role === "owner" || role === "admin";
 
@@ -61,15 +72,15 @@ export default function BoardView() {
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
   const [showMembersPanel, setShowMembersPanel] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [selectedCard, setSelectedCard] = useState(null);
+  const [selectedCard, setSelectedCard] = useState<SelectedCard | null>(null);
 
   const [showFilter, setShowFilter] = useState(false);
   const [filterKeyword, setFilterKeyword] = useState("");
-  const [filterMembers, setFilterMembers] = useState([]);
-  const [filterLabels, setFilterLabels] = useState([]);
-  const [filterDueDate, setFilterDueDate] = useState([]);
-  const [filterStatus, setFilterStatus] = useState([]);
-  const [filterActivity, setFilterActivity] = useState([]);
+  const [filterMembers, setFilterMembers] = useState<string[]>([]);
+  const [filterLabels, setFilterLabels] = useState<string[]>([]);
+  const [filterDueDate, setFilterDueDate] = useState<string[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterActivity, setFilterActivity] = useState<string[]>([]);
 
   useEffect(() => {
     if (board) setTitleValue(board.title);
@@ -77,7 +88,7 @@ export default function BoardView() {
 
   const allLabels = useMemo(() => {
     if (!board) return [];
-    const map = new Map();
+    const map = new Map<string, { id: string; text: string; color: string }>();
     board.lists.forEach((l) =>
       l.cards.forEach((c) => c.labels?.forEach((lb) => map.set(lb.id, lb))),
     );
@@ -86,7 +97,7 @@ export default function BoardView() {
 
   const allMembers = useMemo(() => {
     if (!board) return [];
-    const map = new Map();
+    const map = new Map<string, { id?: string; name: string; filterKey: string }>();
     board.lists.forEach((l) =>
       l.cards.forEach((c) =>
         (c.members || []).forEach((m) => {
@@ -108,7 +119,7 @@ export default function BoardView() {
     filterStatus.length ||
     filterActivity.length;
 
-  const toggleFilter = (arr, setArr, val) =>
+  const toggleFilter = (arr: string[], setArr: React.Dispatch<React.SetStateAction<string[]>>, val: string) =>
     setArr((prev) =>
       prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val],
     );
@@ -247,11 +258,11 @@ export default function BoardView() {
     );
   }
 
-  const onDragEnd = (result) => handleDragEnd(boardId, result);
+  const onDragEnd = (result: Parameters<typeof handleDragEnd>[1]) => handleDragEnd(boardId!, result);
 
   const handleTitleSubmit = () => {
     if (titleValue.trim() && titleValue !== board.title) {
-      updateBoard(boardId, { title: titleValue.trim() });
+      updateBoard(boardId!, { title: titleValue.trim() });
     } else {
       setTitleValue(board.title);
     }
@@ -265,7 +276,7 @@ export default function BoardView() {
     );
     if (!confirmed) return;
     try {
-      await Promise.resolve(deleteBoard(boardId));
+      await Promise.resolve(deleteBoard(boardId!));
       setShowMenu(false);
       navigate("/");
     } catch (error) {
@@ -315,7 +326,7 @@ export default function BoardView() {
         )}
 
         <button
-          onClick={() => toggleStarBoard(boardId)}
+          onClick={() => toggleStarBoard(boardId!)}
           className="p-1.5 rounded-lg hover:bg-secondary/50 transition-colors"
         >
           <Star
@@ -606,14 +617,14 @@ export default function BoardView() {
                     </div>
                   </div>
 
-                  {hasActiveFilters && (
+                  {hasActiveFilters ? (
                     <button
                       onClick={clearAllFilters}
                       className="w-full text-xs text-center py-2 text-primary hover:text-primary/80 font-medium transition-colors"
                     >
                       Clear all filters
                     </button>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </>
@@ -676,15 +687,13 @@ export default function BoardView() {
                     <div ref={provided.innerRef} {...provided.draggableProps}>
                       <KanbanList
                         list={list}
-                        index={index}
-                        boardId={boardId}
                         dragHandleProps={provided.dragHandleProps}
-                        onDeleteList={(listId) => deleteList(boardId, listId)}
+                        onDeleteList={(listId) => deleteList(boardId!, listId)}
                         onUpdateListTitle={(listId, title) =>
-                          updateListTitle(boardId, listId, title)
+                          updateListTitle(boardId!, listId, title)
                         }
                         onAddCard={(listId, title) =>
-                          addCard(boardId, listId, title)
+                          addCard(boardId!, listId, title)
                         }
                         onCardClick={(listId, cardId) =>
                           setSelectedCard({ listId, cardId })
@@ -695,7 +704,7 @@ export default function BoardView() {
                 </Draggable>
               ))}
               {provided.placeholder}
-              <AddListForm onAdd={(title) => addList(boardId, title)} />
+              <AddListForm onAdd={(title) => addList(boardId!, title)} />
             </div>
           )}
         </Droppable>
@@ -714,7 +723,7 @@ export default function BoardView() {
         <BoardBackgroundModal
           selected={board.backgroundImage || "/emerson.jpg"}
           onSelect={(imageUrl) =>
-            updateBoard(boardId, { backgroundImage: imageUrl })
+            updateBoard(boardId!, { backgroundImage: imageUrl })
           }
           onClose={() => setShowBackgroundPicker(false)}
         />
@@ -722,7 +731,7 @@ export default function BoardView() {
 
       {showMembersPanel && (
         <BoardMembersPanel
-          boardId={boardId}
+          boardId={boardId!}
           ownerId={board.ownerId}
           ownerName={board.ownerName}
           currentUserRole={role}
@@ -733,8 +742,8 @@ export default function BoardView() {
 
       {showInviteModal && (
         <InviteMemberModal
-          boardId={boardId}
-          existingMemberIds={[board.ownerId]}
+          boardId={boardId!}
+          existingMemberIds={[board.ownerId!]}
           onClose={() => setShowInviteModal(false)}
           onInvited={() => setShowInviteModal(false)}
         />
@@ -748,7 +757,13 @@ const BOARD_IMAGE_OPTIONS = [
   { id: "esperia", label: "Esperia", url: "/esperia.png" },
 ];
 
-function BoardBackgroundModal({ selected, onSelect, onClose }) {
+interface BoardBackgroundModalProps {
+  selected: string;
+  onSelect: (imageUrl: string) => void;
+  onClose: () => void;
+}
+
+function BoardBackgroundModal({ selected, onSelect, onClose }: BoardBackgroundModalProps) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
@@ -805,14 +820,14 @@ const MEMBER_COLORS = [
   "#ec4899",
 ];
 
-function getMemberColor(name) {
+function getMemberColorLocal(name: string): string {
   let hash = 0;
   for (let i = 0; i < name.length; i++)
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   return MEMBER_COLORS[Math.abs(hash) % MEMBER_COLORS.length];
 }
 
-function MemberAvatar({ name }) {
+function MemberAvatar({ name }: { name: string }) {
   const initials = name
     .split(" ")
     .map((w) => w[0])
@@ -822,14 +837,22 @@ function MemberAvatar({ name }) {
   return (
     <div
       className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
-      style={{ backgroundColor: getMemberColor(name) }}
+      style={{ backgroundColor: getMemberColorLocal(name) }}
     >
       {initials}
     </div>
   );
 }
 
-function FilterCheckbox({ checked, onChange, icon, label, isLabel }) {
+interface FilterCheckboxProps {
+  checked: boolean;
+  onChange: () => void;
+  icon?: React.ReactNode;
+  label?: string;
+  isLabel?: boolean;
+}
+
+function FilterCheckbox({ checked, onChange, icon, label, isLabel }: FilterCheckboxProps) {
   return (
     <button
       onClick={onChange}
@@ -868,14 +891,4 @@ function FilterCheckbox({ checked, onChange, icon, label, isLabel }) {
       )}
     </button>
   );
-}
-
-function getMemberFilterKey(member) {
-  return (member?.name || "").trim().toLowerCase();
-}
-
-function getMemberIdentityKey(member) {
-  const id = (member?.id || "").trim();
-  if (id) return id;
-  return getMemberFilterKey(member);
 }

@@ -1,14 +1,18 @@
 import { useState, useRef } from 'react';
 import { Plus, X } from 'lucide-react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
-export default function AddListForm({ onAdd }) {
+interface AddListFormProps {
+  onAdd: (title: string) => void;
+}
+
+export default function AddListForm({ onAdd }: AddListFormProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [title, setTitle] = useState('');
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
     onAdd(title.trim());

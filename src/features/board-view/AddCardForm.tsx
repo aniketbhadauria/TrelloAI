@@ -1,13 +1,17 @@
 import { useState, useRef } from 'react';
 import { Plus, X } from 'lucide-react';
-import { Button } from './ui/button';
+import { Button } from '@/components/ui/button';
 
-export default function AddCardForm({ onAdd }) {
+interface AddCardFormProps {
+  onAdd: (title: string) => void;
+}
+
+export default function AddCardForm({ onAdd }: AddCardFormProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [title, setTitle] = useState('');
-  const textareaRef = useRef(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
     onAdd(title.trim());
@@ -15,10 +19,10 @@ export default function AddCardForm({ onAdd }) {
     textareaRef.current?.focus();
   };
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e);
+      handleSubmit(e as unknown as React.FormEvent);
     }
     if (e.key === 'Escape') {
       setIsAdding(false);
