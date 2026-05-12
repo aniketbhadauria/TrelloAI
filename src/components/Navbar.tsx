@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Search, LogOut } from 'lucide-react';
 import { Input } from './ui/input';
 import { useAuth } from '@/context/AuthContext';
+import { LogoMark } from '@/components/Logo';
 
 export default function Navbar() {
   const location = useLocation();
@@ -35,7 +36,7 @@ export default function Navbar() {
     <nav className="h-14 border-b border-border/40 bg-background/60 backdrop-blur-xl flex items-center px-5 gap-4 sticky top-0 z-40">
       <Link to="/" className="flex items-center gap-2.5">
         <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-          <LayoutDashboard className="w-4 h-4 text-primary-foreground" />
+          <LogoMark className="w-4 h-4 text-primary-foreground" />
         </div>
         <span className="font-semibold text-foreground tracking-tight">Esperia Trello</span>
       </Link>

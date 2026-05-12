@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { LayoutDashboard, Users, Zap, Shield } from 'lucide-react';
+import { Users, Zap, Shield } from 'lucide-react';
+import { LogoFull, LogoMark } from '@/components/Logo';
 
 const FEATURES = [
   { icon: Users, label: 'Shared boards for every project' },
@@ -16,21 +17,24 @@ export default function AuthPageLayout() {
     <div className="min-h-screen flex">
       {/* Left — branding panel */}
       <div className="hidden lg:flex w-1/2 bg-primary flex-col justify-between p-12 text-primary-foreground select-none">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
-            <LayoutDashboard className="w-5 h-5" />
-          </div>
-          <span className="text-xl font-bold tracking-tight">Esperia Trello</span>
+
+        {/* Top: E mark anchor */}
+        <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
+          <LogoMark className="w-5 h-5 text-white" />
         </div>
 
+        {/* Center: wordmark + headline + features */}
         <div className="space-y-10">
-          <div>
-            <h1 className="text-4xl font-bold leading-tight tracking-tight mb-4">
-              Your team's<br />workspace.
-            </h1>
-            <p className="text-primary-foreground/70 text-base leading-relaxed max-w-xs">
-              Organize projects, track progress, and ship together — built for Esperia Studio.
-            </p>
+          <div className="space-y-5">
+            <LogoFull className="h-7 text-white" />
+            <div>
+              <h1 className="text-4xl font-bold leading-tight tracking-tight mb-3">
+                Your team's<br />workspace.
+              </h1>
+              <p className="text-primary-foreground/65 text-sm leading-relaxed max-w-xs">
+                Organize projects, track progress, and ship together — built for Esperia Studio.
+              </p>
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -45,7 +49,8 @@ export default function AuthPageLayout() {
           </div>
         </div>
 
-        <p className="text-primary-foreground/35 text-xs">
+        {/* Bottom: footer */}
+        <p className="text-primary-foreground/30 text-xs">
           © {new Date().getFullYear()} Esperia Studio — Internal use only
         </p>
       </div>
