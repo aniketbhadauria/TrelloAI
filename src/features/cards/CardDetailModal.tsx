@@ -1,15 +1,22 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { X, Calendar, Tag, Archive, AlignLeft, CheckSquare, Users, MessageSquare, Plus, Send, Circle, Paperclip, Settings2 } from 'lucide-react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Textarea } from './ui/textarea';
-import { Badge } from './ui/badge';
-import { useBoards } from '../context/BoardContext';
-import { useAuth } from '../context/AuthContext';
-import { sendNotification } from '../context/NotificationContext';
-import { LABEL_COLORS } from '../data/initialData';
+import {
+  X, Calendar, Tag, Archive, Circle, CheckSquare, Users, MessageSquare,
+  Plus, Send, Paperclip, Settings2,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { useBoards } from '@/context/BoardContext';
+import { useAuth } from '@/context/AuthContext';
+import { sendNotification } from '@/context/NotificationContext';
 import { format } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
+import CardDescription from './CardDescription';
+import CardLabels from './CardLabels';
+import CardChecklist from './CardChecklist';
+import CardDueDate from './CardDueDate';
+import CardAttachments from './CardAttachments';
+import type { Label } from '@/types/board';
 
 const MEMBER_COLORS = [
   '#8b5cf6', '#3b82f6', '#06b6d4', '#10b981',
@@ -17,76 +24,85 @@ const MEMBER_COLORS = [
 ];
 const RECENT_MEMBER_NAMES_KEY = 'recent_member_names';
 
-function getInitials(name) {
-  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+function getInitials(name: string): string {
+  return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
 }
 
-function getMemberColor(name) {
+function getMemberColor(name: string): string {
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
   return MEMBER_COLORS[Math.abs(hash) % MEMBER_COLORS.length];
 }
 
-function sanitizeUrl(url) {
-  if (!url || typeof url !== 'string') return null;
-  try {
-    const parsed = new URL(url.trim());
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.toString() : null;
-  } catch {
-    return null;
-  }
+function formatCommentTime(dateStr: string): string {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString();
 }
 
-export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
+interface CardDetailModalProps {
+  boardId: string;
+  listId: string;
+  cardId: string;
+  onClose: () => void;
+}
+
+export default function CardDetailModal({ boardId, listId, cardId, onClose }: CardDetailModalProps) {
   const { getBoard, updateCard, archiveCard, boards } = useBoards();
   const { user } = useAuth();
   const board = getBoard(boardId);
-  const list = board?.lists.find(l => l.id === listId);
-  const card = list?.cards.find(c => c.id === cardId);
+  const list = board?.lists.find((l) => l.id === listId);
+  const card = list?.cards.find((c) => c.id === cardId);
 
-  const [title, setTitle] = useState(card?.title || '');
-  const [description, setDescription] = useState(card?.description || '');
-  const [editingDesc, setEditingDesc] = useState(false);
-  const [newLabelText, setNewLabelText] = useState('');
-  const [selectedLabelColor, setSelectedLabelColor] = useState(LABEL_COLORS[0].value);
-  const [dueDate, setDueDate] = useState(card?.dueDate ? format(new Date(card.dueDate), 'yyyy-MM-dd') : '');
-  const [newCheckItem, setNewCheckItem] = useState('');
+  const [title, setTitle] = useState(card?.title ?? '');
+  const [dueDate, setDueDate] = useState(
+    card?.dueDate ? format(new Date(card.dueDate), 'yyyy-MM-dd') : ''
+  );
   const [newMemberName, setNewMemberName] = useState('');
   const [newComment, setNewComment] = useState('');
-  const [activeSection, setActiveSection] = useState(null);
+  const [activeSection, setActiveSection] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(true);
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestionIndex, setSuggestionIndex] = useState(-1);
-  const suggestionsRef = useRef(null);
-  const attachmentBtnRef = useRef(null);
-  const [recentMemberNames, setRecentMemberNames] = useState([]);
+  const [recentMemberNames, setRecentMemberNames] = useState<string[]>([]);
+
+  // Attachment popup state
   const [attachmentUrl, setAttachmentUrl] = useState('');
   const [attachmentText, setAttachmentText] = useState('');
   const [attachmentFileName, setAttachmentFileName] = useState('');
   const [attachmentFileData, setAttachmentFileData] = useState('');
   const [attachmentPopupPos, setAttachmentPopupPos] = useState({ top: 0, left: 0 });
 
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const attachmentBtnRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem(RECENT_MEMBER_NAMES_KEY);
       if (!saved) return;
-      const parsed = JSON.parse(saved);
+      const parsed: unknown = JSON.parse(saved);
       if (Array.isArray(parsed)) {
-        setRecentMemberNames(parsed.filter(Boolean));
+        setRecentMemberNames((parsed as unknown[]).filter((x): x is string => typeof x === 'string'));
       }
     } catch {
-      // Ignore malformed local storage data
+      // Ignore malformed localStorage data
     }
   }, []);
 
   // Collect all unique member names across every board
   const allBoardMembers = useMemo(() => {
-    const nameSet = new Set();
+    const nameSet = new Set<string>();
     for (const b of boards) {
-      for (const l of b.lists || []) {
-        for (const c of l.cards || []) {
-          for (const m of c.members || []) {
+      for (const l of b.lists ?? []) {
+        for (const c of l.cards ?? []) {
+          for (const m of c.members ?? []) {
             if (m.name) nameSet.add(m.name);
           }
         }
@@ -95,15 +111,16 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
     return [...nameSet].sort((a, b) => a.localeCompare(b));
   }, [boards]);
 
-  const checklist = card?.checklist || [];
-  const members = card?.members || [];
-  const comments = card?.comments || [];
-  const attachments = card?.attachments || [];
-  const completedCount = checklist.filter(i => i.completed).length;
+  if (!card) return null;
+
+  const checklist = card.checklist ?? [];
+  const members = card.members ?? [];
+  const comments = card.comments ?? [];
+  const attachments = card.attachments ?? [];
+  const completedCount = checklist.filter((i) => i.completed).length;
   const checklistProgress = checklist.length > 0 ? Math.round((completedCount / checklist.length) * 100) : 0;
 
-  // Filtered suggestions: matching typed text, excluding already-assigned
-  const assignedNames = new Set(members.map(m => m.name.toLowerCase()));
+  const assignedNames = new Set(members.map((m) => m.name.toLowerCase()));
   const candidateMemberNames = useMemo(() => {
     const set = new Set(allBoardMembers);
     for (const name of recentMemberNames) set.add(name);
@@ -113,7 +130,7 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
 
   const filteredSuggestions = newMemberName.trim().length > 0
     ? candidateMemberNames
-        .filter(name =>
+        .filter((name) =>
           name.toLowerCase().includes(newMemberName.trim().toLowerCase()) &&
           !assignedNames.has(name.toLowerCase())
         )
@@ -127,7 +144,8 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
         .slice(0, 8)
     : [];
 
-  const toggleSection = (section) => setActiveSection(prev => prev === section ? null : section);
+  const toggleSection = (section: string) =>
+    setActiveSection((prev) => (prev === section ? null : section));
 
   const handleTitleBlur = () => {
     if (title.trim() && title !== card.title) {
@@ -135,49 +153,38 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
     }
   };
 
-  const handleDescSave = () => {
-    updateCard(boardId, listId, cardId, { description });
-    setEditingDesc(false);
+  const handleAddLabel = (label: Label) => {
+    updateCard(boardId, listId, cardId, { labels: [...card.labels, label] });
   };
 
-  const handleAddLabel = () => {
-    if (!newLabelText.trim()) return;
-    const newLabel = { id: uuidv4(), text: newLabelText.trim(), color: selectedLabelColor };
-    updateCard(boardId, listId, cardId, { labels: [...card.labels, newLabel] });
-    setNewLabelText('');
-    setActiveSection(null);
+  const handleRemoveLabel = (labelId: string) => {
+    updateCard(boardId, listId, cardId, { labels: card.labels.filter((l) => l.id !== labelId) });
   };
 
-  const handleRemoveLabel = (labelId) => {
-    updateCard(boardId, listId, cardId, { labels: card.labels.filter(l => l.id !== labelId) });
+  const handleDueDateChange = (newDueDate: string | null) => {
+    const formatted = newDueDate ? format(new Date(newDueDate), 'yyyy-MM-dd') : '';
+    setDueDate(formatted);
+    updateCard(boardId, listId, cardId, { dueDate: newDueDate });
   };
 
-  const handleDueDateChange = (e) => {
-    const val = e.target.value;
-    setDueDate(val);
-    updateCard(boardId, listId, cardId, { dueDate: val ? new Date(val).toISOString() : null });
-  };
-
-  const handleAddCheckItem = () => {
-    if (!newCheckItem.trim()) return;
-    const item = { id: uuidv4(), text: newCheckItem.trim(), completed: false };
+  const handleAddCheckItem = (text: string) => {
+    const item = { id: uuidv4(), text, completed: false };
     updateCard(boardId, listId, cardId, { checklist: [...checklist, item] });
-    setNewCheckItem('');
   };
 
-  const handleToggleCheckItem = (itemId) => {
-    const updated = checklist.map(i => i.id === itemId ? { ...i, completed: !i.completed } : i);
+  const handleToggleCheckItem = (itemId: string) => {
+    const updated = checklist.map((i) => i.id === itemId ? { ...i, completed: !i.completed } : i);
     updateCard(boardId, listId, cardId, { checklist: updated });
   };
 
-  const handleDeleteCheckItem = (itemId) => {
-    updateCard(boardId, listId, cardId, { checklist: checklist.filter(i => i.id !== itemId) });
+  const handleDeleteCheckItem = (itemId: string) => {
+    updateCard(boardId, listId, cardId, { checklist: checklist.filter((i) => i.id !== itemId) });
   };
 
   const handleAddMember = () => {
     if (!newMemberName.trim()) return;
     const memberName = newMemberName.trim();
-    const exists = members.some(m => m.name.toLowerCase() === memberName.toLowerCase());
+    const exists = members.some((m) => m.name.toLowerCase() === memberName.toLowerCase());
     if (exists) { setNewMemberName(''); setActiveSection(null); return; }
     const member = { id: uuidv4(), name: memberName };
     updateCard(boardId, listId, cardId, { members: [...members, member] });
@@ -185,27 +192,26 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
     setShowSuggestions(false);
     setSuggestionIndex(-1);
 
-    setRecentMemberNames(prev => {
-      const deduped = [memberName, ...prev.filter(n => n.toLowerCase() !== memberName.toLowerCase())].slice(0, 20);
+    setRecentMemberNames((prev) => {
+      const deduped = [memberName, ...prev.filter((n) => n.toLowerCase() !== memberName.toLowerCase())].slice(0, 20);
       localStorage.setItem(RECENT_MEMBER_NAMES_KEY, JSON.stringify(deduped));
       return deduped;
     });
 
-    // Send notification if the member name looks like an email
     const emailToNotify = memberName.includes('@') ? memberName : null;
     if (emailToNotify && emailToNotify !== user?.email) {
       sendNotification({
         userEmail: emailToNotify,
         title: `You were assigned to "${card.title}"`,
-        body: `${user?.email || 'Someone'} added you to a card in ${board?.title || 'a board'}`,
+        body: `${user?.email ?? 'Someone'} added you to a card in ${board?.title ?? 'a board'}`,
         boardId,
         cardId,
       });
     }
   };
 
-  const handleRemoveMember = (memberId) => {
-    updateCard(boardId, listId, cardId, { members: members.filter(m => m.id !== memberId) });
+  const handleRemoveMember = (memberId: string) => {
+    updateCard(boardId, listId, cardId, { members: members.filter((m) => m.id !== memberId) });
   };
 
   const handleAddComment = () => {
@@ -213,54 +219,21 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
     const comment = {
       id: uuidv4(),
       text: newComment.trim(),
-      author: user?.email || 'Anonymous',
+      author: user?.email ?? 'Anonymous',
       createdAt: new Date().toISOString(),
     };
     updateCard(boardId, listId, cardId, { comments: [...comments, comment] });
     setNewComment('');
   };
 
-  const handleDeleteComment = (commentId) => {
-    updateCard(boardId, listId, cardId, { comments: comments.filter(c => c.id !== commentId) });
-  };
-
-  const handleAddAttachment = () => {
-    const url = attachmentUrl.trim();
-    const fileName = attachmentFileName.trim();
-    const fileData = attachmentFileData.trim();
-    const displayText = attachmentText.trim();
-    if (!url && !fileData) return;
-
-    const attachment = {
-      id: uuidv4(),
-      url: url || fileData || null,
-      fileName: fileName || null,
-      fileData: fileData || null,
-      text: displayText || fileName || url,
-      createdAt: new Date().toISOString(),
-    };
-
-    updateCard(boardId, listId, cardId, { attachments: [...attachments, attachment] });
-    setAttachmentUrl('');
-    setAttachmentText('');
-    setAttachmentFileName('');
-    setAttachmentFileData('');
-    setActiveSection(null);
-  };
-
-  const handleRemoveAttachment = (attachmentId) => {
-    updateCard(boardId, listId, cardId, {
-      attachments: attachments.filter((attachment) => attachment.id !== attachmentId),
-    });
+  const handleDeleteComment = (commentId: string) => {
+    updateCard(boardId, listId, cardId, { comments: comments.filter((c) => c.id !== commentId) });
   };
 
   const updateAttachmentPopupPosition = () => {
     if (!attachmentBtnRef.current) return;
     const rect = attachmentBtnRef.current.getBoundingClientRect();
-    setAttachmentPopupPos({
-      top: rect.bottom + 8,
-      left: rect.left,
-    });
+    setAttachmentPopupPos({ top: rect.bottom + 8, left: rect.left });
   };
 
   const toggleAttachmentPopup = () => {
@@ -272,6 +245,7 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
     setActiveSection('attachment');
   };
 
+  // Reposition attachment popup on resize/scroll
   useEffect(() => {
     if (activeSection !== 'attachment') return;
     const handleReposition = () => updateAttachmentPopupPosition();
@@ -283,19 +257,47 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
     };
   }, [activeSection]);
 
+  const handleAddAttachment = () => {
+    const url = attachmentUrl.trim();
+    const fileName = attachmentFileName.trim();
+    const fileData = attachmentFileData.trim();
+    const displayText = attachmentText.trim();
+    if (!url && !fileData) return;
+
+    const attachment = {
+      id: uuidv4(),
+      url: url || fileData || undefined,
+      fileName: fileName || undefined,
+      fileData: fileData || undefined,
+      name: displayText || fileName || url,
+      addedAt: new Date().toISOString(),
+    };
+
+    updateCard(boardId, listId, cardId, { attachments: [...attachments, attachment] });
+    setAttachmentUrl('');
+    setAttachmentText('');
+    setAttachmentFileName('');
+    setAttachmentFileData('');
+    setActiveSection(null);
+  };
+
+  const handleRemoveAttachment = (attachmentId: string) => {
+    updateCard(boardId, listId, cardId, {
+      attachments: attachments.filter((a) => a.id !== attachmentId),
+    });
+  };
+
   const handleDelete = () => {
     archiveCard(boardId, listId, cardId);
     onClose();
   };
 
-  const actionBtnClass = (section) =>
+  const actionBtnClass = (section: string | null) =>
     `flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${
       activeSection === section
         ? 'bg-primary/15 border-primary/40 text-primary'
         : 'bg-secondary/40 border-border/50 text-muted-foreground hover:text-foreground hover:border-border'
     }`;
-
-  if (!card) return null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -310,7 +312,7 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onBlur={handleTitleBlur}
-              onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
+              onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
               className="w-full text-lg font-semibold bg-transparent border-none outline-none focus:bg-secondary/30 rounded px-1 py-0.5 -ml-1 transition-colors"
             />
             <p className="text-xs text-muted-foreground mt-1">
@@ -334,8 +336,9 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
 
             {/* Quick action bar */}
             <div className="flex flex-wrap gap-2 mb-5">
+              {/* Add menu */}
               <div className="relative">
-                <button className={actionBtnClass(showAddMenu ? '_addmenu' : null)} onClick={() => setShowAddMenu(v => !v)}>
+                <button className={actionBtnClass(showAddMenu ? '_addmenu' : null)} onClick={() => setShowAddMenu((v) => !v)}>
                   <Plus className="w-3.5 h-3.5" />
                   Add
                 </button>
@@ -378,6 +381,8 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                   </>
                 )}
               </div>
+
+              {/* Labels button */}
               <button className={actionBtnClass('labels')} onClick={() => toggleSection('labels')}>
                 <Tag className="w-3.5 h-3.5" />
                 Labels
@@ -385,10 +390,14 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                   <span className="w-4.5 h-4.5 rounded-full bg-primary/20 text-[10px] flex items-center justify-center">{card.labels.length}</span>
                 )}
               </button>
+
+              {/* Dates button */}
               <button className={actionBtnClass('dates')} onClick={() => toggleSection('dates')}>
                 <Calendar className="w-3.5 h-3.5" />
                 Dates
               </button>
+
+              {/* Checklist button */}
               <button className={actionBtnClass('checklist')} onClick={() => toggleSection('checklist')}>
                 <CheckSquare className="w-3.5 h-3.5" />
                 Checklist
@@ -396,6 +405,8 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                   <span className="w-4.5 h-4.5 rounded-full bg-primary/20 text-[10px] flex items-center justify-center">{completedCount}/{checklist.length}</span>
                 )}
               </button>
+
+              {/* Attachment button */}
               <div className="relative">
                 <button ref={attachmentBtnRef} className={actionBtnClass('attachment')} onClick={toggleAttachmentPopup}>
                   <Paperclip className="w-3.5 h-3.5" />
@@ -417,7 +428,6 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                           <X className="w-4 h-4 text-muted-foreground" />
                         </button>
                       </div>
-
                       <div className="space-y-3">
                         <div>
                           <p className="text-sm font-medium mb-1">Attach a file from your computer</p>
@@ -438,7 +448,6 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                                 };
                                 reader.onerror = () => {
                                   setAttachmentFileData('');
-                                  console.error('Failed to read selected file');
                                 };
                                 reader.readAsDataURL(file);
                               }}
@@ -451,7 +460,6 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                             <p className="text-xs text-muted-foreground mt-1 truncate">{attachmentFileName}</p>
                           )}
                         </div>
-
                         <div className="border-t border-border/40 pt-3 space-y-2">
                           <div className="text-sm font-medium">Search or paste a link</div>
                           <Input
@@ -471,7 +479,7 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                           <Button
                             size="sm"
                             onClick={handleAddAttachment}
-                              disabled={!attachmentUrl.trim() && !attachmentFileData.trim()}
+                            disabled={!attachmentUrl.trim() && !attachmentFileData.trim()}
                           >
                             Add attachment
                           </Button>
@@ -481,6 +489,8 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                   </>
                 )}
               </div>
+
+              {/* Members button */}
               <button className={actionBtnClass('members')} onClick={() => toggleSection('members')}>
                 <Users className="w-3.5 h-3.5" />
                 Members
@@ -490,129 +500,29 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
               </button>
             </div>
 
-            {/* Expanded section: Labels */}
+            {/* Expanded sections */}
             {activeSection === 'labels' && (
-              <div className="mb-5 bg-secondary/30 rounded-xl p-4 border border-border/30 animate-slide-down">
-                {card.labels.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-3">
-                    {card.labels.map((label) => (
-                      <Badge
-                        key={label.id}
-                        className="cursor-pointer hover:opacity-80 transition-opacity text-white border-none"
-                        style={{ backgroundColor: label.color }}
-                        onClick={() => handleRemoveLabel(label.id)}
-                      >
-                        {label.text} ×
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Input
-                    value={newLabelText}
-                    onChange={(e) => setNewLabelText(e.target.value)}
-                    placeholder="Label text..."
-                    className="bg-background/50 text-sm h-8"
-                    autoFocus
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddLabel()}
-                  />
-                  <div className="flex gap-1.5">
-                    {LABEL_COLORS.map((c) => (
-                      <button
-                        key={c.value}
-                        onClick={() => setSelectedLabelColor(c.value)}
-                        className={`w-6 h-6 rounded-full transition-all ${selectedLabelColor === c.value ? 'ring-2 ring-white ring-offset-1 ring-offset-card scale-110' : ''}`}
-                        style={{ backgroundColor: c.value }}
-                        title={c.name}
-                      />
-                    ))}
-                  </div>
-                  <Button size="sm" onClick={handleAddLabel} disabled={!newLabelText.trim()}>Add label</Button>
-                </div>
-              </div>
+              <CardLabels
+                labels={card.labels}
+                onAdd={handleAddLabel}
+                onRemove={handleRemoveLabel}
+              />
             )}
 
-            {/* Expanded section: Dates */}
             {activeSection === 'dates' && (
-              <div className="mb-5 bg-secondary/30 rounded-xl p-4 border border-border/30 animate-slide-down">
-                <div className="flex items-center gap-2 mb-2">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Due Date</span>
-                </div>
-                <Input
-                  type="date"
-                  value={dueDate}
-                  onChange={handleDueDateChange}
-                  className="bg-background/50 text-sm w-auto"
-                  autoFocus
-                />
-              </div>
+              <CardDueDate
+                dueDate={card.dueDate}
+                onChange={handleDueDateChange}
+              />
             )}
 
-            {/* Expanded section: Checklist */}
             {activeSection === 'checklist' && (
-              <div className="mb-5 bg-secondary/30 rounded-xl p-4 border border-border/30 animate-slide-down">
-                {checklist.length > 0 && (
-                  <div className="mb-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex-1 h-1.5 bg-secondary/50 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-300"
-                          style={{
-                            width: `${checklistProgress}%`,
-                            backgroundColor: checklistProgress === 100 ? '#10b981' : '#ec4899',
-                          }}
-                        />
-                      </div>
-                      <span className="text-[10px] font-medium text-muted-foreground w-8 text-right">
-                        {checklistProgress}%
-                      </span>
-                    </div>
-                    <div className="space-y-1 mb-2">
-                      {checklist.map((item) => (
-                        <div key={item.id} className="flex items-center gap-2 group rounded-lg px-2 py-1.5 hover:bg-secondary/30 transition-colors">
-                          <button
-                            onClick={() => handleToggleCheckItem(item.id)}
-                            className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
-                              item.completed
-                                ? 'bg-green-500 border-green-500 text-white'
-                                : 'border-border hover:border-pink-400'
-                            }`}
-                          >
-                            {item.completed && (
-                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
-                          </button>
-                          <span className={`flex-1 text-sm ${item.completed ? 'line-through text-muted-foreground' : ''}`}>
-                            {item.text}
-                          </span>
-                          <button
-                            onClick={() => handleDeleteCheckItem(item.id)}
-                            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={newCheckItem}
-                    onChange={(e) => setNewCheckItem(e.target.value)}
-                    placeholder="Add an item..."
-                    className="h-8 text-sm bg-background/50 flex-1"
-                    autoFocus
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddCheckItem()}
-                  />
-                  <Button size="sm" className="h-8 px-3" onClick={handleAddCheckItem} disabled={!newCheckItem.trim()}>
-                    <Plus className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </div>
+              <CardChecklist
+                checklist={checklist}
+                onToggle={handleToggleCheckItem}
+                onAdd={handleAddCheckItem}
+                onRemove={handleDeleteCheckItem}
+              />
             )}
 
             {/* Expanded section: Members */}
@@ -655,10 +565,10 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                         if (showSuggestions && filteredSuggestions.length > 0) {
                           if (e.key === 'ArrowDown') {
                             e.preventDefault();
-                            setSuggestionIndex(prev => Math.min(prev + 1, filteredSuggestions.length - 1));
+                            setSuggestionIndex((prev) => Math.min(prev + 1, filteredSuggestions.length - 1));
                           } else if (e.key === 'ArrowUp') {
                             e.preventDefault();
-                            setSuggestionIndex(prev => Math.max(prev - 1, 0));
+                            setSuggestionIndex((prev) => Math.max(prev - 1, 0));
                           } else if (e.key === 'Enter' && suggestionIndex >= 0) {
                             e.preventDefault();
                             setNewMemberName(filteredSuggestions[suggestionIndex]);
@@ -669,8 +579,8 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                         }
                         if (e.key === 'Enter') handleAddMember();
                         if (e.key === 'Escape') {
-                          if (showSuggestions) { setShowSuggestions(false); }
-                          else { setActiveSection(null); }
+                          if (showSuggestions) setShowSuggestions(false);
+                          else setActiveSection(null);
                         }
                       }}
                     />
@@ -678,8 +588,6 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                       Add
                     </Button>
                   </div>
-
-                  {/* Autosuggest dropdown */}
                   {showSuggestions && filteredSuggestions.length > 0 && (
                     <div
                       ref={suggestionsRef}
@@ -717,15 +625,11 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
               </div>
             )}
 
-            {/* Inline chips: show labels, due date, members when sections are collapsed */}
+            {/* Inline chips when sections are collapsed */}
             {activeSection !== 'labels' && card.labels.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-4">
                 {card.labels.map((label) => (
-                  <Badge
-                    key={label.id}
-                    className="text-white border-none text-[11px]"
-                    style={{ backgroundColor: label.color }}
-                  >
+                  <Badge key={label.id} className="text-white border-none text-[11px]" style={{ backgroundColor: label.color }}>
                     {label.text}
                   </Badge>
                 ))}
@@ -756,68 +660,15 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                 )}
               </div>
             )}
-            {activeSection !== 'attachment' && attachments.length > 0 && (
-              <div className="mb-4 space-y-1.5">
-                {attachments.map((attachment) => {
-                  const safeUrl = sanitizeUrl(attachment.url);
-                  return (
-                    <div key={attachment.id} className="flex items-center gap-2 text-xs rounded-lg bg-secondary/30 px-2 py-1.5">
-                      <Paperclip className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                      {safeUrl ? (
-                        <a href={safeUrl} target="_blank" rel="noopener noreferrer" className="truncate text-primary hover:underline">
-                          {attachment.text || safeUrl}
-                        </a>
-                      ) : (
-                        <span className="truncate">{attachment.text || attachment.fileName || attachment.url}</span>
-                      )}
-                      <button
-                        onClick={() => handleRemoveAttachment(attachment.id)}
-                        className="ml-auto text-muted-foreground hover:text-destructive transition-colors"
-                        title="Remove attachment"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
+            {activeSection !== 'attachment' && (
+              <CardAttachments attachments={attachments} onRemove={handleRemoveAttachment} />
             )}
 
             {/* Description */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <AlignLeft className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Description</span>
-              </div>
-              {editingDesc ? (
-                <div className="space-y-2">
-                  <Textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Add a more detailed description..."
-                    rows={8}
-                    autoFocus
-                    className="bg-white text-foreground text-sm border-border/40 rounded-xl leading-relaxed"
-                    style={{ whiteSpace: 'pre-wrap', tabSize: 2 }}
-                  />
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={handleDescSave}>Save</Button>
-                    <Button size="sm" variant="ghost" onClick={() => { setDescription(card.description); setEditingDesc(false); }}>Cancel</Button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setEditingDesc(true)}
-                  className="w-full text-left min-h-[80px] rounded-xl p-4 text-sm cursor-pointer transition-colors bg-white hover:bg-gray-50 border border-border/40"
-                >
-                  {card.description ? (
-                    <DescriptionRenderer text={card.description} />
-                  ) : (
-                    <span className="text-gray-500">Add a more detailed description...</span>
-                  )}
-                </button>
-              )}
-            </div>
+            <CardDescription
+              description={card.description}
+              onSave={(desc) => updateCard(boardId, listId, cardId, { description: desc })}
+            />
           </div>
 
           {/* Right Column: Comments & Activity */}
@@ -841,9 +692,9 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                 <div className="flex items-start gap-2 mb-4">
                   <div
                     className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5"
-                    style={{ backgroundColor: getMemberColor(user?.email || 'U') }}
+                    style={{ backgroundColor: getMemberColor(user?.email ?? 'U') }}
                   >
-                    {getInitials(user?.email?.split('@')[0] || 'U')}
+                    {getInitials(user?.email?.split('@')[0] ?? 'U')}
                   </div>
                   <div className="flex-1 flex gap-1.5">
                     <Input
@@ -851,14 +702,9 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                       onChange={(e) => setNewComment(e.target.value)}
                       placeholder="Write a comment..."
                       className="h-9 text-sm bg-secondary/30 flex-1"
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleAddComment(); }}
                     />
-                    <Button
-                      size="sm"
-                      className="h-9 px-2.5"
-                      onClick={handleAddComment}
-                      disabled={!newComment.trim()}
-                    >
+                    <Button size="sm" className="h-9 px-2.5" onClick={handleAddComment} disabled={!newComment.trim()}>
                       <Send className="w-3.5 h-3.5" />
                     </Button>
                   </div>
@@ -878,7 +724,7 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
                         <div className="flex items-start justify-between gap-1">
                           <div>
                             <span className="text-xs font-semibold">{comment.author}</span>
-                            <p className="text-sm text-foreground/80 mt-0.5 whitespace-pre-wrap wrap-break-word">
+                            <p className="text-sm text-foreground/80 mt-0.5 whitespace-pre-wrap break-words">
                               {comment.text}
                             </p>
                           </div>
@@ -917,65 +763,7 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }) {
             Archive card
           </Button>
         </div>
-
       </div>
     </div>
   );
-}
-
-function formatCommentTime(dateStr) {
-  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (seconds < 60) return 'just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString();
-}
-
-function DescriptionRenderer({ text }) {
-  if (!text) return null;
-
-  const lines = text.split('\n');
-  const elements = [];
-  let currentBullets = [];
-  let key = 0;
-
-  const flushBullets = () => {
-    if (currentBullets.length > 0) {
-      elements.push(
-        <ul key={`ul-${key++}`} className="list-disc list-inside space-y-0.5 my-1.5 text-foreground">
-          {currentBullets.map((b, i) => (
-            <li key={i} className="leading-relaxed">{b}</li>
-          ))}
-        </ul>
-      );
-      currentBullets = [];
-    }
-  };
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const bulletMatch = line.match(/^\s*[•\-*]\s+(.*)/);
-
-    if (bulletMatch) {
-      currentBullets.push(bulletMatch[1]);
-    } else {
-      flushBullets();
-      if (line.trim() === '') {
-        elements.push(<div key={`br-${key++}`} className="h-2" />);
-      } else {
-        elements.push(
-          <p key={`p-${key++}`} className="text-foreground leading-relaxed whitespace-pre-wrap break-words">
-            {line}
-          </p>
-        );
-      }
-    }
-  }
-  flushBullets();
-
-  return <div className="space-y-0.5">{elements}</div>;
 }

@@ -3,7 +3,7 @@ import { useBoards } from "@/context/BoardContext";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import KanbanList from "./KanbanList";
 import AddListForm from "./AddListForm";
-import CardDetailModal from "@/components/CardDetailModal";
+import CardDetailModal from "@/features/cards/CardDetailModal";
 import BoardMembersPanel from "@/features/members/BoardMembersPanel";
 import InviteMemberModal from "@/features/members/InviteMemberModal";
 import {
