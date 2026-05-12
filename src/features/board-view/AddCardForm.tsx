@@ -35,7 +35,7 @@ export default function AddCardForm({ onAdd }: Props) {
     return (
       <button
         onClick={() => setIsAdding(true)}
-        className="w-full flex items-center gap-1.5 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/40 rounded-lg transition-all cursor-pointer"
+        className="w-full flex items-center gap-1.5 px-3 py-2 text-sm text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-all cursor-pointer"
       >
         <Plus className="w-4 h-4" />
         Add a card
@@ -53,11 +53,11 @@ export default function AddCardForm({ onAdd }: Props) {
           placeholder="Enter a title for this card..."
           autoFocus
           rows={2}
-          className="w-full bg-card border border-border/50 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30"
+          className="w-full bg-white rounded-lg p-3 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-white/50"
         />
         <div className="flex gap-2 mt-2">
           <Button type="submit" size="sm" disabled={!isDirty}>Add card</Button>
-          <button type="button" onClick={close} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
+          <button type="button" onClick={close} className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>

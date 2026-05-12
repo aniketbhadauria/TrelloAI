@@ -2,7 +2,6 @@ import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 
 interface Props {
   onAdd: (title: string) => void;
@@ -28,7 +27,7 @@ export default function AddListForm({ onAdd }: Props) {
     return (
       <button
         onClick={() => setIsAdding(true)}
-        className="min-w-[300px] h-11 rounded-xl border-2 border-dashed border-border/40 flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-secondary/30 transition-all text-sm font-medium flex-shrink-0 cursor-pointer"
+        className="min-w-[280px] h-11 rounded-xl border border-white/20 flex items-center justify-center gap-2 text-white/70 hover:text-white hover:bg-white/10 hover:border-white/30 transition-all text-sm font-medium flex-shrink-0 cursor-pointer"
       >
         <Plus className="w-4 h-4" />
         Add another list
@@ -37,19 +36,19 @@ export default function AddListForm({ onAdd }: Props) {
   }
 
   return (
-    <div className="min-w-[300px] flex-shrink-0 animate-slide-down">
-      <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-3">
+    <div className="min-w-[280px] flex-shrink-0 animate-slide-down">
+      <div className="bg-black/30 border border-white/10 rounded-xl p-3">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
-          <Input
+          <input
             {...rest}
             ref={el => { rhfRef(el); (inputRef as React.MutableRefObject<HTMLInputElement | null>).current = el; }}
             placeholder="Enter list title..."
             autoFocus
-            className="bg-secondary/50 text-sm"
+            className="w-full h-9 px-3 text-sm bg-white rounded-lg text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-white/50"
           />
           <div className="flex gap-2">
             <Button type="submit" size="sm" disabled={!isDirty}>Add list</Button>
-            <button type="button" onClick={close} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
+            <button type="button" onClick={close} className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors">
               <X className="w-4 h-4" />
             </button>
           </div>

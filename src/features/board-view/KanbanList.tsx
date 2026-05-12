@@ -43,28 +43,28 @@ export default function KanbanList({ list, onDeleteList, onUpdateListTitle, onAd
               if (e.key === 'Enter') handleTitleSubmit();
               if (e.key === 'Escape') { setTitleValue(list.title); setEditingTitle(false); }
             }}
-            className="flex-1 text-sm font-semibold bg-secondary/50 px-2 py-1 rounded border border-primary/30 outline-none"
+            className="flex-1 text-sm font-semibold bg-white/10 text-white px-2 py-1 rounded border border-white/20 outline-none"
             autoFocus
           />
         ) : (
           <h3
-            className="flex-1 text-sm font-semibold cursor-pointer hover:bg-secondary/30 px-2 py-1 rounded transition-colors truncate"
+            className="flex-1 text-sm font-semibold text-white cursor-pointer hover:bg-white/10 px-2 py-1 rounded transition-colors truncate"
             onClick={() => setEditingTitle(true)}
           >
             {list.title}
-            <span className="ml-2 text-xs text-muted-foreground font-normal">{list.cards.length}</span>
+            <span className="ml-2 text-xs text-white/50 font-normal">{list.cards.length}</span>
           </h3>
         )}
 
         <div className="relative">
           <button
             onClick={() => setShowMenu(!showMenu)}
-            className="p-1 rounded hover:bg-secondary/50 transition-colors text-muted-foreground hover:text-foreground"
+            className="p-1 rounded hover:bg-white/10 transition-colors text-white/50 hover:text-white"
           >
             <MoreHorizontal className="w-4 h-4" />
           </button>
           {showMenu && (
-            <div className="absolute top-full right-0 mt-1 bg-popover border border-border rounded-lg shadow-xl p-1 z-10 min-w-[140px] animate-slide-down">
+            <div className="absolute top-full right-0 mt-1 bg-popover border border-border rounded-lg p-1 z-10 min-w-[140px] animate-slide-down">
               <button
                 onClick={() => { onDeleteList(list.id); setShowMenu(false); }}
                 className="flex items-center gap-2 w-full px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-md transition-colors"
@@ -82,7 +82,7 @@ export default function KanbanList({ list, onDeleteList, onUpdateListTitle, onAd
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className={`kanban-list-cards space-y-2 ${snapshot.isDraggingOver ? 'bg-primary/5 rounded-lg' : ''}`}
+            className={`kanban-list-cards space-y-2 ${snapshot.isDraggingOver ? 'bg-white/5 rounded-lg' : ''}`}
           >
             {list.cards.map((card, cardIndex) => (
               <Draggable key={card.id} draggableId={card.id} index={cardIndex}>
