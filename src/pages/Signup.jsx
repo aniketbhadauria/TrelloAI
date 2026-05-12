@@ -4,26 +4,29 @@ import { useAuth } from '../context/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { GoogleMark } from '@/components/icons/GoogleMark';
+
+const ALLOWED_DOMAIN = 'esperiastudio.com';
+
+function isAllowedEmail(email) {
+  return email.toLowerCase().endsWith(`@${ALLOWED_DOMAIN}`);
+}
 
 function formatSignupError(err) {
   const msg = err?.message || '';
   if (/signups not allowed/i.test(msg)) {
-    return 'New sign-ups are disabled in Supabase. Open Project Settings → Authentication → User Signups and turn on “Allow new users to sign up”, then save. Alternatively, add a user under Authentication → Users and sign in on the Log in page.';
+    return 'New sign-ups are disabled. Go to Supabase Dashboard → Authentication → User Signups and enable "Allow new users to sign up".';
   }
   return msg || 'Could not sign up';
 }
 
 export default function Signup() {
-  const { signUp, signInWithGoogle, session, loading } = useAuth();
+  const { signUp, session, loading } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
 
   if (loading) {
     return (
@@ -41,6 +44,10 @@ export default function Signup() {
     e.preventDefault();
     setError('');
     setMessage('');
+    if (!isAllowedEmail(email.trim())) {
+      setError(`Only @${ALLOWED_DOMAIN} accounts are allowed.`);
+      return;
+    }
     setSubmitting(true);
     try {
       const data = await signUp(email.trim(), password);
@@ -60,23 +67,7 @@ export default function Signup() {
     <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center p-6">
       <div className="w-full max-w-md rounded-2xl border border-border/60 bg-card/40 p-8 shadow-lg backdrop-blur-sm">
         <h1 className="text-2xl font-bold tracking-tight mb-1">Create account</h1>
-        <p className="text-sm text-muted-foreground mb-6">Sign up with Google or email and password.</p>
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full h-10 gap-2 border-border/80 bg-background/80"
-          onClick={handleGoogle}
-          disabled={submitting || googleLoading}
-        >
-          <GoogleMark className="size-4 shrink-0" />
-          {googleLoading ? 'Redirecting to Google…' : 'Continue with Google'}
-        </Button>
-        <div className="relative my-6">
-          <Separator />
-          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card/90 px-2 text-xs text-muted-foreground">
-            or with email
-          </span>
-        </div>
+        <p className="text-sm text-muted-foreground mb-6">Sign up with your email and password.</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="signup-email">Email</Label>
@@ -102,7 +93,7 @@ export default function Signup() {
               minLength={6}
               className="h-10"
             />
-            <p className="text-xs text-muted-foreground">At least 6 characters (match your Supabase policy).</p>
+            <p className="text-xs text-muted-foreground">At least 6 characters.</p>
           </div>
           {error && (
             <p className="text-sm text-destructive" role="alert">
@@ -114,7 +105,7 @@ export default function Signup() {
               {message}
             </p>
           )}
-          <Button type="submit" className="w-full h-10" disabled={submitting || googleLoading}>
+          <Button type="submit" className="w-full h-10" disabled={submitting}>
             {submitting ? 'Creating account…' : 'Sign up'}
           </Button>
         </form>

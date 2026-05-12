@@ -34,27 +34,41 @@ const LogoIcon = ({ src, alt }) => {
   }
   return (
     <div className="w-8 h-8 rounded-xl overflow-hidden">
-      <img src="/esperia.png" alt={alt || "Esperia logo"} className="w-full h-full object-cover" />
+      <img
+        src="/esperia.png"
+        alt={alt || "Esperia logo"}
+        className="w-full h-full object-cover"
+      />
     </div>
   );
 };
 
 const AVATAR_COLORS = [
-  '#8b5cf6', '#3b82f6', '#06b6d4', '#10b981',
-  '#f59e0b', '#f97316', '#ef4444', '#ec4899',
-  '#6366f1', '#14b8a6', '#a855f7', '#e11d48',
+  "#8b5cf6",
+  "#3b82f6",
+  "#06b6d4",
+  "#10b981",
+  "#f59e0b",
+  "#f97316",
+  "#ef4444",
+  "#ec4899",
+  "#6366f1",
+  "#14b8a6",
+  "#a855f7",
+  "#e11d48",
 ];
 
 function getUserColor(email) {
   if (!email) return AVATAR_COLORS[0];
   let hash = 0;
-  for (let i = 0; i < email.length; i++) hash = email.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < email.length; i++)
+    hash = email.charCodeAt(i) + ((hash << 5) - hash);
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
 function getUserInitials(email) {
-  if (!email) return 'U';
-  const name = email.split('@')[0];
+  if (!email) return "U";
+  const name = email.split("@")[0];
   const parts = name.split(/[._-]/);
   if (parts.length >= 2) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -62,10 +76,9 @@ function getUserInitials(email) {
   return name.slice(0, 2).toUpperCase();
 }
 
-
 function appNavPathActive(currentPath, url) {
-  if (url === '/boards') {
-    return currentPath === '/boards' || currentPath.startsWith('/boards/');
+  if (url === "/boards") {
+    return currentPath === "/boards" || currentPath.startsWith("/boards/");
   }
   return currentPath === url;
 }
@@ -76,10 +89,10 @@ function AppNavLink({ to, currentPath, children, className }) {
     <Link
       to={to}
       className={cn(
-        'inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-colors',
+        "inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
         active
-          ? 'bg-primary/10 text-primary'
-          : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+          ? "bg-primary/10 text-primary"
+          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
         className,
       )}
     >
@@ -180,16 +193,23 @@ const Navbar1 = ({
   const location = useLocation();
   const [showNotifs, setShowNotifs] = useState(false);
   const notifData = useNotifications();
-  const { notifications: notifs, unreadCount, markAsRead, markAllAsRead } = notifData;
+  const {
+    notifications: notifs,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+  } = notifData;
   const navigate = useNavigate();
   return (
     <section className="py-4 sticky top-0 z-40 bg-background/60 backdrop-blur-xl border-b border-border/40">
-      <div className="container mx-auto px-4">
+      <div className="mx-auto px-4">
         <nav className="hidden justify-between lg:flex">
           <div className="flex items-center gap-6">
             <Link to={logo.url} className="flex items-center gap-2">
               <LogoIcon src={logo.src} alt={logo.alt} />
-              <span className="text-lg font-semibold bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 bg-clip-text text-transparent font-bold tracking-tight">{logo.title}</span>
+              <span className="text-lg font-semibold bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 bg-clip-text text-transparent font-bold tracking-tight">
+                {logo.title}
+              </span>
             </Link>
             {appNav && appNav.length > 0 && (
               <div className="hidden sm:flex items-center gap-0.5 border-l border-border/60 pl-4 ml-1">
@@ -230,29 +250,40 @@ const Navbar1 = ({
                   {/* Notification bell */}
                   <div className="relative">
                     <button
-                      onClick={() => setShowNotifs(v => !v)}
+                      onClick={() => setShowNotifs((v) => !v)}
                       className="relative p-2 rounded-lg hover:bg-secondary/50 transition-colors"
                     >
                       <Bell className="w-4.5 h-4.5 text-muted-foreground" />
                       {unreadCount > 0 && (
                         <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 rounded-full bg-pink-500 text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-background">
-                          {unreadCount > 9 ? '9+' : unreadCount}
+                          {unreadCount > 9 ? "9+" : unreadCount}
                         </span>
                       )}
                     </button>
                     {showNotifs && (
                       <>
-                        <div className="fixed inset-0 z-50" onClick={() => setShowNotifs(false)} />
+                        <div
+                          className="fixed inset-0 z-50"
+                          onClick={() => setShowNotifs(false)}
+                        />
                         <div className="absolute top-full right-0 mt-1 w-80 bg-card border border-border rounded-xl shadow-2xl z-50 max-h-[70vh] overflow-hidden animate-slide-down">
                           <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
-                            <span className="text-sm font-semibold">Notifications</span>
+                            <span className="text-sm font-semibold">
+                              Notifications
+                            </span>
                             <div className="flex items-center gap-1">
                               {unreadCount > 0 && (
-                                <button onClick={markAllAsRead} className="text-[11px] text-primary hover:text-primary/80 font-medium px-2 py-1 rounded hover:bg-secondary/40 transition-colors">
+                                <button
+                                  onClick={markAllAsRead}
+                                  className="text-[11px] text-primary hover:text-primary/80 font-medium px-2 py-1 rounded hover:bg-secondary/40 transition-colors"
+                                >
                                   Mark all read
                                 </button>
                               )}
-                              <button onClick={() => setShowNotifs(false)} className="p-1 rounded-lg hover:bg-secondary transition-colors">
+                              <button
+                                onClick={() => setShowNotifs(false)}
+                                className="p-1 rounded-lg hover:bg-secondary transition-colors"
+                              >
                                 <XIcon className="w-4 h-4 text-muted-foreground" />
                               </button>
                             </div>
@@ -264,24 +295,32 @@ const Navbar1 = ({
                                 <p className="text-sm">No notifications yet</p>
                               </div>
                             ) : (
-                              notifs.map(n => (
+                              notifs.map((n) => (
                                 <button
                                   key={n.id}
                                   onClick={() => {
                                     markAsRead(n.id);
-                                    if (n.board_id) navigate(`/boards/${n.board_id}`);
+                                    if (n.board_id)
+                                      navigate(`/boards/${n.board_id}`);
                                     setShowNotifs(false);
                                   }}
-                                  className={`w-full text-left px-4 py-3 border-b border-border/20 hover:bg-secondary/30 transition-colors flex items-start gap-3 ${!n.read ? 'bg-primary/5' : ''
-                                    }`}
+                                  className={`w-full text-left px-4 py-3 border-b border-border/20 hover:bg-secondary/30 transition-colors flex items-start gap-3 ${
+                                    !n.read ? "bg-primary/5" : ""
+                                  }`}
                                 >
-                                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.read ? 'bg-pink-500' : 'bg-transparent'}`} />
+                                  <div
+                                    className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.read ? "bg-pink-500" : "bg-transparent"}`}
+                                  />
                                   <div className="flex-1 min-w-0">
-                                    <p className={`text-sm leading-snug ${!n.read ? 'font-semibold' : 'text-muted-foreground'}`}>
+                                    <p
+                                      className={`text-sm leading-snug ${!n.read ? "font-semibold" : "text-muted-foreground"}`}
+                                    >
                                       {n.title}
                                     </p>
                                     {n.body && (
-                                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{n.body}</p>
+                                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                                        {n.body}
+                                      </p>
                                     )}
                                     <p className="text-[10px] text-muted-foreground/60 mt-1">
                                       {formatNotifTime(n.created_at)}
@@ -295,10 +334,12 @@ const Navbar1 = ({
                       </>
                     )}
                   </div>
-                  <span className="text-sm text-muted-foreground truncate max-w-[160px]" title={session.email}>
-                    {session.email}
-                  </span>
-                  <Button type="button" variant="outline" size="sm" onClick={session.onSignOut}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={session.onSignOut}
+                  >
                     Sign out
                   </Button>
                 </>
@@ -306,7 +347,9 @@ const Navbar1 = ({
                 <>
                   <Link
                     to={auth.login.url}
-                    className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                    className={cn(
+                      buttonVariants({ variant: "outline", size: "sm" }),
+                    )}
                   >
                     {auth.login.text}
                   </Link>
@@ -325,11 +368,15 @@ const Navbar1 = ({
           <div className="flex items-center justify-between">
             <Link to={logo.url} className="flex items-center gap-2">
               <LogoIcon src={logo.src} alt={logo.alt} />
-              <span className="text-lg font-semibold bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 bg-clip-text text-transparent font-bold tracking-tight">{logo.title}</span>
+              <span className="text-lg font-semibold bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 bg-clip-text text-transparent font-bold tracking-tight">
+                {logo.title}
+              </span>
             </Link>
             <Sheet>
               <SheetTrigger
-                className={cn(buttonVariants({ variant: "outline", size: "icon" }))}
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "icon" }),
+                )}
               >
                 <Menu className="size-4" />
               </SheetTrigger>
@@ -396,10 +443,17 @@ const Navbar1 = ({
                   <div className="flex flex-col gap-3">
                     {session ? (
                       <>
-                        <span className="text-sm text-muted-foreground px-1 truncate" title={session.email}>
+                        <span
+                          className="text-sm text-muted-foreground px-1 truncate"
+                          title={session.email}
+                        >
                           {session.email}
                         </span>
-                        <Button type="button" variant="outline" onClick={session.onSignOut}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={session.onSignOut}
+                        >
                           Sign out
                         </Button>
                       </>
@@ -517,9 +571,9 @@ const renderMobileMenuItem = (item) => {
 };
 
 function formatNotifTime(dateStr) {
-  if (!dateStr) return '';
+  if (!dateStr) return "";
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (seconds < 60) return 'just now';
+  if (seconds < 60) return "just now";
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.floor(minutes / 60);
