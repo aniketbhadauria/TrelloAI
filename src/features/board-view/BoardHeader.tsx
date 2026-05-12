@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, MoreHorizontal, Filter, Image as ImageIcon, Trash2, Pencil, Check, X } from 'lucide-react';
+import { ArrowLeft, Star, MoreHorizontal, Filter, Image as ImageIcon, Trash2, Pencil, Check, X, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Board, BoardRole, Label } from '@/types/board';
 import BoardFilterPanel from './BoardFilterPanel';
+import InviteMemberModal from '@/features/members/InviteMemberModal';
 import { generateBoardKey } from '@/utils/board';
 
 type Setter<T> = T | ((prev: T) => T);
@@ -51,6 +52,7 @@ export default function BoardHeader({
   const [editingKey, setEditingKey] = useState(false);
   const [keyValue, setKeyValue] = useState(board.key ?? '');
   const [showMenu, setShowMenu] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
 
   useEffect(() => { setTitleValue(board.title); }, [board.title]);
   useEffect(() => { setKeyValue(board.key ?? ''); }, [board.key]);
@@ -142,6 +144,15 @@ export default function BoardHeader({
 
       <div className="flex-1" />
 
+      <Button
+        size="sm"
+        onClick={() => setShowInvite(true)}
+        className="gap-1.5 text-xs h-8 bg-white/15 text-white border border-white/25 hover:bg-white/25"
+      >
+        <UserPlus className="w-3.5 h-3.5" />
+        Invite
+      </Button>
+
       <div className="relative">
         <Button
           variant="ghost"
@@ -203,6 +214,14 @@ export default function BoardHeader({
           </>
         )}
       </div>
+
+      {showInvite && (
+        <InviteMemberModal
+          boardId={board.id}
+          ownerId={board.ownerId}
+          onClose={() => setShowInvite(false)}
+        />
+      )}
     </div>
   );
 }

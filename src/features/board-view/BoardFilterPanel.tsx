@@ -72,7 +72,7 @@ export default function BoardFilterPanel({
   return (
     <>
       <div className="fixed inset-0 z-50" onClick={onClose} />
-      <div className="absolute top-full right-0 mt-1 w-72 bg-card border border-border rounded-xl shadow-2xl z-50 max-h-[70vh] overflow-y-auto animate-slide-down">
+      <div className="absolute top-full right-0 mt-1 w-72 bg-card border border-border rounded-xl shadow-2xl z-50 max-h-[70vh] overflow-y-auto animate-slide-down text-foreground">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/30 sticky top-0 bg-card z-10 rounded-t-xl">
           <span className="text-sm font-semibold">Filter</span>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-secondary transition-colors">
