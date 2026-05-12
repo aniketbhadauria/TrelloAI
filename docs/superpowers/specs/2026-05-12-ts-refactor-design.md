@@ -176,7 +176,11 @@ src/
   lib/
     supabase.ts
     logger.ts
-    utils.ts
+    utils.ts               ← cn() only (shadcn dependency)
+  utils/
+    date.ts                ← timeAgo() and other date helpers
+    gradients.ts           ← GRADIENT_STYLES map + GRADIENTS constant
+    board.ts               ← resolveBoardImageUrl() and other board helpers
   types/
     board.ts
     auth.ts
