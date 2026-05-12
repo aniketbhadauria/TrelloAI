@@ -1,18 +1,18 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
-import PublicLayout from '@/layouts/PublicLayout';
+import AuthPageLayout from '@/layouts/AuthPageLayout';
 import LoginPage from '@/features/auth/LoginPage';
 import SignupPage from '@/features/auth/SignupPage';
 import HomePage from '@/features/boards/HomePage';
 import BoardViewPage from '@/features/board-view/BoardViewPage';
 import ArchivePage from '@/features/boards/ArchivePage';
-import Landing from '@/features/boards/LandingPage';
 
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route element={<PublicLayout />}>
-        <Route path="/" element={<Landing />} />
+      <Route path="/" element={<Navigate to="/boards" replace />} />
+
+      <Route element={<AuthPageLayout />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
       </Route>
