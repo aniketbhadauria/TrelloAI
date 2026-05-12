@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Check } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -17,15 +18,48 @@ const GRADIENT_STYLES = {
   'gradient-8': 'linear-gradient(135deg, #f9a8d4 0%, #c4b5fd 100%)',
 };
 
+const TEMPLATES = [
+  {
+    id: 'blank',
+    name: 'Blank board',
+    description: 'Start from scratch',
+    lists: [],
+  },
+  {
+    id: 'kanban',
+    name: 'Kanban',
+    description: 'Classic flow board',
+    lists: ['Backlog', 'To Do', 'In Progress', 'Done'],
+  },
+  {
+    id: 'project',
+    name: 'Project Management',
+    description: 'Track work end-to-end',
+    lists: ['Planning', 'In Progress', 'In Review', 'Done', 'Blocked'],
+  },
+  {
+    id: 'sprint',
+    name: 'Sprint Board',
+    description: 'Agile sprint planning',
+    lists: ['Backlog', 'Sprint', 'In Progress', 'Testing', 'Done'],
+  },
+];
+
+function buildLists(listNames) {
+  return listNames.map(name => ({ id: uuidv4(), title: name, cards: [] }));
+}
+
 export default function CreateBoardModal({ onClose }) {
   const { addBoard } = useBoards();
   const [title, setTitle] = useState('');
   const [selectedGradient, setSelectedGradient] = useState(GRADIENTS[0]);
+  const [selectedTemplate, setSelectedTemplate] = useState('blank');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
-    addBoard(title.trim(), selectedGradient, null);
+    const template = TEMPLATES.find(t => t.id === selectedTemplate);
+    addBoard(title.trim(), selectedGradient, null, buildLists(template.lists));
     onClose();
   };
 
@@ -64,6 +98,43 @@ export default function CreateBoardModal({ onClose }) {
               autoFocus
               className="bg-secondary/50"
             />
+          </div>
+
+          {/* Template picker */}
+          <div className="space-y-2">
+            <Label>Template</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {TEMPLATES.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setSelectedTemplate(t.id)}
+                  className={`relative text-left rounded-xl border p-3 transition-all ${
+                    selectedTemplate === t.id
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                      : 'border-border/50 hover:border-border hover:bg-secondary/40'
+                  }`}
+                >
+                  {selectedTemplate === t.id && (
+                    <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                      <Check className="w-2.5 h-2.5 text-primary-foreground" />
+                    </span>
+                  )}
+                  <p className="text-sm font-semibold mb-1 pr-5">{t.name}</p>
+                  {t.lists.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {t.lists.map((l) => (
+                        <span key={l} className="text-[10px] bg-secondary px-1.5 py-0.5 rounded-md text-muted-foreground">
+                          {l}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">{t.description}</p>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Gradient picker */}

@@ -217,10 +217,10 @@ export function BoardProvider({ children }) {
     };
   }, [boards]);
 
-  const addBoard = useCallback(async (title, gradient, backgroundImage = null) => {
+  const addBoard = useCallback(async (title, gradient, backgroundImage = null, lists = []) => {
     const id = uuidv4();
     const now = new Date().toISOString();
-    const boardData = { id, title, gradient, backgroundImage, starred: false, archived: false, createdAt: now, lists: [] };
+    const boardData = { id, title, gradient, backgroundImage, starred: false, archived: false, createdAt: now, lists };
     const newBoard = { ownerId: user.id, memberRole: 'owner', ownerName: null, ...boardData };
 
     // Optimistic add
