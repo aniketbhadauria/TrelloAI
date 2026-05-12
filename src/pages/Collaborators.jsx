@@ -6,6 +6,7 @@ import { Users, Search, UserPlus, X, Loader2, Pencil, Trash2 } from 'lucide-reac
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { cn } from '../lib/utils';
+import { logError } from '../lib/logger';
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 function getInitials(name) {
@@ -96,7 +97,11 @@ function InviteModal({ onClose, onInvited }) {
 
     setLoading(false);
 
-    if (err) { setError(err.message); return; }
+    if (err) {
+      logError('Failed to invite collaborator', { message: err.message });
+      setError(err.message);
+      return;
+    }
     onInvited(data);
     onClose();
   }
@@ -204,7 +209,11 @@ function EditModal({ member, onClose, onSaved }) {
       .maybeSingle();
 
     setLoading(false);
-    if (err) { setError(err.message); return; }
+    if (err) {
+      logError('Failed to update collaborator', { message: err.message });
+      setError(err.message);
+      return;
+    }
     onSaved(data);
     onClose();
   }
@@ -304,7 +313,7 @@ export default function Collaborators() {
       .order('updated_at', { ascending: false })
       .then(({ data, error }) => {
         if (cancelled) return;
-        if (error) { console.error('Failed to load collaborators:', error.message); return; }
+        if (error) { logError('Failed to load collaborators', { message: error.message }); return; }
         setDirectoryUsers(data || []);
       });
     return () => { cancelled = true; };
@@ -374,7 +383,7 @@ export default function Collaborators() {
     setRemovingId(dirId);
     const { error } = await supabase.from('app_users').delete().eq('id', dirId);
     setRemovingId(null);
-    if (error) { console.error('Failed to remove collaborator:', error.message); return; }
+    if (error) { logError('Failed to delete collaborator', { message: error.message }); return; }
     setDirectoryUsers(prev => prev.filter(u => u.id !== dirId));
   }
 

@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useDebouncedCallback } from '../hooks/useDebouncedCallback';
+import { logError } from '../lib/logger';
 
 const BoardContext = createContext(null);
 
@@ -48,7 +49,7 @@ export function BoardProvider({ children }) {
       if (cancelled) return;
 
       if (error) {
-        console.error('Failed to load boards:', error.message);
+        logError('Failed to load boards', { message: error.message });
         setBoardsLoading(false);
         isInitialLoad.current = false;
         return;
@@ -66,7 +67,7 @@ export function BoardProvider({ children }) {
           .select('updated_at')
           .maybeSingle();
         if (upsertError) {
-          console.error('Failed to create board row:', upsertError.message);
+          logError('Failed to create board row', { message: upsertError.message });
         }
         setData(EMPTY_DATA);
         lastServerUpdatedAtRef.current = upserted?.updated_at || nowIso;
@@ -137,7 +138,7 @@ export function BoardProvider({ children }) {
     const { data: updated, error } = await query.select('updated_at').maybeSingle();
 
     if (error) {
-      console.error('Failed to save boards:', error.message);
+      logError('Failed to save boards', { message: error.message });
       setIsSavingBoards(false);
       return;
     }
@@ -152,7 +153,7 @@ export function BoardProvider({ children }) {
         .eq('id', boardRowId)
         .maybeSingle();
       if (fetchError) {
-        console.error('Failed to refetch boards after stale save:', fetchError.message);
+        logError('Failed to refetch boards after stale save', { message: fetchError.message });
         setIsSavingBoards(false);
         return;
       }
@@ -192,6 +193,8 @@ export function BoardProvider({ children }) {
       lastSavedSerializedRef.current = JSON.stringify(row.data);
       setData(row.data);
       setTimeout(() => { isInitialLoad.current = false; }, 100);
+    } else if (error) {
+      logError('Failed to refresh boards', { message: error.message });
     }
   }, [boardRowId]);
 
@@ -218,7 +221,7 @@ export function BoardProvider({ children }) {
 
     if (error) {
       setIsSavingBoards(false);
-      console.error('Failed to persist boards immediately:', error.message);
+      logError('Failed to persist boards immediately', { message: error.message });
       throw error;
     }
 

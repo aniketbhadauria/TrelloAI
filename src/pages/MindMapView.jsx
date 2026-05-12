@@ -5,6 +5,7 @@ import {
   ArrowLeft, Plus, Minus, Maximize2, Sparkles, Trash2, Edit3,
   ChevronRight, ChevronDown, X, Loader2, Brain, RotateCcw,
 } from 'lucide-react';
+import { logError } from '../lib/logger';
 
 const BRANCH_COLORS = ['#8b5cf6', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#f97316', '#ef4444', '#ec4899'];
 const ROOT_W = 200, ROOT_H = 50, NODE_H = 40, H_GAP = 60, V_GAP = 14;
@@ -185,7 +186,7 @@ export default function MindMapView() {
       setMapData(assignColors(data));
       setShowAI(false); setAiTopic(''); setSelectedId(null);
       setTimeout(fitView, 150);
-    } catch (e) { console.error(e); }
+    } catch (e) { logError('Mindmap generation failed', { message: e.message }); }
     finally { setAiLoading(false); }
   };
 

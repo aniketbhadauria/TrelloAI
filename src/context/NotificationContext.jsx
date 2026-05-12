@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
+import { logError } from '../lib/logger';
 
 const NotificationContext = createContext(null);
 
@@ -33,7 +34,7 @@ export function NotificationProvider({ children }) {
       if (cancelled) return;
 
       if (error) {
-        console.error('Failed to load notifications:', error.message);
+        logError('Failed to load notifications', { message: error.message });
       } else {
         setNotifications(data || []);
       }
@@ -65,19 +66,22 @@ export function NotificationProvider({ children }) {
 
   const markAsRead = useCallback(async (notificationId) => {
     setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n));
-    await supabase.from('notifications').update({ read: true }).eq('id', notificationId);
+    const { error } = await supabase.from('notifications').update({ read: true }).eq('id', notificationId);
+    if (error) logError('Failed to mark notification read', { message: error.message });
   }, []);
 
   const markAllAsRead = useCallback(async () => {
     if (!userEmail) return;
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    await supabase.from('notifications').update({ read: true }).eq('user_email', userEmail).eq('read', false);
+    const { error } = await supabase.from('notifications').update({ read: true }).eq('user_email', userEmail).eq('read', false);
+    if (error) logError('Failed to mark all notifications read', { message: error.message });
   }, [userEmail]);
 
   const clearAll = useCallback(async () => {
     if (!userEmail) return;
     setNotifications([]);
-    await supabase.from('notifications').delete().eq('user_email', userEmail);
+    const { error } = await supabase.from('notifications').delete().eq('user_email', userEmail);
+    if (error) logError('Failed to clear notifications', { message: error.message });
   }, [userEmail]);
 
   const value = useMemo(() => ({
@@ -101,7 +105,7 @@ export async function sendNotification({ userEmail, title, body = '', boardId = 
   const { error } = await supabase
     .from('notifications')
     .insert({ user_email: userEmail, title, body, board_id: boardId, card_id: cardId });
-  if (error) console.error('Failed to send notification:', error.message);
+  if (error) logError('Failed to send notification', { message: error.message });
 }
 
 export function useNotifications() {

@@ -5,6 +5,7 @@
  * Mounted directly via a <script type="module"> tag in index.html so it never
  * touches React context, the router, or any existing component.
  */
+import { logError } from '../lib/logger';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.SUPABASE_ANON_KEY;
@@ -266,7 +267,7 @@ async function renderPanel(panel) {
       <div class="tf-bex-list">${items}</div>
     `;
   } catch (err) {
-    console.error('[BoardExporter] load failed:', err);
+    logError('Board export fetch failed', { message: err.message });
     panel.innerHTML = `
       <div class="tf-bex-header">
         <div>

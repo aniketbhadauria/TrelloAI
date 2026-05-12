@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { logError } from '../lib/logger';
 
 const AuthContext = createContext(null);
 
@@ -8,10 +9,12 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      setLoading(false);
-    });
+    supabase.auth.getSession()
+      .then(({ data: { session: s } }) => {
+        setSession(s);
+        setLoading(false);
+      })
+      .catch(err => logError('getSession failed', err));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
@@ -43,7 +46,7 @@ export function AuthProvider({ children }) {
         { onConflict: 'id' }
       )
       .then(({ error }) => {
-        if (error) console.error('Failed to sync app user:', error.message);
+        if (error) logError('Failed to sync app_user', { message: error.message });
       });
   }, [session]);
 
