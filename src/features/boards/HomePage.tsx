@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useBoards } from "../context/BoardContext";
-import BoardCard from "../components/BoardCard";
-import CreateBoardModal from "../components/CreateBoardModal";
-import { Star, Plus, Users } from "lucide-react";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useBoards } from '@/context/BoardContext';
+import BoardCard from './BoardCard';
+import CreateBoardModal from './CreateBoardModal';
+import { Star, Plus, Users } from 'lucide-react';
 
 export default function Home() {
   const { boards, boardsLoading } = useBoards();
@@ -20,14 +20,14 @@ export default function Home() {
   }
 
   const starredBoards = boards.filter(
-    (b) => b.starred && b.memberRole === "owner",
+    (b) => b.starred && b.memberRole === 'owner',
   );
   const ownedBoards = boards
-    .filter((b) => b.memberRole === "owner")
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    .filter((b) => b.memberRole === 'owner')
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   const sharedBoards = boards
-    .filter((b) => b.memberRole !== "owner")
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    .filter((b) => b.memberRole !== 'owner')
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto page-enter pb-32">
@@ -35,7 +35,7 @@ export default function Home() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">
-              Your{" "}
+              Your{' '}
               <span className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 bg-clip-text text-transparent">
                 Workspace
               </span>
@@ -46,7 +46,7 @@ export default function Home() {
           </div>
           <button
             type="button"
-            onClick={() => navigate("/collaborators")}
+            onClick={() => navigate('/collaborators')}
             className="inline-flex items-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-sm font-medium hover:bg-secondary/50 transition-colors"
           >
             <Users className="w-4 h-4" />
