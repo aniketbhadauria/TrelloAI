@@ -42,13 +42,13 @@ interface BoardFilterPanelProps {
   filterKeyword: string;
   setFilterKeyword: (v: string) => void;
   filterLabels: string[];
-  setFilterLabels: React.Dispatch<React.SetStateAction<string[]>>;
+  setFilterLabels: (v: string[] | ((prev: string[]) => string[])) => void;
   filterDueDate: string[];
-  setFilterDueDate: React.Dispatch<React.SetStateAction<string[]>>;
+  setFilterDueDate: (v: string[] | ((prev: string[]) => string[])) => void;
   filterStatus: string[];
-  setFilterStatus: React.Dispatch<React.SetStateAction<string[]>>;
+  setFilterStatus: (v: string[] | ((prev: string[]) => string[])) => void;
   filterActivity: string[];
-  setFilterActivity: React.Dispatch<React.SetStateAction<string[]>>;
+  setFilterActivity: (v: string[] | ((prev: string[]) => string[])) => void;
   allLabels: Label[];
   hasActiveFilters: boolean;
   clearAllFilters: () => void;
@@ -65,7 +65,7 @@ export default function BoardFilterPanel({
 }: BoardFilterPanelProps) {
   const toggle = (
     arr: string[],
-    setArr: React.Dispatch<React.SetStateAction<string[]>>,
+    setArr: (v: (prev: string[]) => string[]) => void,
     val: string,
   ) => setArr(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
 

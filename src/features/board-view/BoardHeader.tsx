@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, MoreHorizontal, Filter, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { ArrowLeft, Star, MoreHorizontal, Filter, Image as ImageIcon, Trash2, Pencil, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { Board, BoardRole } from '@/types/board';
+import type { Board, BoardRole, Label } from '@/types/board';
 import BoardFilterPanel from './BoardFilterPanel';
-import type { Label } from '@/types/board';
+import { generateBoardKey } from '@/utils/board';
+
+type Setter<T> = T | ((prev: T) => T);
 
 interface BoardHeaderProps {
   board: Board;
@@ -15,27 +17,27 @@ interface BoardHeaderProps {
   onFilterToggle: () => void;
   onFilterClose: () => void;
   onTitleSave: (title: string) => void;
+  onKeySave: (key: string) => void;
   onStar: () => void;
   onBackgroundPicker: () => void;
   onArchive: () => void;
-  // filter state passed through to panel
   filterKeyword: string;
   setFilterKeyword: (v: string) => void;
   filterLabels: string[];
-  setFilterLabels: React.Dispatch<React.SetStateAction<string[]>>;
+  setFilterLabels: (v: Setter<string[]>) => void;
   filterDueDate: string[];
-  setFilterDueDate: React.Dispatch<React.SetStateAction<string[]>>;
+  setFilterDueDate: (v: Setter<string[]>) => void;
   filterStatus: string[];
-  setFilterStatus: React.Dispatch<React.SetStateAction<string[]>>;
+  setFilterStatus: (v: Setter<string[]>) => void;
   filterActivity: string[];
-  setFilterActivity: React.Dispatch<React.SetStateAction<string[]>>;
+  setFilterActivity: (v: Setter<string[]>) => void;
   allLabels: Label[];
   clearAllFilters: () => void;
 }
 
 export default function BoardHeader({
   board, canEdit, role, hasActiveFilters, filterOpen, onFilterToggle, onFilterClose,
-  onTitleSave, onStar, onBackgroundPicker, onArchive,
+  onTitleSave, onKeySave, onStar, onBackgroundPicker, onArchive,
   filterKeyword, setFilterKeyword,
   filterLabels, setFilterLabels,
   filterDueDate, setFilterDueDate,
@@ -46,17 +48,25 @@ export default function BoardHeader({
   const navigate = useNavigate();
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(board.title);
+  const [editingKey, setEditingKey] = useState(false);
+  const [keyValue, setKeyValue] = useState(board.key ?? '');
   const [showMenu, setShowMenu] = useState(false);
 
-  useEffect(() => {
-    setTitleValue(board.title);
-  }, [board.title]);
+  useEffect(() => { setTitleValue(board.title); }, [board.title]);
+  useEffect(() => { setKeyValue(board.key ?? ''); }, [board.key]);
 
   const handleTitleSubmit = () => {
     const val = titleValue.trim();
     if (val && val !== board.title) onTitleSave(val);
     else setTitleValue(board.title);
     setEditingTitle(false);
+  };
+
+  const handleKeySubmit = () => {
+    const val = keyValue.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+    if (val && val !== board.key) onKeySave(val);
+    else setKeyValue(board.key ?? '');
+    setEditingKey(false);
   };
 
   return (
@@ -93,16 +103,40 @@ export default function BoardHeader({
         </h1>
       )}
 
-      {board.key && (
-        <span className="text-xs font-mono text-white/40 px-1.5 py-0.5 rounded bg-white/10">
-          {board.key}
-        </span>
+      {/* Board key badge — click to edit */}
+      {editingKey ? (
+        <div className="flex items-center gap-1">
+          <input
+            value={keyValue}
+            onChange={(e) => setKeyValue(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8))}
+            onBlur={handleKeySubmit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleKeySubmit();
+              if (e.key === 'Escape') { setKeyValue(board.key ?? ''); setEditingKey(false); }
+            }}
+            className="w-20 text-xs font-mono bg-white/10 text-white px-1.5 py-0.5 rounded border border-white/30 outline-none uppercase"
+            maxLength={8}
+            autoFocus
+          />
+          <button onClick={handleKeySubmit} className="p-0.5 rounded hover:bg-white/10 transition-colors">
+            <Check className="w-3 h-3 text-white/70" />
+          </button>
+          <button onClick={() => { setKeyValue(board.key ?? ''); setEditingKey(false); }} className="p-0.5 rounded hover:bg-white/10 transition-colors">
+            <X className="w-3 h-3 text-white/70" />
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => canEdit && setEditingKey(true)}
+          className="group flex items-center gap-1 text-xs font-mono text-white/40 px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 transition-colors"
+          title="Click to edit board key"
+        >
+          {board.key || generateBoardKey(board.title)}
+          {canEdit && <Pencil className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />}
+        </button>
       )}
 
-      <button
-        onClick={onStar}
-        className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
-      >
+      <button onClick={onStar} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
         <Star className={`w-4 h-4 ${board.starred ? 'fill-yellow-300 text-yellow-300' : 'text-white/60'}`} />
       </button>
 
