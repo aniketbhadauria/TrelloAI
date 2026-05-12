@@ -75,6 +75,17 @@ export default function BoardHeader({
   useEffect(() => { setTitleValue(board.title); }, [board.title]);
   useEffect(() => { setKeyValue(board.key ?? ''); }, [board.key]);
 
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (showMenu) { setShowMenu(false); return; }
+      if (showMembersPanel) { setShowMembersPanel(false); return; }
+      if (filterOpen) { onFilterClose(); }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [showMenu, showMembersPanel, filterOpen, onFilterClose]);
+
   const handleTitleSubmit = () => {
     const val = titleValue.trim();
     if (val && val !== board.title) onTitleSave(val);
