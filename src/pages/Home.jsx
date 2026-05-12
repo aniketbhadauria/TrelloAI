@@ -1,47 +1,15 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useBoards } from '../context/BoardContext';
-import BoardCard from '../components/BoardCard';
-import CreateBoardModal from '../components/CreateBoardModal';
-import MacOSDock from '../components/ui/mac-os-dock';
-import { Star, Plus, Users } from 'lucide-react';
-
-const dockApps = [
-  { id: 'finder', name: 'Finder', icon: 'https://cdn.jim-nielsen.com/macos/1024/finder-2021-09-10.png?rf=1024' },
-  { id: 'calculator', name: 'Calculator', icon: 'https://cdn.jim-nielsen.com/macos/1024/calculator-2021-04-29.png?rf=1024' },
-  { id: 'terminal', name: 'Terminal', icon: 'https://cdn.jim-nielsen.com/macos/1024/terminal-2021-06-03.png?rf=1024' },
-  { id: 'mail', name: 'Mail', icon: 'https://cdn.jim-nielsen.com/macos/1024/mail-2021-05-25.png?rf=1024' },
-  { id: 'notes', name: 'Notes', icon: 'https://cdn.jim-nielsen.com/macos/1024/notes-2021-05-25.png?rf=1024' },
-  { id: 'safari', name: 'Analytics', icon: 'https://cdn.jim-nielsen.com/macos/1024/safari-2021-06-02.png?rf=1024' },
-  { id: 'photos', name: 'Photos', icon: 'https://cdn.jim-nielsen.com/macos/1024/photos-2021-05-28.png?rf=1024' },
-  { id: 'music', name: 'Music', icon: 'https://cdn.jim-nielsen.com/macos/1024/music-2021-05-25.png?rf=1024' },
-  { id: 'calendar', name: 'Calendar', icon: 'https://cdn.jim-nielsen.com/macos/1024/calendar-2021-04-29.png?rf=1024' },
-];
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useBoards } from "../context/BoardContext";
+import BoardCard from "../components/BoardCard";
+import CreateBoardModal from "../components/CreateBoardModal";
+import { Star, Plus, Users } from "lucide-react";
 
 export default function Home() {
   const { boards, boardsLoading } = useBoards();
   const [showCreate, setShowCreate] = useState(false);
-  const [openApps, setOpenApps] = useState(['finder', 'safari']);
 
   const navigate = useNavigate();
-
-  const handleDockAppClick = (appId) => {
-    if (appId === 'finder') {
-      navigate('/');
-      return;
-    }
-    if (appId === 'safari') {
-      navigate('/analytics');
-      return;
-    }
-    if (appId === 'calendar') {
-      window.open('https://calendar.google.com', '_blank');
-      return;
-    }
-    setOpenApps(prev =>
-      prev.includes(appId) ? prev.filter(id => id !== appId) : [...prev, appId]
-    );
-  };
 
   if (boardsLoading) {
     return (
@@ -51,12 +19,14 @@ export default function Home() {
     );
   }
 
-  const starredBoards = boards.filter(b => b.starred && b.memberRole === 'owner');
+  const starredBoards = boards.filter(
+    (b) => b.starred && b.memberRole === "owner",
+  );
   const ownedBoards = boards
-    .filter(b => b.memberRole === 'owner')
+    .filter((b) => b.memberRole === "owner")
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const sharedBoards = boards
-    .filter(b => b.memberRole !== 'owner')
+    .filter((b) => b.memberRole !== "owner")
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   return (
@@ -65,16 +35,18 @@ export default function Home() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">
-              Your{' '}
+              Your{" "}
               <span className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 bg-clip-text text-transparent">
                 Workspace
               </span>
             </h1>
-            <p className="text-muted-foreground text-base text-9xl-line-height">Organize, manage, and track your projects with ease.</p>
+            <p className="text-muted-foreground text-base text-9xl-line-height">
+              Organize, manage, and track your projects with ease.
+            </p>
           </div>
           <button
             type="button"
-            onClick={() => navigate('/collaborators')}
+            onClick={() => navigate("/collaborators")}
             className="inline-flex items-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-sm font-medium hover:bg-secondary/50 transition-colors"
           >
             <Users className="w-4 h-4" />
@@ -89,10 +61,12 @@ export default function Home() {
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-400 flex items-center justify-center">
               <Star className="w-3.5 h-3.5 text-white fill-white" />
             </div>
-            <h2 className="text-lg font-semibold tracking-tight">Starred Boards</h2>
+            <h2 className="text-lg font-semibold tracking-tight">
+              Starred Boards
+            </h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {starredBoards.map(board => (
+            {starredBoards.map((board) => (
               <BoardCard key={board.id} board={board} />
             ))}
           </div>
@@ -102,12 +76,16 @@ export default function Home() {
       <section className="mb-10">
         <div className="flex items-center gap-2.5 mb-5">
           <div className="w-7 h-7 rounded-lg overflow-hidden">
-            <img src="/esperia.png" alt="Esperia logo" className="w-full h-full object-cover" />
+            <img
+              src="/esperia.png"
+              alt="Esperia logo"
+              className="w-full h-full object-cover"
+            />
           </div>
           <h2 className="text-lg font-semibold tracking-tight">Your Boards</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {ownedBoards.map(board => (
+          {ownedBoards.map((board) => (
             <BoardCard key={board.id} board={board} />
           ))}
           <button
@@ -118,7 +96,9 @@ export default function Home() {
               <Plus className="w-6 h-6 group-hover:scale-110 transition-transform" />
             </div>
             <span className="text-sm font-semibold">Create new board</span>
-            <p className="text-xs text-muted-foreground/60 mt-1">Start a fresh project</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">
+              Start a fresh project
+            </p>
           </button>
         </div>
       </section>
@@ -129,25 +109,23 @@ export default function Home() {
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
               <Users className="w-3.5 h-3.5 text-white" />
             </div>
-            <h2 className="text-lg font-semibold tracking-tight">Shared with You</h2>
+            <h2 className="text-lg font-semibold tracking-tight">
+              Shared with You
+            </h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {sharedBoards.map(board => (
-              <BoardCard key={board.id} board={board} sharedBy={board.ownerName} />
+            {sharedBoards.map((board) => (
+              <BoardCard
+                key={board.id}
+                board={board}
+                sharedBy={board.ownerName}
+              />
             ))}
           </div>
         </section>
       )}
 
       {showCreate && <CreateBoardModal onClose={() => setShowCreate(false)} />}
-
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
-        <MacOSDock
-          apps={dockApps}
-          onAppClick={handleDockAppClick}
-          openApps={openApps}
-        />
-      </div>
     </div>
   );
 }

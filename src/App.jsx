@@ -1,21 +1,33 @@
-import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { BoardProvider, useBoards } from './context/BoardContext';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { NotificationProvider } from './context/NotificationContext';
-import { Navbar1 } from './components/ui/shadcnblocks-com-navbar1';
-import Landing from './pages/Landing';
-import Home from './pages/Home';
-import BoardView from './pages/BoardView';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useLocation,
+  useNavigate,
+  Navigate,
+} from "react-router-dom";
+import { BoardProvider, useBoards } from "./context/BoardContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { NotificationProvider } from "./context/NotificationContext";
+import { Navbar1 } from "./components/ui/shadcnblocks-com-navbar1";
+import Landing from "./pages/Landing";
+import Home from "./pages/Home";
+import BoardView from "./pages/BoardView";
 
-import MindMapView from './pages/MindMapView';
-import Analytics from './pages/Analytics';
-import Collaborators from './pages/Collaborators';
-import ArchivePage from './pages/Archive';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import { Book, Sunset, Trees, Zap, HelpCircle, Mail, Activity, FileText } from 'lucide-react';
-import AICopilot from './components/AICopilot';
-import './App.css';
+import ArchivePage from "./pages/Archive";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import {
+  Book,
+  Sunset,
+  Trees,
+  Zap,
+  HelpCircle,
+  Mail,
+  Activity,
+  FileText,
+} from "lucide-react";
+import "./App.css";
 
 const navbarDataBase = {
   logo: {
@@ -52,7 +64,8 @@ const navbarDataBase = {
         },
         {
           title: "Support",
-          description: "Get in touch with our support team or visit our community forums",
+          description:
+            "Get in touch with our support team or visit our community forums",
           icon: <Zap className="size-5 shrink-0" />,
           url: "#",
         },
@@ -122,17 +135,17 @@ function ProtectedRoute({ children }) {
 function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
-  const isLanding = location.pathname === '/';
+  const isLanding = location.pathname === "/";
   const { session, signOut } = useAuth();
   const { persistBoardsNow } = useBoards();
 
   const appNav =
     session && !isLanding
       ? [
-          { title: 'Boards', url: '/boards' },
-          { title: 'Analytics', url: '/analytics' },
-          { title: 'Collaborators', url: '/collaborators' },
-          { title: 'Archive', url: '/archive' },
+          { title: "Boards", url: "/boards" },
+          { title: "Analytics", url: "/analytics" },
+          { title: "Collaborators", url: "/collaborators" },
+          { title: "Archive", url: "/archive" },
         ]
       : null;
 
@@ -140,21 +153,24 @@ function AppContent() {
     ...navbarDataBase,
     appNav,
     auth: {
-      login: { text: 'Log in', url: '/login' },
-      signup: { text: 'Sign up', url: '/signup' },
+      login: { text: "Log in", url: "/login" },
+      signup: { text: "Sign up", url: "/signup" },
       session: session?.user?.email
         ? {
-          email: session.user.email,
-          onSignOut: async () => {
-            try {
-              await persistBoardsNow();
-            } catch (error) {
-              console.error('Unable to persist boards before sign out:', error);
-            }
-            await signOut();
-            navigate('/', { replace: true });
-          },
-        }
+            email: session.user.email,
+            onSignOut: async () => {
+              try {
+                await persistBoardsNow();
+              } catch (error) {
+                console.error(
+                  "Unable to persist boards before sign out:",
+                  error,
+                );
+              }
+              await signOut();
+              navigate("/", { replace: true });
+            },
+          }
         : null,
     },
   };
@@ -173,22 +189,22 @@ function AppContent() {
           <Route path="/signup" element={<Signup />} />
           <Route
             path="/boards"
-            element={(
+            element={
               <ProtectedRoute>
                 <Home />
               </ProtectedRoute>
-            )}
+            }
           />
           <Route
             path="/boards/:boardId"
-            element={(
+            element={
               <ProtectedRoute>
                 <BoardView />
               </ProtectedRoute>
-            )}
+            }
           />
 
-          <Route
+          {/* <Route
             path="/mindmap"
             element={(
               <ProtectedRoute>
@@ -211,20 +227,20 @@ function AppContent() {
                 <Collaborators />
               </ProtectedRoute>
             )}
-          />
+          /> */}
           <Route
             path="/archive"
-            element={(
+            element={
               <ProtectedRoute>
                 <ArchivePage />
               </ProtectedRoute>
-            )}
+            }
           />
         </Routes>
       </div>
 
       {/* AI Copilot — visible on all authenticated pages */}
-      {session && !isLanding && <AICopilot />}
+      {/* {session && !isLanding && <AICopilot />} */}
     </div>
   );
 }
