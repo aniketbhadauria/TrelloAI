@@ -4,15 +4,32 @@ import { ArrowLeft, Star, MoreHorizontal, Filter, Image as ImageIcon, Trash2, Pe
 import { Button } from '@/components/ui/button';
 import type { Board, BoardRole, Label } from '@/types/board';
 import BoardFilterPanel from './BoardFilterPanel';
-import InviteMemberModal from '@/features/members/InviteMemberModal';
 import { generateBoardKey } from '@/utils/board';
 
 type Setter<T> = T | ((prev: T) => T);
+
+interface BoardMember {
+  userId: string;
+  display_name: string | null;
+  email: string | null;
+}
+
+const MEMBER_COLORS = ['#8b5cf6', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#f97316', '#ef4444', '#ec4899'];
+function avatarColor(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = id.charCodeAt(i) + ((h << 5) - h);
+  return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length];
+}
+function initials(name: string | null, email: string | null) {
+  const src = name || email || '?';
+  return (src.split(/\s|@/)[0]?.[0] ?? '?').toUpperCase();
+}
 
 interface BoardHeaderProps {
   board: Board;
   canEdit: boolean;
   role: BoardRole | null;
+  members: BoardMember[];
   hasActiveFilters: boolean;
   filterOpen: boolean;
   onFilterToggle: () => void;
@@ -20,6 +37,7 @@ interface BoardHeaderProps {
   onTitleSave: (title: string) => void;
   onKeySave: (key: string) => void;
   onStar: () => void;
+  onInvite: () => void;
   onBackgroundPicker: () => void;
   onArchive: () => void;
   filterKeyword: string;
@@ -37,8 +55,8 @@ interface BoardHeaderProps {
 }
 
 export default function BoardHeader({
-  board, canEdit, role, hasActiveFilters, filterOpen, onFilterToggle, onFilterClose,
-  onTitleSave, onKeySave, onStar, onBackgroundPicker, onArchive,
+  board, canEdit, role, members, hasActiveFilters, filterOpen, onFilterToggle, onFilterClose,
+  onTitleSave, onKeySave, onStar, onInvite, onBackgroundPicker, onArchive,
   filterKeyword, setFilterKeyword,
   filterLabels, setFilterLabels,
   filterDueDate, setFilterDueDate,
@@ -52,7 +70,6 @@ export default function BoardHeader({
   const [editingKey, setEditingKey] = useState(false);
   const [keyValue, setKeyValue] = useState(board.key ?? '');
   const [showMenu, setShowMenu] = useState(false);
-  const [showInvite, setShowInvite] = useState(false);
 
   useEffect(() => { setTitleValue(board.title); }, [board.title]);
   useEffect(() => { setKeyValue(board.key ?? ''); }, [board.key]);
@@ -144,9 +161,30 @@ export default function BoardHeader({
 
       <div className="flex-1" />
 
+      {/* Member avatars */}
+      {members.length > 0 && (
+        <div className="flex items-center -space-x-2">
+          {members.slice(0, 4).map((m) => (
+            <div
+              key={m.userId}
+              title={m.display_name || m.email || m.userId}
+              className="w-7 h-7 rounded-full border-2 border-black/20 flex items-center justify-center text-white text-[10px] font-bold shrink-0"
+              style={{ backgroundColor: avatarColor(m.userId) }}
+            >
+              {initials(m.display_name, m.email)}
+            </div>
+          ))}
+          {members.length > 4 && (
+            <div className="w-7 h-7 rounded-full border-2 border-black/20 bg-white/20 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+              +{members.length - 4}
+            </div>
+          )}
+        </div>
+      )}
+
       <Button
         size="sm"
-        onClick={() => setShowInvite(true)}
+        onClick={onInvite}
         className="gap-1.5 text-xs h-8 bg-white/15 text-white border border-white/25 hover:bg-white/25"
       >
         <UserPlus className="w-3.5 h-3.5" />
@@ -215,13 +253,6 @@ export default function BoardHeader({
         )}
       </div>
 
-      {showInvite && (
-        <InviteMemberModal
-          boardId={board.id}
-          ownerId={board.ownerId}
-          onClose={() => setShowInvite(false)}
-        />
-      )}
     </div>
   );
 }

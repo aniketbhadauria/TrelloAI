@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { WorkflowBuilderCard } from '@/components/ui/workflow-builder-card';
 import { timeAgo } from '@/utils/date';
-import { resolveBoardImageUrl } from '@/utils/board';
+import { resolveBoardImageUrl, generateBoardKey } from '@/utils/board';
 import type { Board } from '@/types/board';
 
 interface BoardCardProps {
@@ -14,7 +14,7 @@ export default function BoardCard({ board, sharedBy }: BoardCardProps) {
   const listNames = board.lists.map(l => l.title).slice(0, 3);
 
   return (
-    <Link to={`/boards/${board.id}`} className="block relative">
+    <Link to={`/boards/${board.key || generateBoardKey(board.title)}`} className="block relative">
       <WorkflowBuilderCard
         imageUrl={resolveBoardImageUrl(board.backgroundImage)}
         gradientClass={board.gradient}

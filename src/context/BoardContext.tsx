@@ -169,8 +169,13 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
 
   const getBoardRole = useCallback((boardId: string): BoardRole | null => membershipMap[boardId] || null, [membershipMap]);
 
-  const getBoard = useCallback((boardId: string): Board | null => {
-    const board = boards.find(b => b.id === boardId && !b.archived);
+  const getBoard = useCallback((boardIdOrKey: string): Board | null => {
+    const upper = boardIdOrKey.toUpperCase();
+    const board = boards.find(b => !b.archived && (
+      b.id === boardIdOrKey ||
+      (b.key && b.key === upper) ||
+      generateBoardKey(b.title) === upper
+    ));
     if (!board) return null;
     return {
       ...board,

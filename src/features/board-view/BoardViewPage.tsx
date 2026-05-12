@@ -7,6 +7,7 @@ import CardDetailModal from '@/features/cards/CardDetailModal';
 import BoardHeader from './BoardHeader';
 import BoardBackgroundModal from './BoardBackgroundModal';
 import InviteMemberModal from '@/features/members/InviteMemberModal';
+import { apiFetchBoardMembers } from '@/api/members';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -19,8 +20,10 @@ interface SelectedCard {
   cardId: string;
 }
 
+type BoardMember = Awaited<ReturnType<typeof apiFetchBoardMembers>>[number] & { display_name: string | null; email: string | null };
+
 export default function BoardView() {
-  const { boardId } = useParams<{ boardId: string }>();
+  const { boardId: boardSlug } = useParams<{ boardId: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const {
@@ -29,15 +32,17 @@ export default function BoardView() {
     addList, deleteList, updateListTitle, addCard, deleteBoard,
   } = useBoards();
 
-  const board = getBoard(boardId!);
+  const board = getBoard(boardSlug!);
+  const boardId = board?.id;
   usePageTitle(board?.title);
-  const role = getBoardRole(boardId!);
+  const role = getBoardRole(boardId ?? '');
   const canEdit = role === 'owner' || role === 'admin' || role === 'member';
 
   const [selectedCard, setSelectedCard] = useState<SelectedCard | null>(null);
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [boardMembers, setBoardMembers] = useState<BoardMember[]>([]);
 
   const {
     filters, hasActiveFilters, allLabels, filteredLists,
@@ -57,6 +62,11 @@ export default function BoardView() {
       }
     }
   }, [board?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!boardId) return;
+    apiFetchBoardMembers(boardId).then(members => setBoardMembers(members as BoardMember[]));
+  }, [boardId]);
 
   if (boardsLoading) {
     return (
@@ -100,12 +110,18 @@ export default function BoardView() {
     }
   };
 
+  const handleMembersRefresh = () => {
+    if (!boardId) return;
+    apiFetchBoardMembers(boardId).then(members => setBoardMembers(members as BoardMember[]));
+  };
+
   return (
     <div className="h-[calc(100vh-56px)] flex flex-col page-enter" style={boardStyle}>
       <BoardHeader
         board={board}
         canEdit={canEdit}
         role={role}
+        members={boardMembers}
         hasActiveFilters={hasActiveFilters}
         filterOpen={showFilter}
         onFilterToggle={() => setShowFilter(v => !v)}
@@ -158,6 +174,7 @@ export default function BoardView() {
           boardId={boardId!}
           listId={selectedCard.listId}
           cardId={selectedCard.cardId}
+          boardMembers={boardMembers}
           onClose={handleCardClose}
         />
       )}
@@ -176,7 +193,7 @@ export default function BoardView() {
         <InviteMemberModal
           boardId={boardId!}
           ownerId={board.ownerId}
-          onClose={() => setShowInvite(false)}
+          onClose={() => { setShowInvite(false); handleMembersRefresh(); }}
         />
       )}
     </div>

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   X, Calendar, Tag, Archive, Circle, CheckSquare,
-  MessageSquare, Plus, Send, Paperclip, Link2, Check,
+  MessageSquare, Plus, Send, Paperclip, Link2, Check, Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,12 @@ const MEMBER_COLORS = [
   '#8b5cf6', '#3b82f6', '#06b6d4', '#10b981',
   '#f59e0b', '#f97316', '#ef4444', '#ec4899',
 ];
+
+function avatarColor(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = id.charCodeAt(i) + ((h << 5) - h);
+  return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length];
+}
 
 function getInitials(name: string): string {
   return name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
@@ -44,14 +50,21 @@ function formatCommentTime(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
+interface BoardMember {
+  userId: string;
+  display_name: string | null;
+  email: string | null;
+}
+
 interface CardDetailModalProps {
   boardId: string;
   listId: string;
   cardId: string;
+  boardMembers?: BoardMember[];
   onClose: () => void;
 }
 
-export default function CardDetailModal({ boardId, listId, cardId, onClose }: CardDetailModalProps) {
+export default function CardDetailModal({ boardId, listId, cardId, boardMembers = [], onClose }: CardDetailModalProps) {
   const { getBoard, updateCard, archiveCard } = useBoards();
   const { user } = useAuth();
   const board = getBoard(boardId);
@@ -88,8 +101,9 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }: Ca
     ? (board?.key ? `${board.key}-${card.number}` : `#${card.number}`)
     : null;
 
+  const boardSlug = board?.key ?? boardId;
   const shareUrl = card.number
-    ? `${window.location.origin}/boards/${boardId}?card=${card.number}`
+    ? `${window.location.origin}/boards/${boardSlug}?card=${card.number}`
     : null;
 
   const handleCopyLink = async () => {
@@ -205,6 +219,15 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }: Ca
     });
   };
 
+  const handleToggleMember = (member: BoardMember) => {
+    const currentMembers = card.members ?? [];
+    const isAssigned = currentMembers.some(m => m.id === member.userId);
+    const updated = isAssigned
+      ? currentMembers.filter(m => m.id !== member.userId)
+      : [...currentMembers, { id: member.userId, name: member.display_name || member.email || member.userId }];
+    updateCard(boardId, listId, cardId, { members: updated });
+  };
+
   const handleDelete = () => {
     archiveCard(boardId, listId, cardId);
     onClose();
@@ -287,6 +310,7 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }: Ca
                         </button>
                       </div>
                       {[
+                        { id: 'members', icon: Users, title: 'Members', desc: 'Assign members to this card' },
                         { id: 'labels', icon: Tag, title: 'Labels', desc: 'Organize, categorize, and prioritize' },
                         { id: 'dates', icon: Calendar, title: 'Dates', desc: 'Start dates, due dates, and reminders' },
                         { id: 'checklist', icon: CheckSquare, title: 'Checklist', desc: 'Add subtasks' },
@@ -308,6 +332,14 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }: Ca
                   </>
                 )}
               </div>
+
+              <button className={actionBtnClass('members')} onClick={() => toggleSection('members')}>
+                <Users className="w-3.5 h-3.5" />
+                Members
+                {(card.members?.length ?? 0) > 0 && (
+                  <span className="w-4.5 h-4.5 rounded-full bg-primary/20 text-[10px] flex items-center justify-center">{card.members!.length}</span>
+                )}
+              </button>
 
               <button className={actionBtnClass('labels')} onClick={() => toggleSection('labels')}>
                 <Tag className="w-3.5 h-3.5" />
@@ -413,6 +445,36 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }: Ca
             </div>
 
             {/* Expanded sections */}
+            {activeSection === 'members' && boardMembers.length > 0 && (
+              <div className="mb-4 p-3 bg-secondary/30 rounded-xl border border-border/40">
+                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Assign members</p>
+                <div className="space-y-1">
+                  {boardMembers.map((m) => {
+                    const isAssigned = (card.members ?? []).some(cm => cm.id === m.userId);
+                    const label = m.display_name || m.email || m.userId;
+                    return (
+                      <button
+                        key={m.userId}
+                        onClick={() => handleToggleMember(m)}
+                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors text-left ${isAssigned ? 'bg-primary/10' : 'hover:bg-secondary/60'}`}
+                      >
+                        <div
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                          style={{ backgroundColor: avatarColor(m.userId) }}
+                        >
+                          {label[0]?.toUpperCase()}
+                        </div>
+                        <span className="flex-1 text-sm truncate">{label}</span>
+                        {isAssigned && <Check className="w-3.5 h-3.5 text-primary" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {activeSection === 'members' && boardMembers.length === 0 && (
+              <p className="text-xs text-muted-foreground mb-4 px-1">No members on this board yet. Invite members first.</p>
+            )}
             {activeSection === 'labels' && (
               <CardLabels labels={card.labels} onAdd={handleAddLabel} onRemove={handleRemoveLabel} />
             )}
@@ -429,6 +491,23 @@ export default function CardDetailModal({ boardId, listId, cardId, onClose }: Ca
             )}
 
             {/* Inline chips when sections are collapsed */}
+            {activeSection !== 'members' && (card.members?.length ?? 0) > 0 && (
+              <div className="flex items-center gap-1.5 mb-4">
+                <span className="text-xs text-muted-foreground">Assigned:</span>
+                <div className="flex -space-x-1.5">
+                  {card.members!.map((m) => (
+                    <div
+                      key={m.id}
+                      title={m.name}
+                      className="w-6 h-6 rounded-full border-2 border-card flex items-center justify-center text-white text-[9px] font-bold"
+                      style={{ backgroundColor: avatarColor(m.id) }}
+                    >
+                      {m.name[0]?.toUpperCase()}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {activeSection !== 'labels' && card.labels.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mb-4">
                 {card.labels.map((label) => (

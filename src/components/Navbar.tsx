@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useProfile } from '@/context/ProfileContext';
 import { useBoards } from '@/context/BoardContext';
 import { LogoMark } from '@/components/Logo';
+import { generateBoardKey } from '@/utils/board';
 
 export default function Navbar() {
   const location = useLocation();
@@ -13,7 +14,7 @@ export default function Navbar() {
   const { profile } = useProfile();
   const { boards } = useBoards();
   const isBoards = location.pathname === '/boards';
-
+  console.log(profile)
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -21,7 +22,6 @@ export default function Navbar() {
   const searchRef = useRef<HTMLDivElement>(null);
 
   const email = session?.user?.email ?? '';
-  const displayName = profile?.display_name ?? profile?.first_name ?? email.split('@')[0];
   const initials = (profile?.first_name?.[0] ?? email[0] ?? '?').toUpperCase();
   const avatarUrl = profile?.avatar_url;
 
@@ -51,7 +51,7 @@ export default function Navbar() {
   function handleSearchKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Escape') { setSearchOpen(false); setSearchQuery(''); }
     if (e.key === 'Enter' && searchResults.length > 0) {
-      navigate(`/boards/${searchResults[0].id}`);
+      navigate(`/boards/${searchResults[0].key || generateBoardKey(searchResults[0].title)}`);
       setSearchOpen(false);
       setSearchQuery('');
     }
@@ -94,7 +94,7 @@ export default function Navbar() {
                 searchResults.map(board => (
                   <button
                     key={board.id}
-                    onClick={() => { navigate(`/boards/${board.id}`); setSearchOpen(false); setSearchQuery(''); }}
+                    onClick={() => { navigate(`/boards/${board.key || generateBoardKey(board.title)}`); setSearchOpen(false); setSearchQuery(''); }}
                     className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-secondary/60 transition-colors"
                   >
                     <div className="w-6 h-6 rounded-md shrink-0" style={{ backgroundColor: board.backgroundImage ? undefined : `var(--color-${board.gradient}, #475569)` }}>
@@ -117,11 +117,10 @@ export default function Navbar() {
         {session && (
           <Link
             to="/boards"
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              isBoards
-                ? 'bg-primary/10 text-primary'
-                : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
-            }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isBoards
+              ? 'bg-primary/10 text-primary'
+              : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+              }`}
           >
             <LayoutDashboard className="w-4 h-4" />
             Boards
@@ -136,7 +135,7 @@ export default function Navbar() {
               aria-label="Account menu"
             >
               {avatarUrl ? (
-                <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+                <img src={avatarUrl} alt={profile?.first_name ?? ''} className="w-full h-full object-cover" />
               ) : (
                 initials
               )}
@@ -145,7 +144,7 @@ export default function Navbar() {
             {menuOpen && (
               <div className="absolute right-0 top-10 w-56 bg-popover border border-border rounded-xl shadow-lg py-1 animate-slide-down">
                 <div className="px-3 py-2.5 border-b border-border/60 mb-1">
-                  <p className="text-xs font-semibold text-foreground truncate">{displayName}</p>
+                  <p className="text-xs font-semibold text-foreground truncate capitalize">{profile?.first_name ?? ''} {profile?.last_name ?? ''}</p>
                   <p className="text-xs text-muted-foreground truncate mt-0.5">{email}</p>
                 </div>
                 <button
