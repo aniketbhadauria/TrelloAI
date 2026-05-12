@@ -1,7 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Users, Zap, Shield } from 'lucide-react';
-import { LogoFull, LogoMark } from '@/components/Logo';
+import { LogoMark } from '@/components/Logo';
 
 const FEATURES = [
   { icon: Users, label: 'Shared boards for every project' },
@@ -26,7 +26,6 @@ export default function AuthPageLayout() {
         {/* Center: wordmark + headline + features */}
         <div className="space-y-10">
           <div className="space-y-5">
-            <LogoFull className="h-7 text-white" />
             <div>
               <h1 className="text-4xl font-bold leading-tight tracking-tight mb-3">
                 Your team's<br />workspace.

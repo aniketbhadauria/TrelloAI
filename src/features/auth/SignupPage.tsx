@@ -1,54 +1,58 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
-const ALLOWED_DOMAIN = 'esperiastudio.com';
-
-function isAllowedEmail(email: string): boolean {
-  return email.toLowerCase().endsWith(`@${ALLOWED_DOMAIN}`);
-}
+const schema = z.object({
+  email: z
+    .string()
+    .email('Invalid email address')
+    .refine(v => v.toLowerCase().endsWith('@esperiastudio.com'), {
+      message: 'Only @esperiastudio.com accounts are allowed',
+    }),
+  password: z.string().min(6, 'At least 6 characters'),
+});
+type SignupForm = z.infer<typeof schema>;
 
 function formatSignupError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
-  if (/signups not allowed/i.test(msg)) {
+  if (/signups not allowed/i.test(msg))
     return 'New sign-ups are disabled. Enable them in Supabase Dashboard → Authentication → User Signups.';
-  }
   return msg || 'Could not sign up';
 }
 
 export default function SignupPage() {
+  usePageTitle('Sign Up');
   const { signUp } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(''); setMessage('');
-    if (!isAllowedEmail(email.trim())) {
-      setError(`Only @${ALLOWED_DOMAIN} accounts are allowed.`);
-      return;
-    }
-    setSubmitting(true);
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<SignupForm>({ resolver: zodResolver(schema) });
+
+  const onSubmit = async (data: SignupForm) => {
     try {
-      const data = await signUp(email.trim(), password);
-      if (data.session) {
+      const result = await signUp(data.email, data.password);
+      if (result.session) {
         navigate('/boards', { replace: true });
       } else {
-        setMessage('Check your email to confirm your account, then sign in.');
+        setSuccessMsg('Check your email to confirm your account, then sign in.');
       }
     } catch (err) {
-      setError(formatSignupError(err));
-    } finally {
-      setSubmitting(false);
+      setError('root', { message: formatSignupError(err) });
     }
-  }
+  };
 
   return (
     <div>
@@ -59,7 +63,7 @@ export default function SignupPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="signup-email">Email</Label>
           <Input
@@ -67,30 +71,35 @@ export default function SignupPage() {
             type="email"
             autoComplete="email"
             placeholder="you@esperiastudio.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
             className="h-10"
+            {...register('email')}
           />
+          {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
         </div>
+
         <div className="space-y-2">
           <Label htmlFor="signup-password">Password</Label>
           <Input
             id="signup-password"
             type="password"
             autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
             className="h-10"
+            {...register('password')}
           />
+          {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
           <p className="text-xs text-muted-foreground">At least 6 characters.</p>
         </div>
-        {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
-        {message && <p className="text-sm text-muted-foreground" role="status">{message}</p>}
-        <Button type="submit" className="w-full h-10 mt-2" disabled={submitting}>
-          {submitting ? 'Creating account…' : 'Sign up'}
+
+        {errors.root && (
+          <p className="text-sm text-destructive" role="alert">{errors.root.message}</p>
+        )}
+        {successMsg && (
+          <p className="text-sm text-muted-foreground" role="status">{successMsg}</p>
+        )}
+
+        <Button type="submit" className="w-full h-10 mt-2" disabled={isSubmitting}>
+          {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+          {isSubmitting ? 'Creating account…' : 'Sign up'}
         </Button>
       </form>
 

@@ -1,52 +1,54 @@
-import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
-const ALLOWED_DOMAIN = 'esperiastudio.com';
-
-function isAllowedEmail(email: string): boolean {
-  return email.toLowerCase().endsWith(`@${ALLOWED_DOMAIN}`);
-}
+const schema = z.object({
+  email: z
+    .string()
+    .email('Invalid email address')
+    .refine(v => v.toLowerCase().endsWith('@esperiastudio.com'), {
+      message: 'Only @esperiastudio.com accounts are allowed',
+    }),
+  password: z.string().min(1, 'Password is required'),
+});
+type LoginForm = z.infer<typeof schema>;
 
 function formatLoginError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
-  if (/email logins are disabled/i.test(msg)) {
+  if (/email logins are disabled/i.test(msg))
     return 'Email/password sign-in is disabled. Enable it in Supabase Dashboard → Authentication → Providers → Email.';
-  }
   return msg || 'Could not sign in';
 }
 
 export default function LoginPage() {
+  usePageTitle('Sign In');
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
   const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? '/boards';
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
-    if (!isAllowedEmail(email.trim())) {
-      setError(`Only @${ALLOWED_DOMAIN} accounts are allowed.`);
-      return;
-    }
-    setSubmitting(true);
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginForm>({ resolver: zodResolver(schema) });
+
+  const onSubmit = async (data: LoginForm) => {
     try {
-      await signIn(email.trim(), password);
+      await signIn(data.email, data.password);
       navigate(from, { replace: true });
     } catch (err) {
-      setError(formatLoginError(err));
-    } finally {
-      setSubmitting(false);
+      setError('root', { message: formatLoginError(err) });
     }
-  }
+  };
 
   return (
     <div>
@@ -57,7 +59,7 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="login-email">Email</Label>
           <Input
@@ -65,27 +67,31 @@ export default function LoginPage() {
             type="email"
             autoComplete="email"
             placeholder="you@esperiastudio.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
             className="h-10"
+            {...register('email')}
           />
+          {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
         </div>
+
         <div className="space-y-2">
           <Label htmlFor="login-password">Password</Label>
           <Input
             id="login-password"
             type="password"
             autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
             className="h-10"
+            {...register('password')}
           />
+          {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
         </div>
-        {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
-        <Button type="submit" className="w-full h-10 mt-2" disabled={submitting}>
-          {submitting ? 'Signing in…' : 'Sign in'}
+
+        {errors.root && (
+          <p className="text-sm text-destructive" role="alert">{errors.root.message}</p>
+        )}
+
+        <Button type="submit" className="w-full h-10 mt-2" disabled={isSubmitting}>
+          {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+          {isSubmitting ? 'Signing in…' : 'Sign in'}
         </Button>
       </form>
 

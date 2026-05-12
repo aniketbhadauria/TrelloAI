@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { X, Check } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@/components/ui/button';
@@ -33,12 +34,13 @@ interface CreateBoardModalProps {
 
 export default function CreateBoardModal({ onClose }: CreateBoardModalProps) {
   const { addBoard } = useBoards();
-  const [title, setTitle] = useState('');
   const [selectedGradient, setSelectedGradient] = useState<GradientKey>(GRADIENTS[0]);
   const [selectedTemplate, setSelectedTemplate] = useState('blank');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const { register, handleSubmit, watch, formState: { isDirty } } = useForm<{ title: string }>();
+  const title = watch('title', '');
+
+  const onSubmit = ({ title }: { title: string }) => {
     if (!title.trim()) return;
     const template = TEMPLATES.find(t => t.id === selectedTemplate);
     addBoard(title.trim(), selectedGradient, null, buildLists(template!.lists));
@@ -58,7 +60,7 @@ export default function CreateBoardModal({ onClose }: CreateBoardModalProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           {/* Preview */}
           <div
             className="h-28 rounded-xl flex items-end p-4 transition-all duration-300"
@@ -74,11 +76,10 @@ export default function CreateBoardModal({ onClose }: CreateBoardModalProps) {
             <Label htmlFor="board-title">Board title</Label>
             <Input
               id="board-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter board title..."
               autoFocus
               className="bg-secondary/50"
+              {...register('title', { required: true })}
             />
           </div>
 
@@ -144,7 +145,7 @@ export default function CreateBoardModal({ onClose }: CreateBoardModalProps) {
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={!title.trim()}>
+            <Button type="submit" className="flex-1" disabled={!isDirty || !title?.trim()}>
               Create Board
             </Button>
           </div>

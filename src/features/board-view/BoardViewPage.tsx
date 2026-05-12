@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useMemo } from "react";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import {
   isPast,
   isToday,
@@ -62,6 +63,7 @@ export default function BoardView() {
     deleteBoard,
   } = useBoards();
   const board = getBoard(boardId!);
+  usePageTitle(board?.title);
   const role = getBoardRole(boardId!);
   const canEdit = role === "owner" || role === "admin" || role === "member";
   const canManageMembers = role === "owner" || role === "admin";

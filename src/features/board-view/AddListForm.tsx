@@ -1,24 +1,28 @@
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-interface AddListFormProps {
+interface Props {
   onAdd: (title: string) => void;
 }
 
-export default function AddListForm({ onAdd }: AddListFormProps) {
+export default function AddListForm({ onAdd }: Props) {
   const [isAdding, setIsAdding] = useState(false);
-  const [title, setTitle] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const { register, handleSubmit, reset, formState: { isDirty } } = useForm<{ title: string }>();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = ({ title }: { title: string }) => {
     if (!title.trim()) return;
     onAdd(title.trim());
-    setTitle('');
+    reset();
     inputRef.current?.focus();
   };
+
+  const { ref: rhfRef, ...rest } = register('title');
+
+  function close() { setIsAdding(false); reset(); }
 
   if (!isAdding) {
     return (
@@ -35,18 +39,17 @@ export default function AddListForm({ onAdd }: AddListFormProps) {
   return (
     <div className="min-w-[300px] flex-shrink-0 animate-slide-down">
       <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl p-3">
-        <form onSubmit={handleSubmit} className="space-y-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
           <Input
-            ref={inputRef}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            {...rest}
+            ref={el => { rhfRef(el); (inputRef as React.MutableRefObject<HTMLInputElement | null>).current = el; }}
             placeholder="Enter list title..."
             autoFocus
             className="bg-secondary/50 text-sm"
           />
           <div className="flex gap-2">
-            <Button type="submit" size="sm" disabled={!title.trim()}>Add list</Button>
-            <button type="button" onClick={() => { setIsAdding(false); setTitle(''); }} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
+            <Button type="submit" size="sm" disabled={!isDirty}>Add list</Button>
+            <button type="button" onClick={close} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
               <X className="w-4 h-4" />
             </button>
           </div>

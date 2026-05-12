@@ -1,34 +1,35 @@
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-interface AddCardFormProps {
+interface Props {
   onAdd: (title: string) => void;
 }
 
-export default function AddCardForm({ onAdd }: AddCardFormProps) {
+export default function AddCardForm({ onAdd }: Props) {
   const [isAdding, setIsAdding] = useState(false);
-  const [title, setTitle] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { register, handleSubmit, reset, formState: { isDirty } } = useForm<{ title: string }>();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = ({ title }: { title: string }) => {
     if (!title.trim()) return;
     onAdd(title.trim());
-    setTitle('');
+    reset();
     textareaRef.current?.focus();
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const { ref: rhfRef, ...rest } = register('title');
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e as unknown as React.FormEvent);
+      handleSubmit(onSubmit)();
     }
-    if (e.key === 'Escape') {
-      setIsAdding(false);
-      setTitle('');
-    }
-  };
+    if (e.key === 'Escape') { setIsAdding(false); reset(); }
+  }
+
+  function close() { setIsAdding(false); reset(); }
 
   if (!isAdding) {
     return (
@@ -44,11 +45,10 @@ export default function AddCardForm({ onAdd }: AddCardFormProps) {
 
   return (
     <div className="px-2 pb-2 animate-slide-down">
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit(onSubmit)}>
         <textarea
-          ref={textareaRef}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          {...rest}
+          ref={el => { rhfRef(el); (textareaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = el; }}
           onKeyDown={handleKeyDown}
           placeholder="Enter a title for this card..."
           autoFocus
@@ -56,8 +56,8 @@ export default function AddCardForm({ onAdd }: AddCardFormProps) {
           className="w-full bg-card border border-border/50 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/30"
         />
         <div className="flex gap-2 mt-2">
-          <Button type="submit" size="sm" disabled={!title.trim()}>Add card</Button>
-          <button type="button" onClick={() => { setIsAdding(false); setTitle(''); }} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
+          <Button type="submit" size="sm" disabled={!isDirty}>Add card</Button>
+          <button type="button" onClick={close} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>

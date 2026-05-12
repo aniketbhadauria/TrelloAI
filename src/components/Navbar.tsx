@@ -3,18 +3,22 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Search, LogOut } from 'lucide-react';
 import { Input } from './ui/input';
 import { useAuth } from '@/context/AuthContext';
+import { useProfile } from '@/context/ProfileContext';
 import { LogoMark } from '@/components/Logo';
 
 export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { session, signOut } = useAuth();
+  const { profile } = useProfile();
   const isBoards = location.pathname === '/boards';
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const email = session?.user?.email ?? '';
-  const initials = email ? email[0].toUpperCase() : '?';
+  const displayName = profile?.display_name ?? profile?.first_name ?? email.split('@')[0];
+  const initials = (profile?.first_name?.[0] ?? email[0] ?? '?').toUpperCase();
+  const avatarUrl = profile?.avatar_url;
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -38,7 +42,7 @@ export default function Navbar() {
         <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
           <LogoMark className="w-4 h-4 text-primary-foreground" />
         </div>
-        <span className="font-semibold text-foreground tracking-tight">Esperia Trello</span>
+        <span className="font-semibold text-foreground tracking-tight">Trello</span>
       </Link>
 
       <div className="flex-1 max-w-sm mx-auto">
@@ -71,14 +75,21 @@ export default function Navbar() {
           <div ref={menuRef} className="relative">
             <button
               onClick={() => setMenuOpen(o => !o)}
-              className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
+              className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity overflow-hidden"
+              aria-label="Account menu"
             >
-              {initials}
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+              ) : (
+                initials
+              )}
             </button>
+
             {menuOpen && (
-              <div className="absolute right-0 top-10 w-52 bg-popover border border-border rounded-xl shadow-lg py-1 animate-slide-down">
-                <div className="px-3 py-2 text-xs text-muted-foreground truncate border-b border-border/60 mb-1">
-                  {email}
+              <div className="absolute right-0 top-10 w-56 bg-popover border border-border rounded-xl shadow-lg py-1 animate-slide-down">
+                <div className="px-3 py-2.5 border-b border-border/60 mb-1">
+                  <p className="text-xs font-semibold text-foreground truncate">{displayName}</p>
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">{email}</p>
                 </div>
                 <button
                   onClick={handleSignOut}

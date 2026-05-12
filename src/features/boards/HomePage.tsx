@@ -4,12 +4,13 @@ import { useBoards } from '@/context/BoardContext';
 import BoardCard from './BoardCard';
 import CreateBoardModal from './CreateBoardModal';
 import { Star, Plus, Users } from 'lucide-react';
+import { usePageTitle } from '@/hooks/usePageTitle';
 
 export default function Home() {
   const { boards, boardsLoading } = useBoards();
   const [showCreate, setShowCreate] = useState(false);
-
   const navigate = useNavigate();
+  usePageTitle('My Boards');
 
   if (boardsLoading) {
     return (
