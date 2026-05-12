@@ -1,20 +1,29 @@
 import { useRef, useCallback, useEffect } from 'react';
 
-export function useDebouncedCallback(callback, delay) {
-  const timeoutRef = useRef(null);
+interface DebouncedCallback {
+  run: (...args: unknown[]) => void;
+  cancel: () => void;
+  flush: () => void;
+}
+
+export function useDebouncedCallback(
+  callback: (...args: unknown[]) => unknown,
+  delay: number,
+): DebouncedCallback {
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const callbackRef = useRef(callback);
-  const argsRef = useRef(null);
+  const argsRef = useRef<unknown[] | null>(null);
 
   useEffect(() => {
     callbackRef.current = callback;
   }, [callback]);
 
-  const run = useCallback((...args) => {
+  const run = useCallback((...args: unknown[]) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     argsRef.current = args;
     timeoutRef.current = setTimeout(() => {
       timeoutRef.current = null;
-      const latestArgs = argsRef.current || [];
+      const latestArgs = argsRef.current ?? [];
       argsRef.current = null;
       callbackRef.current(...latestArgs);
     }, delay);
@@ -30,7 +39,7 @@ export function useDebouncedCallback(callback, delay) {
     if (!timeoutRef.current) return;
     clearTimeout(timeoutRef.current);
     timeoutRef.current = null;
-    const latestArgs = argsRef.current || [];
+    const latestArgs = argsRef.current ?? [];
     argsRef.current = null;
     callbackRef.current(...latestArgs);
   }, []);
