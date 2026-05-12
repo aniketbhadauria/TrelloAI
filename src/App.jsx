@@ -14,8 +14,8 @@ import Landing from "./pages/Landing";
 import Home from "./pages/Home";
 import BoardView from "./pages/BoardView";
 import ArchivePage from "./pages/Archive";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
+import Login from "./features/auth/LoginPage";
+import Signup from "./features/auth/SignupPage";
 import {
   Book,
   Sunset,
