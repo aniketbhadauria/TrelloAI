@@ -24,8 +24,8 @@
   flex-direction: column;
   border-radius: var(--radius);
   background: var(--card);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   flex-shrink: 0;
 }
 
@@ -36,8 +36,8 @@
   min-height: 2rem;
 }
 
-.kanban-card { transition: box-shadow 0.15s ease; }
-.kanban-card:hover { box-shadow: var(--shadow-md); }
+.kanban-card { transition: box-shadow 0.15s ease, transform 0.1s ease; }
+.kanban-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); transform: translateY(-1px); }
 
 /* Board card */
 .board-card { transition: box-shadow 0.15s ease, transform 0.15s ease; }

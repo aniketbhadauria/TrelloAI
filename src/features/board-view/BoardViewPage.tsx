@@ -25,6 +25,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useMemo } from "react";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { GRADIENT_STYLES } from "@/utils/gradients";
+import type { GradientKey } from "@/utils/gradients";
 import {
   isPast,
   isToday,
@@ -246,7 +248,7 @@ export default function BoardView() {
   if (boardsLoading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-56px)]">
-        <div className="w-8 h-8 border-3 border-pink-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -289,19 +291,24 @@ export default function BoardView() {
     }
   };
 
+  const boardBg = GRADIENT_STYLES[board.gradient as GradientKey] ?? "#475569";
+
   return (
-    <div className="h-[calc(100vh-56px)] flex flex-col page-enter">
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border/30 bg-background/50 backdrop-blur-sm shrink-0 relative z-20">
+    <div
+      className="h-[calc(100vh-56px)] flex flex-col page-enter"
+      style={{ backgroundColor: boardBg }}
+    >
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-black/25 backdrop-blur-md shrink-0 relative z-20 text-white">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => navigate("/boards")}
-          className="gap-1.5"
+          className="gap-1.5 text-white/90 hover:text-white hover:bg-white/10"
         >
           <ArrowLeft className="w-4 h-4" />
           Boards
         </Button>
-        <div className="w-px h-6 bg-border/50" />
+        <div className="w-px h-6 bg-white/20" />
 
         {editingTitle ? (
           <input
@@ -320,7 +327,7 @@ export default function BoardView() {
           />
         ) : (
           <h1
-            className="text-lg font-bold cursor-pointer hover:bg-secondary/30 px-2 py-1 rounded-lg transition-colors"
+            className="text-lg font-bold cursor-pointer hover:bg-white/10 px-2 py-1 rounded-lg transition-colors text-white"
             onClick={() => canEdit && setEditingTitle(true)}
           >
             {board.title}
@@ -329,10 +336,10 @@ export default function BoardView() {
 
         <button
           onClick={() => toggleStarBoard(boardId!)}
-          className="p-1.5 rounded-lg hover:bg-secondary/50 transition-colors"
+          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
         >
           <Star
-            className={`w-4 h-4 ${board.starred ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`}
+            className={`w-4 h-4 ${board.starred ? "fill-yellow-300 text-yellow-300" : "text-white/60"}`}
           />
         </button>
 
@@ -344,17 +351,16 @@ export default function BoardView() {
             variant="ghost"
             size="sm"
             onClick={() => setShowMembersPanel(true)}
-            className="gap-1.5"
+            className="gap-1.5 text-white/90 hover:text-white hover:bg-white/10"
           >
             <Users className="w-4 h-4" />
             Members
           </Button>
           {canManageMembers && (
             <Button
-              variant="outline"
               size="sm"
               onClick={() => setShowInviteModal(true)}
-              className="gap-1.5 text-xs h-8"
+              className="gap-1.5 text-xs h-8 bg-white/15 text-white border border-white/25 hover:bg-white/25"
             >
               <UserPlus className="w-3.5 h-3.5" />
               Invite
@@ -367,12 +373,12 @@ export default function BoardView() {
             variant="ghost"
             size="sm"
             onClick={() => setShowFilter((v) => !v)}
-            className={`gap-1.5 ${hasActiveFilters ? "text-primary" : ""}`}
+            className={`gap-1.5 text-white/90 hover:text-white hover:bg-white/10 ${hasActiveFilters ? "bg-white/15" : ""}`}
           >
             <Filter className="w-4 h-4" />
             Filter
             {hasActiveFilters ? (
-              <span className="w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold">
+              <span className="w-4 h-4 rounded-full bg-white text-black text-[10px] flex items-center justify-center font-bold">
                 !
               </span>
             ) : null}
@@ -638,6 +644,7 @@ export default function BoardView() {
             variant="ghost"
             size="sm"
             onClick={() => setShowMenu(!showMenu)}
+            className="text-white/90 hover:text-white hover:bg-white/10"
           >
             <MoreHorizontal className="w-4 h-4" />
           </Button>
