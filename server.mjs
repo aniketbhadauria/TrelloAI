@@ -7,11 +7,27 @@ import {
   makeToolHandlers,
   runAgentLoop,
 } from './src/lib/taskflow-tools.mjs';
+import { Axiom } from '@axiomhq/js';
+import { Logger, AxiomJSTransport, ConsoleTransport } from '@axiomhq/logging';
+
+// ─── Logger ──────────────────────────────────────────────────
+const _transports = [new ConsoleTransport({ prettyPrint: process.env.NODE_ENV !== 'production' })];
+if (process.env.AXIOM_TOKEN && process.env.AXIOM_DATASET) {
+  _transports.unshift(new AxiomJSTransport({
+    axiom: new Axiom({ token: process.env.AXIOM_TOKEN }),
+    dataset: process.env.AXIOM_DATASET,
+  }));
+}
+const logger = new Logger({ transports: _transports });
 
 // ─── Express setup ───────────────────────────────────────────
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
+app.use((req, _res, next) => {
+  logger.info(`${req.method} ${req.path}`, { ip: req.ip });
+  next();
+});
 
 // ─── Supabase client (server-side) ──────────────────────────
 const supabase = makeSupabaseClient();
@@ -27,7 +43,7 @@ if (AI_ENABLED) {
     if (!apiKey) throw new Error('Missing ANTHROPIC_API_KEY');
     anthropic = new Anthropic({ apiKey });
   } catch (error) {
-    console.error('AI disabled: failed to initialize Anthropic SDK.', error.message);
+    logger.error('AI disabled: failed to initialize Anthropic SDK.', { message: error.message });
   }
 }
 
@@ -69,7 +85,7 @@ app.post('/api/chat', async (req, res) => {
     res.write('data: [DONE]\n\n');
     res.end();
   } catch (err) {
-    console.error('Chat error:', err);
+    logger.error('Chat error', { message: err.message, stack: err.stack });
 
     // Classify known error shapes so the UI can render them nicely.
     const status = err?.status || err?.response?.status;
@@ -152,7 +168,7 @@ Rules:
     const mindmap = JSON.parse(jsonMatch[0]);
     res.json(mindmap);
   } catch (err) {
-    console.error('Mindmap generation error:', err);
+    logger.error('Mindmap generation error', { message: err.message, stack: err.stack });
     res.status(500).json({ error: err.message });
   }
 });
@@ -249,7 +265,7 @@ if (SLACK_BOT_TOKEN && SLACK_APP_TOKEN && SLACK_SIGNING_SECRET && AI_READY) {
         const result = await askTaskFlowAI(text, command.user_name);
         await respond({ replace_original: true, response_type: 'in_channel', blocks: buildResponseBlocks(result, text), text: result });
       } catch (err) {
-        console.error('[/taskflow error]', err);
+        logger.error('Slack /taskflow error', { message: err.message, stack: err.stack });
         await respond({ replace_original: true, text: `:warning: Error: ${err.message}` });
       }
     });
@@ -262,7 +278,7 @@ if (SLACK_BOT_TOKEN && SLACK_APP_TOKEN && SLACK_SIGNING_SECRET && AI_READY) {
         const result = await askTaskFlowAI(text, event.user);
         await slackApp.client.chat.update({ channel: thinking.channel, ts: thinking.ts, blocks: buildResponseBlocks(result, text), text: result });
       } catch (err) {
-        console.error('[mention error]', err);
+        logger.error('Slack mention error', { message: err.message, stack: err.stack });
         await slackApp.client.chat.update({ channel: thinking.channel, ts: thinking.ts, text: `:warning: Error: ${err.message}` });
       }
     });
@@ -274,7 +290,7 @@ if (SLACK_BOT_TOKEN && SLACK_APP_TOKEN && SLACK_SIGNING_SECRET && AI_READY) {
         const result = await askTaskFlowAI(message.text, message.user);
         await slackApp.client.chat.update({ channel: thinking.channel, ts: thinking.ts, blocks: buildResponseBlocks(result, message.text), text: result });
       } catch (err) {
-        console.error('[DM error]', err);
+        logger.error('Slack DM error', { message: err.message, stack: err.stack });
         await slackApp.client.chat.update({ channel: thinking.channel, ts: thinking.ts, text: `:warning: Error: ${err.message}` });
       }
     });
@@ -282,7 +298,7 @@ if (SLACK_BOT_TOKEN && SLACK_APP_TOKEN && SLACK_SIGNING_SECRET && AI_READY) {
     await slackApp.start();
     console.log('✅ TaskFlow Slack bot running (Socket Mode) — /taskflow, @mention, DM');
   } catch (err) {
-    console.error('Slack bot failed to start:', err.message);
+    logger.error('Slack bot failed to start', { message: err.message });
   }
 } else if (SLACK_BOT_TOKEN || SLACK_APP_TOKEN || SLACK_SIGNING_SECRET) {
   console.warn('Slack bot skipped: missing one or more SLACK_* env vars, or AI not ready.');
