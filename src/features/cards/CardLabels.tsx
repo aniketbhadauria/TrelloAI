@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { LABEL_COLORS } from '@/data/initialData';
+import { LABEL_COLORS } from '@/utils/labels';
 import type { Label } from '@/types/board';
 
 interface CardLabelsProps {

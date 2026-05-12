@@ -16,42 +16,42 @@ import type { Profile } from '@/types/profile';
 /* ── constants ─────────────────────────────────────────────────────────── */
 
 const COUNTRIES = [
-  'Afghanistan','Albania','Algeria','Argentina','Australia','Austria',
-  'Bahrain','Bangladesh','Belgium','Brazil','Canada','Chile','China',
-  'Colombia','Croatia','Czech Republic','Denmark','Egypt','Finland',
-  'France','Germany','Greece','Hungary','India','Indonesia','Iran',
-  'Iraq','Ireland','Israel','Italy','Japan','Jordan','Kazakhstan',
-  'Kenya','Kuwait','Lebanon','Malaysia','Mexico','Morocco','Netherlands',
-  'New Zealand','Nigeria','Norway','Oman','Pakistan','Peru','Philippines',
-  'Poland','Portugal','Qatar','Romania','Russia','Saudi Arabia',
-  'Singapore','South Africa','South Korea','Spain','Sri Lanka','Sweden',
-  'Switzerland','Thailand','Tunisia','Turkey','Ukraine',
-  'United Arab Emirates','United Kingdom','United States','Venezuela','Vietnam',
+  'Afghanistan', 'Albania', 'Algeria', 'Argentina', 'Australia', 'Austria',
+  'Bahrain', 'Bangladesh', 'Belgium', 'Brazil', 'Canada', 'Chile', 'China',
+  'Colombia', 'Croatia', 'Czech Republic', 'Denmark', 'Egypt', 'Finland',
+  'France', 'Germany', 'Greece', 'Hungary', 'India', 'Indonesia', 'Iran',
+  'Iraq', 'Ireland', 'Israel', 'Italy', 'Japan', 'Jordan', 'Kazakhstan',
+  'Kenya', 'Kuwait', 'Lebanon', 'Malaysia', 'Mexico', 'Morocco', 'Netherlands',
+  'New Zealand', 'Nigeria', 'Norway', 'Oman', 'Pakistan', 'Peru', 'Philippines',
+  'Poland', 'Portugal', 'Qatar', 'Romania', 'Russia', 'Saudi Arabia',
+  'Singapore', 'South Africa', 'South Korea', 'Spain', 'Sri Lanka', 'Sweden',
+  'Switzerland', 'Thailand', 'Tunisia', 'Turkey', 'Ukraine',
+  'United Arab Emirates', 'United Kingdom', 'United States', 'Venezuela', 'Vietnam',
 ].sort();
 
 const GENDERS: { value: NonNullable<Profile['gender']>; label: string }[] = [
-  { value: 'male',              label: 'Male' },
-  { value: 'female',            label: 'Female' },
-  { value: 'non_binary',        label: 'Non-binary' },
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+  { value: 'non_binary', label: 'Non-binary' },
   { value: 'prefer_not_to_say', label: 'Prefer not to say' },
 ];
 
 const STEPS = [
-  { label: 'Personal details',   emoji: '👋', hint: "Let's start with the basics" },
+  { label: 'Personal details', emoji: '👋', hint: "Let's start with the basics" },
   { label: 'Contact & location', emoji: '📍', hint: 'So your team can reach you' },
-  { label: 'Profile photo',      emoji: '🖼️', hint: 'Put a face to the name' },
+  { label: 'Profile photo', emoji: '🖼️', hint: 'Put a face to the name' },
 ] as const;
 
 /* ── zod schema ─────────────────────────────────────────────────────────── */
 
 const schema = z.object({
   firstName: z.string().min(1, 'Required'),
-  lastName:  z.string().min(1, 'Required'),
-  dob:       z.string().min(1, 'Required'),
-  gender:    z.enum(['male', 'female', 'non_binary', 'prefer_not_to_say'], {
+  lastName: z.string().min(1, 'Required'),
+  dob: z.string().min(1, 'Required'),
+  gender: z.enum(['male', 'female', 'non_binary', 'prefer_not_to_say'], {
     message: 'Select a gender',
   }),
-  phone:   z.string().min(1, 'Required'),
+  phone: z.string().min(1, 'Required'),
   country: z.string().min(1, 'Required'),
 });
 type OnboardingForm = z.infer<typeof schema>;
@@ -75,25 +75,22 @@ function StepIndicator({ current }: { current: number }) {
       {STEPS.map((step, i) => (
         <Fragment key={step.label}>
           <div className="flex flex-col items-center gap-1.5">
-            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-              i < current
-                ? 'bg-primary text-primary-foreground'
-                : i === current
+            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${i < current
+              ? 'bg-primary text-primary-foreground'
+              : i === current
                 ? 'bg-primary text-primary-foreground ring-4 ring-primary/20'
                 : 'bg-secondary text-muted-foreground'
-            }`}>
+              }`}>
               {i < current ? <Check className="w-4 h-4" /> : i + 1}
             </div>
-            <span className={`text-[11px] font-medium whitespace-nowrap ${
-              i === current ? 'text-foreground' : 'text-muted-foreground'
-            }`}>
+            <span className={`text-[11px] font-medium whitespace-nowrap ${i === current ? 'text-foreground' : 'text-muted-foreground'
+              }`}>
               {step.label}
             </span>
           </div>
           {i < STEPS.length - 1 && (
-            <div className={`flex-1 h-px mx-3 mb-5 transition-all duration-300 ${
-              i < current ? 'bg-primary' : 'bg-border'
-            }`} />
+            <div className={`flex-1 h-px mx-3 mb-5 transition-all duration-300 ${i < current ? 'bg-primary' : 'bg-border'
+              }`} />
           )}
         </Fragment>
       ))}
@@ -151,14 +148,14 @@ export default function OnboardingPage() {
     try {
       const avatarUrl = await uploadAvatar(avatarFile);
       await saveProfile({
-        first_name:   data.firstName,
-        last_name:    data.lastName,
+        first_name: data.firstName,
+        last_name: data.lastName,
         display_name: `${data.firstName} ${data.lastName}`,
         date_of_birth: data.dob,
-        gender:        data.gender,
-        phone:         data.phone,
-        country:       data.country,
-        avatar_url:    avatarUrl,
+        gender: data.gender,
+        phone: data.phone,
+        country: data.country,
+        avatar_url: avatarUrl,
         onboarding_completed: true,
       });
     } catch (err) {
@@ -216,7 +213,7 @@ export default function OnboardingPage() {
             <div className="space-y-5 animate-fade-in">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="ob-dob">Date of birth 🎂</Label>
+                  <Label htmlFor="ob-dob">Date of birth </Label>
                   <Input id="ob-dob" type="date" className="h-10" {...register('dob')} />
                   <FieldError message={errors.dob?.message} />
                 </div>
@@ -234,13 +231,13 @@ export default function OnboardingPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="ob-phone">Phone number 📞</Label>
+                  <Label htmlFor="ob-phone">Phone number </Label>
                   <Input id="ob-phone" type="tel" placeholder="+1 555 000 0000"
                     autoComplete="tel" className="h-10" {...register('phone')} />
                   <FieldError message={errors.phone?.message} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ob-country">Country 🌍</Label>
+                  <Label htmlFor="ob-country">Country </Label>
                   <select id="ob-country" className={SELECT_CLS} {...register('country')}>
                     <option value="">Select…</option>
                     {COUNTRIES.map(c => (
@@ -316,7 +313,7 @@ export default function OnboardingPage() {
                 <Button type="submit" className="px-8" disabled={isSubmitting}>
                   {isSubmitting
                     ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Saving…</>
-                    : '🚀 Complete Profile'}
+                    : 'Complete Profile'}
                 </Button>
               </div>
             </div>
