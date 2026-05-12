@@ -4,8 +4,8 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import KanbanList from "../components/KanbanList";
 import AddListForm from "../components/AddListForm";
 import CardDetailModal from "../components/CardDetailModal";
-import BoardMembersPanel from "../components/BoardMembersPanel";
-import InviteMemberModal from "../components/InviteMemberModal";
+import BoardMembersPanel from "@/features/members/BoardMembersPanel";
+import InviteMemberModal from "@/features/members/InviteMemberModal";
 import {
   ArrowLeft,
   Star,
