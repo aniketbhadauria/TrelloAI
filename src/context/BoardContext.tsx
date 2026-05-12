@@ -4,7 +4,13 @@ import type { DropResult } from '@hello-pangea/dnd';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useDebouncedCallback } from '../hooks/useDebouncedCallback';
-import { logError, logInfo } from '../lib/logger';
+import {
+  apiRunMigrationIfNeeded,
+  apiFetchAllBoards,
+  apiCreateBoard,
+  apiSaveBoard,
+  apiDeleteBoard,
+} from '@/api/boards';
 import type { Board, List, Card, ArchivedCard, BoardRole } from '../types/board';
 
 interface BoardContextValue {
@@ -46,101 +52,6 @@ function extractBoardData(board: Board): Omit<Board, 'ownerId' | 'memberRole' | 
   return data;
 }
 
-async function runMigrationIfNeeded(userId: string): Promise<void> {
-  const key = `migrated_to_boards_v2_${userId}`;
-  if (localStorage.getItem(key)) return;
-
-  try {
-    const { count } = await supabase
-      .from('boards')
-      .select('id', { count: 'exact', head: true })
-      .eq('owner_id', userId);
-
-    if (count && count > 0) {
-      localStorage.setItem(key, '1');
-      return;
-    }
-
-    const { data: oldRow } = await supabase
-      .from('app_boards')
-      .select('data')
-      .eq('id', userId)
-      .maybeSingle();
-
-    const oldBoards = (oldRow?.data as { boards?: Board[] } | null)?.boards || [];
-    if (oldBoards.length > 0) {
-      const now = new Date().toISOString();
-      await supabase.from('boards').insert(
-        oldBoards.map((b: Board) => ({
-          id: b.id,
-          owner_id: userId,
-          data: b,
-          created_at: b.createdAt || now,
-          updated_at: now,
-        }))
-      );
-    }
-  } catch (err) {
-    logError('Board migration failed', { message: (err as Error).message });
-  }
-
-  localStorage.setItem(`migrated_to_boards_v2_${userId}`, '1');
-}
-
-interface FetchResult {
-  boards: Board[];
-  membershipMap: Record<string, BoardRole>;
-}
-
-async function fetchAllBoards(userId: string): Promise<FetchResult> {
-  const [ownedResult, sharedResult] = await Promise.all([
-    supabase.from('boards').select('*').eq('owner_id', userId),
-    supabase.from('board_members')
-      .select('board_id, role, boards(*)')
-      .eq('user_id', userId),
-  ]);
-
-  if (ownedResult.error) logError('Failed to load owned boards', { message: ownedResult.error.message });
-  if (sharedResult.error) logError('Failed to load shared boards', { message: sharedResult.error.message });
-
-  const membershipMap: Record<string, BoardRole> = {};
-
-  const ownedBoards: Board[] = (ownedResult.data || []).map((row: Record<string, unknown>) => {
-    membershipMap[row.id as string] = 'owner';
-    return { ownerId: row.owner_id as string, memberRole: 'owner' as BoardRole, ownerName: null, ...(row.data as object), id: row.id as string } as Board;
-  });
-
-  const sharedRows = ((sharedResult.data || []).filter((m: Record<string, unknown>) => m.boards) as unknown) as Array<{
-    board_id: string;
-    role: BoardRole;
-    boards: { id: string; owner_id: string; data: Partial<Board> };
-  }>;
-  const ownerIds = [...new Set(sharedRows.map(m => m.boards.owner_id))];
-
-  const ownerNames: Record<string, string> = {};
-  if (ownerIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from('app_users')
-      .select('id, display_name, email')
-      .in('id', ownerIds);
-    (profiles || []).forEach((p: { id: string; display_name: string | null; email: string }) => {
-      ownerNames[p.id] = p.display_name || p.email;
-    });
-  }
-
-  const sharedBoards: Board[] = sharedRows.map(m => {
-    membershipMap[m.boards.id] = m.role;
-    return {
-      ownerId: m.boards.owner_id,
-      memberRole: m.role,
-      ownerName: ownerNames[m.boards.owner_id] || null,
-      ...m.boards.data,
-      id: m.boards.id,
-    } as Board;
-  });
-
-  return { boards: [...ownedBoards, ...sharedBoards], membershipMap };
-}
 
 export function BoardProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
@@ -171,10 +82,10 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     setBoardsLoading(true);
 
     (async () => {
-      await runMigrationIfNeeded(user.id);
+      await apiRunMigrationIfNeeded(user.id);
       if (cancelled) return;
 
-      const { boards: allBoards, membershipMap: map } = await fetchAllBoards(user.id);
+      const { boards: allBoards, membershipMap: map } = await apiFetchAllBoards(user.id);
       if (cancelled) return;
 
       allBoards.forEach(b => {
@@ -184,7 +95,6 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
       setMembershipMap(map);
       setBoardsLoading(false);
       isInitialLoad.current = false;
-      logInfo('boards_loaded', { userId: user.id, count: allBoards.length });
     })();
 
     return () => { cancelled = true; };
@@ -229,13 +139,12 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
 
     await Promise.all(dirty.map(async (board) => {
       const boardData = extractBoardData(board);
-      const { error } = await supabase
-        .from('boards')
-        .update({ data: boardData, updated_at: new Date().toISOString() })
-        .eq('id', board.id);
-      if (error) { logError('board_save_failed', { boardId: board.id, message: error.message }); return; }
-      lastSavedRef.current[board.id] = JSON.stringify(boardData);
-      logInfo('board_saved', { boardId: board.id });
+      try {
+        await apiSaveBoard(board.id, boardData);
+        lastSavedRef.current[board.id] = JSON.stringify(boardData);
+      } catch {
+        // error already logged in apiSaveBoard
+      }
     }));
 
     setLastSavedAt(new Date());
@@ -274,14 +183,10 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     setMembershipMap(prev => ({ ...prev, [id]: 'owner' }));
     setBoards(prev => [...prev, newBoard]);
 
-    const { error } = await supabase.from('boards').insert({
-      id, owner_id: user!.id, data: boardData, created_at: now, updated_at: now,
-    });
-
-    if (!error) {
-      logInfo('board_created', { boardId: id, userId: user!.id });
-    } else {
-      logError('board_create_failed', { message: error.message });
+    try {
+      await apiCreateBoard(id, user!.id, boardData);
+    } catch {
+      // error already logged in apiCreateBoard; rollback optimistic add
       setBoards(prev => prev.filter(b => b.id !== id));
       setMembershipMap(prev => { const n = { ...prev }; delete n[id]; return n; });
       delete lastSavedRef.current[id];
@@ -297,9 +202,11 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
 
   const deleteBoardPermanently = useCallback(async (boardId: string): Promise<void> => {
     if (membershipMap[boardId] !== 'owner') return;
-    const { error } = await supabase.from('boards').delete().eq('id', boardId);
-    if (error) { logError('board_delete_failed', { boardId, message: error.message }); return; }
-    logInfo('board_deleted', { boardId });
+    try {
+      await apiDeleteBoard(boardId);
+    } catch {
+      return; // error already logged
+    }
     delete lastSavedRef.current[boardId];
     setMembershipMap(prev => { const n = { ...prev }; delete n[boardId]; return n; });
     setBoards(prev => prev.filter(b => b.id !== boardId));
@@ -416,7 +323,7 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
   const refreshBoards = useCallback(async (): Promise<void> => {
     if (!user?.id) return;
     isInitialLoad.current = true;
-    const { boards: allBoards, membershipMap: map } = await fetchAllBoards(user.id);
+    const { boards: allBoards, membershipMap: map } = await apiFetchAllBoards(user.id);
     allBoards.forEach(b => { lastSavedRef.current[b.id] = JSON.stringify(extractBoardData(b)); });
     setBoards(allBoards);
     setMembershipMap(map);
@@ -434,15 +341,11 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     setIsSavingBoards(true);
     await Promise.all(dirty.map(async (board) => {
       const boardData = extractBoardData(board);
-      const { error } = await supabase
-        .from('boards')
-        .update({ data: boardData, updated_at: new Date().toISOString() })
-        .eq('id', board.id);
-      if (!error) {
+      try {
+        await apiSaveBoard(board.id, boardData);
         lastSavedRef.current[board.id] = JSON.stringify(boardData);
-        logInfo('board_saved', { boardId: board.id });
-      } else {
-        logError('board_save_failed', { boardId: board.id, message: error.message });
+      } catch {
+        // error already logged in apiSaveBoard
       }
     }));
     setLastSavedAt(new Date());

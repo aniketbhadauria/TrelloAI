@@ -36,7 +36,11 @@ const GENDERS: { value: NonNullable<Profile['gender']>; label: string }[] = [
   { value: 'prefer_not_to_say', label: 'Prefer not to say' },
 ];
 
-const STEPS = ['Personal details', 'Contact & location', 'Profile photo'] as const;
+const STEPS = [
+  { label: 'Personal details',   emoji: '👋', hint: "Let's start with the basics" },
+  { label: 'Contact & location', emoji: '📍', hint: 'So your team can reach you' },
+  { label: 'Profile photo',      emoji: '🖼️', hint: 'Put a face to the name' },
+] as const;
 
 /* ── zod schema ─────────────────────────────────────────────────────────── */
 
@@ -67,9 +71,9 @@ const SELECT_CLS =
 
 function StepIndicator({ current }: { current: number }) {
   return (
-    <div className="flex items-center mb-10">
-      {STEPS.map((label, i) => (
-        <Fragment key={label}>
+    <div className="flex items-center mb-8">
+      {STEPS.map((step, i) => (
+        <Fragment key={step.label}>
           <div className="flex flex-col items-center gap-1.5">
             <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
               i < current
@@ -83,7 +87,7 @@ function StepIndicator({ current }: { current: number }) {
             <span className={`text-[11px] font-medium whitespace-nowrap ${
               i === current ? 'text-foreground' : 'text-muted-foreground'
             }`}>
-              {label}
+              {step.label}
             </span>
           </div>
           {i < STEPS.length - 1 && (
@@ -126,6 +130,7 @@ export default function OnboardingPage() {
   if (isComplete) return <Navigate to="/boards" replace />;
 
   const initials = (user?.email?.[0] ?? '?').toUpperCase();
+  const currentStep = STEPS[step];
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -162,19 +167,18 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12">
+    <div className="min-h-screen bg-muted/30 flex flex-col items-center justify-center px-6 py-12">
       {/* Logo */}
       <div className="mb-10">
         <LogoFull className="h-6 text-primary" />
       </div>
 
-      <div className="w-full max-w-lg">
-        {/* Header */}
+      <div className="w-full max-w-lg bg-card border border-border/50 rounded-2xl shadow-sm p-8">
+        {/* Step header */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold tracking-tight mb-1">Complete your profile</h1>
-          <p className="text-sm text-muted-foreground">
-            Step {step + 1} of {STEPS.length} — {STEPS[step]}
-          </p>
+          <div className="text-5xl mb-4">{currentStep.emoji}</div>
+          <h1 className="text-2xl font-bold tracking-tight mb-1">{currentStep.label}</h1>
+          <p className="text-sm text-muted-foreground">{currentStep.hint}</p>
         </div>
 
         {/* Step indicator */}
@@ -201,7 +205,7 @@ export default function OnboardingPage() {
 
               <div className="flex justify-end pt-2">
                 <Button type="button" onClick={goNext} className="px-8">
-                  Continue
+                  Continue →
                 </Button>
               </div>
             </div>
@@ -212,7 +216,7 @@ export default function OnboardingPage() {
             <div className="space-y-5 animate-fade-in">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="ob-dob">Date of birth</Label>
+                  <Label htmlFor="ob-dob">Date of birth 🎂</Label>
                   <Input id="ob-dob" type="date" className="h-10" {...register('dob')} />
                   <FieldError message={errors.dob?.message} />
                 </div>
@@ -230,13 +234,13 @@ export default function OnboardingPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="ob-phone">Phone number</Label>
+                  <Label htmlFor="ob-phone">Phone number 📞</Label>
                   <Input id="ob-phone" type="tel" placeholder="+1 555 000 0000"
                     autoComplete="tel" className="h-10" {...register('phone')} />
                   <FieldError message={errors.phone?.message} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ob-country">Country</Label>
+                  <Label htmlFor="ob-country">Country 🌍</Label>
                   <select id="ob-country" className={SELECT_CLS} {...register('country')}>
                     <option value="">Select…</option>
                     {COUNTRIES.map(c => (
@@ -249,10 +253,10 @@ export default function OnboardingPage() {
 
               <div className="flex justify-between pt-2">
                 <Button type="button" variant="outline" onClick={() => setStep(0)}>
-                  Back
+                  ← Back
                 </Button>
                 <Button type="button" onClick={goNext} className="px-8">
-                  Continue
+                  Continue →
                 </Button>
               </div>
             </div>
@@ -261,29 +265,32 @@ export default function OnboardingPage() {
           {/* ── Step 2: Avatar ──────────────────────────────────────────── */}
           {step === 2 && (
             <div className="space-y-6 animate-fade-in">
-              <div className="flex flex-col items-center gap-3">
+              <div className="flex flex-col items-center gap-4">
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
-                  className="relative w-28 h-28 rounded-full bg-primary flex items-center justify-center overflow-hidden ring-4 ring-background shadow-lg group cursor-pointer transition-transform hover:scale-105"
+                  className="relative w-32 h-32 rounded-full bg-primary flex items-center justify-center overflow-hidden ring-4 ring-primary/20 shadow-lg group cursor-pointer transition-transform hover:scale-105"
                   aria-label="Upload profile photo"
                 >
                   {avatarPreview ? (
                     <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-4xl font-bold text-primary-foreground select-none">
+                    <span className="text-5xl font-bold text-primary-foreground select-none">
                       {initials}
                     </span>
                   )}
                   <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Camera className="w-6 h-6 text-white" />
-                    <span className="text-white text-[11px] font-medium">Upload</span>
+                    <Camera className="w-7 h-7 text-white" />
+                    <span className="text-white text-xs font-semibold">Upload</span>
                   </div>
                 </button>
 
-                <p className="text-sm text-muted-foreground">
-                  {avatarPreview ? 'Looking good! Click to change.' : 'Click the circle to upload a photo.'}
-                </p>
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">
+                    {avatarPreview ? '✨ Looking great! Click to change.' : '📷 Click the circle to upload a photo'}
+                  </p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">JPG, PNG or GIF · max 5 MB</p>
+                </div>
 
                 <input
                   ref={fileRef}
@@ -294,28 +301,32 @@ export default function OnboardingPage() {
                 />
 
                 {avatarError && (
-                  <p className="text-sm text-destructive">{avatarError}</p>
+                  <p className="text-sm text-destructive">⚠️ {avatarError}</p>
                 )}
               </div>
 
               {submitError && (
-                <p className="text-sm text-destructive text-center" role="alert">{submitError}</p>
+                <p className="text-sm text-destructive text-center" role="alert">⚠️ {submitError}</p>
               )}
 
               <div className="flex justify-between pt-2">
                 <Button type="button" variant="outline" onClick={() => setStep(1)}>
-                  Back
+                  ← Back
                 </Button>
                 <Button type="submit" className="px-8" disabled={isSubmitting}>
                   {isSubmitting
                     ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Saving…</>
-                    : 'Complete Profile'}
+                    : '🚀 Complete Profile'}
                 </Button>
               </div>
             </div>
           )}
         </form>
       </div>
+
+      <p className="mt-6 text-xs text-muted-foreground/60">
+        Esperia Studio · Internal use only
+      </p>
     </div>
   );
 }

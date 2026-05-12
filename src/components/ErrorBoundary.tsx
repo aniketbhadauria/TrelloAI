@@ -52,61 +52,46 @@ export default class ErrorBoundary extends Component<Props, State> {
     const { submitted, sending, description } = this.state;
 
     return (
-      <div style={{
-        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: '#0a0a0a', color: '#e5e5e5', fontFamily: 'sans-serif', padding: '2rem',
-      }}>
-        <div style={{
-          width: '100%', maxWidth: 460, background: '#111', border: '1px solid #222',
-          borderRadius: 16, padding: '2rem',
-        }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
-          <h2 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 700 }}>Something went wrong</h2>
-          <p style={{ margin: '0 0 24px', color: '#737373', fontSize: 14 }}>
+      <div className="min-h-screen flex items-center justify-center bg-background p-8">
+        <div className="w-full max-w-md bg-card border border-border rounded-2xl p-8 shadow-xl">
+          <div className="text-4xl mb-4">💥</div>
+          <h2 className="text-xl font-bold mb-2 text-foreground">Something went wrong</h2>
+          <p className="text-sm text-muted-foreground mb-6">
             An unexpected error occurred. You can try again or send us a quick report.
           </p>
+
           {submitted ? (
-            <div style={{
-              background: '#0d1f12', border: '1px solid #166534', borderRadius: 10,
-              padding: '1rem', color: '#4ade80', fontSize: 14, marginBottom: 20,
-            }}>
+            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-green-600 dark:text-green-400 text-sm mb-5">
               Report sent — thank you!
             </div>
           ) : (
-            <form onSubmit={(e) => this.handleReport(e)} style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontSize: 13, color: '#a3a3a3', marginBottom: 6 }}>
-                What were you doing? <span style={{ color: '#525252' }}>(optional)</span>
-              </label>
-              <textarea
-                value={description}
-                onChange={(e) => this.setState({ description: e.target.value })}
-                placeholder="e.g. I clicked on a board card and the page crashed…"
-                rows={3}
-                style={{
-                  width: '100%', background: '#0a0a0a', border: '1px solid #333',
-                  borderRadius: 8, color: '#e5e5e5', fontSize: 14, padding: '10px 12px',
-                  resize: 'vertical', outline: 'none', boxSizing: 'border-box',
-                }}
-              />
+            <form onSubmit={(e) => this.handleReport(e)} className="mb-4 space-y-3">
+              <div>
+                <label className="block text-sm text-muted-foreground mb-1.5">
+                  What were you doing?{' '}
+                  <span className="text-muted-foreground/50">(optional)</span>
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => this.setState({ description: e.target.value })}
+                  placeholder="e.g. I clicked on a board card and the page crashed…"
+                  rows={3}
+                  className="w-full bg-secondary/40 border border-border/60 rounded-lg text-sm text-foreground placeholder:text-muted-foreground/50 p-3 resize-none outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-colors"
+                />
+              </div>
               <button
-                type="submit" disabled={sending}
-                style={{
-                  marginTop: 10, width: '100%', padding: '10px', background: '#ec4899',
-                  color: '#fff', border: 'none', borderRadius: 8, fontWeight: 600,
-                  fontSize: 14, cursor: sending ? 'not-allowed' : 'pointer', opacity: sending ? 0.7 : 1,
-                }}
+                type="submit"
+                disabled={sending}
+                className="w-full py-2.5 bg-primary text-primary-foreground text-sm font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
               >
                 {sending ? 'Sending…' : 'Send report'}
               </button>
             </form>
           )}
+
           <button
             onClick={() => this.setState({ hasError: false, error: null, submitted: false, description: '' })}
-            style={{
-              width: '100%', padding: '10px', background: 'transparent',
-              color: '#a3a3a3', border: '1px solid #333', borderRadius: 8,
-              fontWeight: 500, fontSize: 14, cursor: 'pointer',
-            }}
+            className="w-full py-2.5 bg-transparent text-muted-foreground border border-border/60 text-sm font-medium rounded-lg hover:bg-secondary/40 transition-colors"
           >
             Try again
           </button>

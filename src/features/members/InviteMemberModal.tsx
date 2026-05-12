@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { logError, logInfo } from '@/lib/logger';
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
+import { apiSearchUsers, apiInviteMember } from '@/api/members';
+import type { AppUserResult } from '@/api/members';
 import type { BoardRole } from '@/types/board';
 
 interface InviteMemberModalProps {
@@ -12,13 +12,7 @@ interface InviteMemberModalProps {
   onInvited?: (member: InvitedMember) => void;
 }
 
-interface AppUser {
-  id: string;
-  display_name: string | null;
-  email: string | null;
-}
-
-interface InvitedMember extends AppUser {
+interface InvitedMember extends AppUserResult {
   role: BoardRole;
 }
 
@@ -53,8 +47,8 @@ export default function InviteMemberModal({
   onInvited,
 }: InviteMemberModalProps) {
   const [query, setQuery] = useState<string>('');
-  const [results, setResults] = useState<AppUser[]>([]);
-  const [selected, setSelected] = useState<AppUser | null>(null);
+  const [results, setResults] = useState<AppUserResult[]>([]);
+  const [selected, setSelected] = useState<AppUserResult | null>(null);
   const [role, setRole] = useState<BoardRole>('member');
   const [searching, setSearching] = useState<boolean>(false);
   const [inviting, setInviting] = useState<boolean>(false);
@@ -64,15 +58,9 @@ export default function InviteMemberModal({
     const queryStr = q as string;
     if (!queryStr.trim()) { setResults([]); return; }
     setSearching(true);
-    const { data, error: err } = await supabase
-      .from('app_users')
-      .select('id, display_name, email')
-      .or(`display_name.ilike.%${queryStr}%,email.ilike.%${queryStr}%`)
-      .limit(10);
+    const data = await apiSearchUsers(queryStr);
     setSearching(false);
-    if (err) { logError('member_search_failed', { message: err.message }); return; }
-    logInfo('member_search', { query: queryStr, resultCount: (data || []).length });
-    setResults(data || []);
+    setResults(data);
   }, 300);
 
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -81,7 +69,7 @@ export default function InviteMemberModal({
     search.run(e.target.value);
   };
 
-  const selectUser = (u: AppUser): void => {
+  const selectUser = (u: AppUserResult): void => {
     setSelected(u);
     setQuery(u.display_name || u.email || '');
     setResults([]);
@@ -91,20 +79,15 @@ export default function InviteMemberModal({
     if (!selected) return;
     setInviting(true);
     setError(null);
-    const { error: err } = await supabase.from('board_members').insert({
-      board_id: boardId,
-      user_id: selected.id,
-      role,
-    });
-    setInviting(false);
-    if (err) {
-      setError(err.message);
-      logError('member_invite_failed', { boardId, userId: selected.id, message: err.message });
-      return;
+    try {
+      await apiInviteMember(boardId, selected.id, role);
+      onInvited?.({ ...selected, role });
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to invite member');
+    } finally {
+      setInviting(false);
     }
-    logInfo('member_invited', { boardId, userId: selected.id, role });
-    onInvited?.({ ...selected, role });
-    onClose();
   };
 
   return (
@@ -181,7 +164,7 @@ export default function InviteMemberModal({
           </div>
         )}
 
-        {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
+        {error && <p className="text-xs text-destructive mb-3">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-1">
           <button
