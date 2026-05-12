@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, MoreHorizontal, Filter, Image as ImageIcon, Trash2, Pencil, Check, X, UserPlus } from 'lucide-react';
+import { ArrowLeft, Star, MoreHorizontal, Filter, Image as ImageIcon, Trash2, Pencil, Check, X, UserPlus, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Board, BoardRole, Label } from '@/types/board';
 import BoardFilterPanel from './BoardFilterPanel';
@@ -70,6 +70,7 @@ export default function BoardHeader({
   const [editingKey, setEditingKey] = useState(false);
   const [keyValue, setKeyValue] = useState(board.key ?? '');
   const [showMenu, setShowMenu] = useState(false);
+  const [showMembersPanel, setShowMembersPanel] = useState(false);
 
   useEffect(() => { setTitleValue(board.title); }, [board.title]);
   useEffect(() => { setKeyValue(board.key ?? ''); }, [board.key]);
@@ -190,6 +191,55 @@ export default function BoardHeader({
         <UserPlus className="w-3.5 h-3.5" />
         Invite
       </Button>
+
+      {/* Members panel */}
+      <div className="relative">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowMembersPanel(v => !v)}
+          className="gap-1.5 text-white/90 hover:text-white hover:bg-white/10"
+        >
+          <Users className="w-4 h-4" />
+          Members
+          {members.length > 0 && (
+            <span className="text-[10px] bg-white/20 rounded-full px-1.5">{members.length}</span>
+          )}
+        </Button>
+        {showMembersPanel && (
+          <>
+            <div className="fixed inset-0 z-50" onClick={() => setShowMembersPanel(false)} />
+            <div className="absolute top-full right-0 mt-1 w-64 bg-card border border-border rounded-xl shadow-2xl z-50 animate-slide-down text-foreground overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
+                <span className="text-sm font-semibold">Members ({members.length})</span>
+                <button onClick={() => setShowMembersPanel(false)} className="p-1 rounded hover:bg-secondary transition-colors">
+                  <X className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </div>
+              {members.length > 0 ? (
+                <div className="py-1 max-h-64 overflow-y-auto">
+                  {members.map((m) => (
+                    <div key={m.userId} className="flex items-center gap-2.5 px-4 py-2.5">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                        style={{ backgroundColor: avatarColor(m.userId) }}
+                      >
+                        {initials(m.display_name, m.email)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{m.display_name || m.email}</p>
+                        {m.display_name && <p className="text-xs text-muted-foreground truncate">{m.email}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground px-4 py-4">No members yet. Invite someone!</p>
+              )}
+            </div>
+          </>
+        )}
+      </div>
 
       <div className="relative">
         <Button

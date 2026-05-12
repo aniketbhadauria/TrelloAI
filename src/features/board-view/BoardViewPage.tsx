@@ -14,6 +14,9 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { GRADIENT_STYLES } from '@/utils/gradients';
 import type { GradientKey } from '@/utils/gradients';
 import { useBoardFilters } from './useBoardFilters';
+import { generateBoardKey } from '@/utils/board';
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface SelectedCard {
   listId: string;
@@ -83,6 +86,14 @@ export default function BoardView() {
         <Button onClick={() => navigate('/boards')}>Go home</Button>
       </div>
     );
+  }
+
+  // Redirect UUID URLs to key-based URLs
+  if (UUID_RE.test(boardSlug!)) {
+    const keySlug = board.key || generateBoardKey(board.title);
+    const qs = searchParams.toString();
+    navigate(`/boards/${keySlug}${qs ? `?${qs}` : ''}`, { replace: true });
+    return null;
   }
 
   const boardStyle: React.CSSProperties = board.backgroundImage

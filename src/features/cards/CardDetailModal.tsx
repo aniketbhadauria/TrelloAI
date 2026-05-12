@@ -310,7 +310,7 @@ export default function CardDetailModal({ boardId, listId, cardId, boardMembers 
                         </button>
                       </div>
                       {[
-                        { id: 'members', icon: Users, title: 'Members', desc: 'Assign members to this card' },
+                        { id: 'members', icon: Users, title: 'Assignee', desc: 'Assign members to this card' },
                         { id: 'labels', icon: Tag, title: 'Labels', desc: 'Organize, categorize, and prioritize' },
                         { id: 'dates', icon: Calendar, title: 'Dates', desc: 'Start dates, due dates, and reminders' },
                         { id: 'checklist', icon: CheckSquare, title: 'Checklist', desc: 'Add subtasks' },
@@ -335,7 +335,7 @@ export default function CardDetailModal({ boardId, listId, cardId, boardMembers 
 
               <button className={actionBtnClass('members')} onClick={() => toggleSection('members')}>
                 <Users className="w-3.5 h-3.5" />
-                Members
+                Assignee
                 {(card.members?.length ?? 0) > 0 && (
                   <span className="w-4.5 h-4.5 rounded-full bg-primary/20 text-[10px] flex items-center justify-center">{card.members!.length}</span>
                 )}
@@ -445,35 +445,56 @@ export default function CardDetailModal({ boardId, listId, cardId, boardMembers 
             </div>
 
             {/* Expanded sections */}
-            {activeSection === 'members' && boardMembers.length > 0 && (
+            {activeSection === 'members' && (
               <div className="mb-4 p-3 bg-secondary/30 rounded-xl border border-border/40">
-                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Assign members</p>
-                <div className="space-y-1">
-                  {boardMembers.map((m) => {
-                    const isAssigned = (card.members ?? []).some(cm => cm.id === m.userId);
-                    const label = m.display_name || m.email || m.userId;
-                    return (
-                      <button
-                        key={m.userId}
-                        onClick={() => handleToggleMember(m)}
-                        className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors text-left ${isAssigned ? 'bg-primary/10' : 'hover:bg-secondary/60'}`}
-                      >
-                        <div
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-                          style={{ backgroundColor: avatarColor(m.userId) }}
+                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Assignee</p>
+                {/* Assign to me shortcut */}
+                {user && (
+                  <button
+                    onClick={() => {
+                      const me = boardMembers.find(m => m.userId === user.id);
+                      handleToggleMember({ userId: user.id, display_name: me?.display_name ?? null, email: user.email ?? null });
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 mb-2 rounded-lg border border-dashed border-border/60 hover:bg-secondary/60 transition-colors text-left"
+                  >
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
+                      style={{ backgroundColor: avatarColor(user.id) }}
+                    >
+                      {(user.email?.[0] ?? '?').toUpperCase()}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {(card.members ?? []).some(m => m.id === user.id) ? 'Remove me' : 'Assign to me'}
+                    </span>
+                  </button>
+                )}
+                {boardMembers.length > 0 ? (
+                  <div className="space-y-1">
+                    {boardMembers.map((m) => {
+                      const isAssigned = (card.members ?? []).some(cm => cm.id === m.userId);
+                      const label = m.display_name || m.email || m.userId;
+                      return (
+                        <button
+                          key={m.userId}
+                          onClick={() => handleToggleMember(m)}
+                          className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors text-left ${isAssigned ? 'bg-primary/10' : 'hover:bg-secondary/60'}`}
                         >
-                          {label[0]?.toUpperCase()}
-                        </div>
-                        <span className="flex-1 text-sm truncate">{label}</span>
-                        {isAssigned && <Check className="w-3.5 h-3.5 text-primary" />}
-                      </button>
-                    );
-                  })}
-                </div>
+                          <div
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                            style={{ backgroundColor: avatarColor(m.userId) }}
+                          >
+                            {label[0]?.toUpperCase()}
+                          </div>
+                          <span className="flex-1 text-sm truncate">{label}</span>
+                          {isAssigned && <Check className="w-3.5 h-3.5 text-primary" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground px-1">No other members on this board yet.</p>
+                )}
               </div>
-            )}
-            {activeSection === 'members' && boardMembers.length === 0 && (
-              <p className="text-xs text-muted-foreground mb-4 px-1">No members on this board yet. Invite members first.</p>
             )}
             {activeSection === 'labels' && (
               <CardLabels labels={card.labels} onAdd={handleAddLabel} onRemove={handleRemoveLabel} />
