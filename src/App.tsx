@@ -10,13 +10,8 @@ export default function App() {
       <AuthProvider>
         <BoardProvider>
           <NotificationProvider>
-            <div className="min-h-screen bg-background relative overflow-hidden">
-              <div className="gradient-orb gradient-orb-1" />
-              <div className="gradient-orb gradient-orb-2" />
-              <div className="gradient-orb gradient-orb-3" />
-              <div className="relative z-10">
-                <AppRoutes />
-              </div>
+            <div className="min-h-screen bg-background">
+              <AppRoutes />
             </div>
           </NotificationProvider>
         </BoardProvider>

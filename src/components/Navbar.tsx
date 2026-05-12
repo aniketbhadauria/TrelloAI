@@ -33,13 +33,11 @@ export default function Navbar() {
 
   return (
     <nav className="h-14 border-b border-border/40 bg-background/60 backdrop-blur-xl flex items-center px-5 gap-4 sticky top-0 z-40">
-      <Link to="/" className="flex items-center gap-2.5 font-semibold text-lg">
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-400 via-pink-500 to-purple-500 flex items-center justify-center shadow-md shadow-pink-500/20">
-          <LayoutDashboard className="w-4 h-4 text-white" />
+      <Link to="/" className="flex items-center gap-2.5">
+        <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
+          <LayoutDashboard className="w-4 h-4 text-primary-foreground" />
         </div>
-        <span className="bg-gradient-to-r from-orange-500 via-pink-500 to-purple-500 bg-clip-text text-transparent font-bold tracking-tight">
-          Esperia Trello
-        </span>
+        <span className="font-semibold text-foreground tracking-tight">Esperia Trello</span>
       </Link>
 
       <div className="flex-1 max-w-sm mx-auto">
@@ -57,10 +55,10 @@ export default function Navbar() {
         {session && (
           <Link
             to="/boards"
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               isBoards
-                ? 'bg-gradient-to-r from-pink-500/10 to-purple-500/10 text-pink-600'
-                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                ? 'bg-primary/10 text-primary'
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
             }`}
           >
             <LayoutDashboard className="w-4 h-4" />
@@ -72,7 +70,7 @@ export default function Navbar() {
           <div ref={menuRef} className="relative">
             <button
               onClick={() => setMenuOpen(o => !o)}
-              className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 via-pink-500 to-purple-500 flex items-center justify-center text-white text-sm font-semibold shadow-md shadow-pink-500/20 hover:opacity-90 transition-opacity"
+              className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
             >
               {initials}
             </button>
