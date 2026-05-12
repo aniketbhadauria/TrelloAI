@@ -2,6 +2,13 @@ import { AlignLeft, Calendar, CheckSquare, MessageSquare } from 'lucide-react';
 import { format, isPast, isToday } from 'date-fns';
 import type { Card } from '@/types/board';
 
+const MEMBER_COLORS = ['#8b5cf6', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#f97316', '#ef4444', '#ec4899'];
+function avatarColor(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = id.charCodeAt(i) + ((h << 5) - h);
+  return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length];
+}
+
 interface KanbanCardProps {
   card: Card;
   boardKey?: string;
@@ -74,9 +81,30 @@ export default function KanbanCard({ card, boardKey, onClick, isDragging }: Kanb
           )}
         </div>
 
-        {cardRef && (
-          <span className="text-[10px] font-mono text-muted-foreground/60 shrink-0">{cardRef}</span>
-        )}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {(card.members?.length ?? 0) > 0 && (
+            <div className="flex -space-x-1.5">
+              {card.members!.slice(0, 3).map((m) => (
+                <div
+                  key={m.id}
+                  title={m.name}
+                  className="w-5 h-5 rounded-full border border-card flex items-center justify-center text-white text-[9px] font-bold"
+                  style={{ backgroundColor: avatarColor(m.id) }}
+                >
+                  {m.name[0]?.toUpperCase()}
+                </div>
+              ))}
+              {card.members!.length > 3 && (
+                <div className="w-5 h-5 rounded-full border border-card bg-muted flex items-center justify-center text-muted-foreground text-[8px] font-bold">
+                  +{card.members!.length - 3}
+                </div>
+              )}
+            </div>
+          )}
+          {cardRef && (
+            <span className="text-[10px] font-mono text-muted-foreground/60">{cardRef}</span>
+          )}
+        </div>
       </div>
     </div>
   );

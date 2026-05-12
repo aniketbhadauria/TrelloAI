@@ -138,7 +138,7 @@ export default function BoardView() {
         onFilterToggle={() => setShowFilter(v => !v)}
         onFilterClose={() => setShowFilter(false)}
         onTitleSave={(title) => updateBoard(boardId!, { title })}
-        onKeySave={(key) => updateBoard(boardId!, { key })}
+        onKeySave={(key) => { updateBoard(boardId!, { key }); navigate(`/boards/${key}`, { replace: true }); }}
         onStar={() => toggleStarBoard(boardId!)}
         onInvite={() => setShowInvite(true)}
         onBackgroundPicker={() => setShowBackgroundPicker(true)}
