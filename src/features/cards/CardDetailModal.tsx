@@ -189,6 +189,12 @@ export default function CardDetailModal({ boardId, listId, cardId, boardMembers 
     };
   }, [activeSection]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const handleAddAttachment = () => {
     const url = attachmentUrl.trim();
     const fileName = attachmentFileName.trim();
