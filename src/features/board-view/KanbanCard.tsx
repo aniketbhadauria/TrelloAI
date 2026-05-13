@@ -1,31 +1,39 @@
-import { AlignLeft, Calendar, CheckSquare, MessageSquare } from 'lucide-react';
-import { format, isPast, isToday } from 'date-fns';
-import type { Card } from '@/types/board';
+import { AlignLeft, Calendar, CheckSquare } from 'lucide-react'
+import { format, isPast, isToday } from 'date-fns'
+import type { Card } from '@/types/board'
 
-const MEMBER_COLORS = ['#8b5cf6', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#f97316', '#ef4444', '#ec4899'];
+const MEMBER_COLORS = [
+  '#8b5cf6',
+  '#3b82f6',
+  '#06b6d4',
+  '#10b981',
+  '#f59e0b',
+  '#f97316',
+  '#ef4444',
+  '#ec4899',
+]
 function avatarColor(id: string) {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = id.charCodeAt(i) + ((h << 5) - h);
-  return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length];
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = id.charCodeAt(i) + ((h << 5) - h)
+  return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length]
 }
 
 interface KanbanCardProps {
-  card: Card;
-  boardKey?: string;
-  onClick: () => void;
-  isDragging: boolean;
+  card: Card
+  boardKey?: string
+  onClick: () => void
+  isDragging: boolean
 }
 
 export default function KanbanCard({ card, boardKey, onClick, isDragging }: KanbanCardProps) {
-  const hasDueDate = !!card.dueDate;
-  const dueDate = hasDueDate ? new Date(card.dueDate!) : null;
-  const isOverdue = dueDate && isPast(dueDate) && !isToday(dueDate);
-  const isDueToday = dueDate && isToday(dueDate);
+  const hasDueDate = !!card.dueDate
+  const dueDate = hasDueDate ? new Date(card.dueDate!) : null
+  const isOverdue = dueDate && isPast(dueDate) && !isToday(dueDate)
+  const isDueToday = dueDate && isToday(dueDate)
 
-  const checklist = card.checklist || [];
-  const comments = card.comments || [];
-  const completedCount = checklist.filter(i => i.completed).length;
-  const cardRef = card.number ? (boardKey ? `${boardKey}-${card.number}` : `#${card.number}`) : null;
+  const checklist = card.checklist || []
+  const completedCount = checklist.filter((i) => i.completed).length
+  const cardRef = card.number ? (boardKey ? `${boardKey}-${card.number}` : `#${card.number}`) : null
 
   return (
     <div
@@ -50,33 +58,40 @@ export default function KanbanCard({ card, boardKey, onClick, isDragging }: Kanb
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-3 flex-wrap">
           {hasDueDate && dueDate && (
-            <div className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded ${
-              isOverdue ? 'bg-destructive/20 text-destructive' : isDueToday ? 'bg-yellow-500/20 text-yellow-400' : 'text-muted-foreground'
-            }`}>
+            <div
+              className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded ${
+                isOverdue
+                  ? 'bg-destructive/20 text-destructive'
+                  : isDueToday
+                    ? 'bg-yellow-500/20 text-yellow-400'
+                    : 'text-muted-foreground'
+              }`}
+            >
               <Calendar className="w-3 h-3" />
               <span>{format(dueDate, 'MMM d')}</span>
             </div>
           )}
           {card.description && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground" title="Has description">
+            <div
+              className="flex items-center gap-1 text-xs text-muted-foreground"
+              title="Has description"
+            >
               <AlignLeft className="w-3 h-3" />
             </div>
           )}
           {checklist.length > 0 && (
             <div
               className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded ${
-                completedCount === checklist.length ? 'bg-green-500/20 text-green-400' : 'text-muted-foreground'
+                completedCount === checklist.length
+                  ? 'bg-green-500/20 text-green-400'
+                  : 'text-muted-foreground'
               }`}
               title={`${completedCount}/${checklist.length} completed`}
             >
               <CheckSquare className="w-3 h-3" />
-              <span>{completedCount}/{checklist.length}</span>
-            </div>
-          )}
-          {comments.length > 0 && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground" title={`${comments.length} comment${comments.length > 1 ? 's' : ''}`}>
-              <MessageSquare className="w-3 h-3" />
-              <span>{comments.length}</span>
+              <span>
+                {completedCount}/{checklist.length}
+              </span>
             </div>
           )}
         </div>
@@ -107,5 +122,5 @@ export default function KanbanCard({ card, boardKey, onClick, isDragging }: Kanb
         </div>
       </div>
     </div>
-  );
+  )
 }

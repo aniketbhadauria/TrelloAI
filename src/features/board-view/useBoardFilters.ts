@@ -1,104 +1,120 @@
-import { useState, useCallback, useMemo } from 'react';
-import type { Board } from '@/types/board';
-import { isPast, isToday, addDays, addWeeks, addMonths, isWithinInterval, subWeeks } from 'date-fns';
+import { useState, useCallback, useMemo } from 'react'
+import type { Board } from '@/types/board'
+import { isPast, isToday, addDays, addWeeks, addMonths, isWithinInterval } from 'date-fns'
 
 interface Filters {
-  keyword: string;
-  labels: string[];
-  dueDate: string[];
-  status: string[];
-  activity: string[];
+  keyword: string
+  labels: string[]
+  dueDate: string[]
+  status: string[]
+  activity: string[]
 }
 
-const EMPTY: Filters = { keyword: '', labels: [], dueDate: [], status: [], activity: [] };
+const EMPTY: Filters = { keyword: '', labels: [], dueDate: [], status: [], activity: [] }
 
-type Setter<T> = T | ((prev: T) => T);
+type Setter<T> = T | ((prev: T) => T)
 
 export function useBoardFilters(board: Board | null) {
-  const [filters, setFilters] = useState<Filters>(EMPTY);
+  const [filters, setFilters] = useState<Filters>(EMPTY)
 
-  const setKeyword = useCallback((v: string) => setFilters(f => ({ ...f, keyword: v })), []);
-  const setLabels = useCallback((v: Setter<string[]>) =>
-    setFilters(f => ({ ...f, labels: typeof v === 'function' ? v(f.labels) : v })), []);
-  const setDueDate = useCallback((v: Setter<string[]>) =>
-    setFilters(f => ({ ...f, dueDate: typeof v === 'function' ? v(f.dueDate) : v })), []);
-  const setStatus = useCallback((v: Setter<string[]>) =>
-    setFilters(f => ({ ...f, status: typeof v === 'function' ? v(f.status) : v })), []);
-  const setActivity = useCallback((v: Setter<string[]>) =>
-    setFilters(f => ({ ...f, activity: typeof v === 'function' ? v(f.activity) : v })), []);
-  const clear = useCallback(() => setFilters(EMPTY), []);
+  const setKeyword = useCallback((v: string) => setFilters((f) => ({ ...f, keyword: v })), [])
+  const setLabels = useCallback(
+    (v: Setter<string[]>) =>
+      setFilters((f) => ({ ...f, labels: typeof v === 'function' ? v(f.labels) : v })),
+    []
+  )
+  const setDueDate = useCallback(
+    (v: Setter<string[]>) =>
+      setFilters((f) => ({ ...f, dueDate: typeof v === 'function' ? v(f.dueDate) : v })),
+    []
+  )
+  const setStatus = useCallback(
+    (v: Setter<string[]>) =>
+      setFilters((f) => ({ ...f, status: typeof v === 'function' ? v(f.status) : v })),
+    []
+  )
+  const setActivity = useCallback(
+    (v: Setter<string[]>) =>
+      setFilters((f) => ({ ...f, activity: typeof v === 'function' ? v(f.activity) : v })),
+    []
+  )
+  const clear = useCallback(() => setFilters(EMPTY), [])
 
   const hasActiveFilters = !!(
-    filters.keyword || filters.labels.length || filters.dueDate.length ||
-    filters.status.length || filters.activity.length
-  );
+    filters.keyword ||
+    filters.labels.length ||
+    filters.dueDate.length ||
+    filters.status.length ||
+    filters.activity.length
+  )
 
   const allLabels = useMemo(() => {
-    if (!board) return [];
-    const map = new Map<string, { id: string; text: string; color: string }>();
-    board.lists.forEach(l => l.cards.forEach(c => c.labels?.forEach(lb => map.set(lb.id, lb))));
-    return [...map.values()];
-  }, [board]);
+    if (!board) return []
+    const map = new Map<string, { id: string; text: string; color: string }>()
+    board.lists.forEach((l) =>
+      l.cards.forEach((c) => c.labels?.forEach((lb) => map.set(lb.id, lb)))
+    )
+    return [...map.values()]
+  }, [board])
 
   const filteredLists = useMemo(() => {
-    if (!board || !hasActiveFilters) return board?.lists || [];
-    const now = new Date();
-    return board.lists.map(list => ({
+    if (!board || !hasActiveFilters) return board?.lists || []
+    const now = new Date()
+    return board.lists.map((list) => ({
       ...list,
-      cards: list.cards.filter(card => {
+      cards: list.cards.filter((card) => {
         if (filters.keyword) {
-          const kw = filters.keyword.toLowerCase();
-          const match = card.title?.toLowerCase().includes(kw)
-            || card.description?.toLowerCase().includes(kw)
-            || card.labels?.some(l => l.text.toLowerCase().includes(kw));
-          if (!match) return false;
+          const kw = filters.keyword.toLowerCase()
+          const match =
+            card.title?.toLowerCase().includes(kw) ||
+            card.description?.toLowerCase().includes(kw) ||
+            card.labels?.some((l) => l.text.toLowerCase().includes(kw))
+          if (!match) return false
         }
         if (filters.labels.length) {
-          const ids = (card.labels || []).map(l => l.id);
-          const pass = (filters.labels.includes('__none__') && ids.length === 0)
-            || filters.labels.some(id => id !== '__none__' && ids.includes(id));
-          if (!pass) return false;
+          const ids = (card.labels || []).map((l) => l.id)
+          const pass =
+            (filters.labels.includes('__none__') && ids.length === 0) ||
+            filters.labels.some((id) => id !== '__none__' && ids.includes(id))
+          if (!pass) return false
         }
         if (filters.dueDate.length) {
-          const due = card.dueDate ? new Date(card.dueDate) : null;
-          const pass = filters.dueDate.some(f => {
-            if (f === 'none') return !due;
-            if (!due) return false;
-            if (f === 'overdue') return isPast(due) && !isToday(due);
-            if (f === 'nextDay') return isWithinInterval(due, { start: now, end: addDays(now, 1) });
-            if (f === 'nextWeek') return isWithinInterval(due, { start: now, end: addWeeks(now, 1) });
-            if (f === 'nextMonth') return isWithinInterval(due, { start: now, end: addMonths(now, 1) });
-            return true;
-          });
-          if (!pass) return false;
+          const due = card.dueDate ? new Date(card.dueDate) : null
+          const pass = filters.dueDate.some((f) => {
+            if (f === 'none') return !due
+            if (!due) return false
+            if (f === 'overdue') return isPast(due) && !isToday(due)
+            if (f === 'nextDay') return isWithinInterval(due, { start: now, end: addDays(now, 1) })
+            if (f === 'nextWeek')
+              return isWithinInterval(due, { start: now, end: addWeeks(now, 1) })
+            if (f === 'nextMonth')
+              return isWithinInterval(due, { start: now, end: addMonths(now, 1) })
+            return true
+          })
+          if (!pass) return false
         }
         if (filters.status.length) {
-          const cl = card.checklist || [];
-          const allDone = cl.length > 0 && cl.every(i => i.completed);
-          const pass = filters.status.some(f => (f === 'complete' ? allDone : !allDone));
-          if (!pass) return false;
+          const cl = card.checklist || []
+          const allDone = cl.length > 0 && cl.every((i) => i.completed)
+          const pass = filters.status.some((f) => (f === 'complete' ? allDone : !allDone))
+          if (!pass) return false
         }
-        if (filters.activity.length) {
-          const last = (card.comments || []).reduce((latest, c) => {
-            const d = new Date(c.createdAt);
-            return d > latest ? d : latest;
-          }, new Date(0));
-          const pass = filters.activity.some(f => {
-            if (f === '1week') return last > subWeeks(now, 1);
-            if (f === '2weeks') return last > subWeeks(now, 2);
-            if (f === '4weeks') return last > subWeeks(now, 4);
-            if (f === 'noActivity') return last.getTime() === 0;
-            return true;
-          });
-          if (!pass) return false;
-        }
-        return true;
+        // activity filter is a no-op until DB-backed activity feed is implemented
+        return true
       }),
-    }));
-  }, [board, filters, hasActiveFilters]);
+    }))
+  }, [board, filters, hasActiveFilters])
 
   return {
-    filters, hasActiveFilters, allLabels, filteredLists,
-    setKeyword, setLabels, setDueDate, setStatus, setActivity, clear,
-  };
+    filters,
+    hasActiveFilters,
+    allLabels,
+    filteredLists,
+    setKeyword,
+    setLabels,
+    setDueDate,
+    setStatus,
+    setActivity,
+    clear,
+  }
 }
