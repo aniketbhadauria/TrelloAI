@@ -22,6 +22,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useProfile } from '@/context/ProfileContext'
 import { format } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import CardDescription from './CardDescription'
 import CardLabels from './CardLabels'
 import CardChecklist from './CardChecklist'
@@ -122,32 +123,25 @@ export default function CardDetailModal({
   const [attachmentFileData, setAttachmentFileData] = useState('')
   const attachmentBtnRef = useRef<HTMLButtonElement>(null)
 
-  const commentEditorRef = useRef<RichTextEditorRef>(null)
-  const [cardComments, setCardComments] = useState<CardComment[]>([])
-  const [cardActivity, setCardActivity] = useState<ActivityEntry[]>([])
-  const [feedLoading, setFeedLoading] = useState(true)
   const [isCommenting, setIsCommenting] = useState(false)
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [commentToDeleteId, setCommentToDeleteId] = useState<string | null>(null)
   const prevCommentMentionsRef = useRef<Array<{ id: string; label: string }>>([])
+  const commentEditorRef = useRef<RichTextEditorRef>(null)
+  const { data: cardComments = [], isLoading: commentsLoading } = useQuery({
+    queryKey: ['card-comments', boardId, cardId],
+    queryFn: () => apiFetchComments(boardId, cardId),
+    enabled: !!cardId,
+  })
 
-  useEffect(() => {
-    let cancelled = false
-    setFeedLoading(true)
+  const { data: cardActivity = [], isLoading: activityLoading } = useQuery({
+    queryKey: ['card-activity', boardId, cardId],
+    queryFn: () => apiFetchActivity(boardId, cardId),
+    enabled: !!cardId,
+  })
 
-    Promise.all([apiFetchComments(boardId, cardId), apiFetchActivity(boardId, cardId)]).then(
-      ([comments, activity]) => {
-        if (cancelled) return
-        setCardComments(comments)
-        setCardActivity(activity)
-        setFeedLoading(false)
-      }
-    )
-
-    return () => {
-      cancelled = true
-    }
-  }, [boardId, cardId])
+  const feedLoading = commentsLoading || activityLoading
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     const channel = supabase
@@ -160,22 +154,8 @@ export default function CardDetailModal({
           table: 'card_comments',
           filter: `card_id=eq.${cardId}`,
         },
-        (payload) => {
-          const row = payload.new as Record<string, unknown>
-          const newComment = {
-            id: row.id as string,
-            boardId: row.board_id as string,
-            cardId: row.card_id as string,
-            authorEmail: row.author_email as string,
-            authorName: row.author_name as string,
-            authorAvatar: row.author_avatar as string,
-            content: row.content as Record<string, unknown>,
-            createdAt: row.created_at as string,
-          }
-          setCardComments((prev) => {
-            if (prev.some((c) => c.id === newComment.id)) return prev
-            return [...prev, newComment]
-          })
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['card-comments', boardId, cardId] })
         }
       )
       .on(
@@ -186,9 +166,8 @@ export default function CardDetailModal({
           table: 'card_comments',
           filter: `card_id=eq.${cardId}`,
         },
-        (payload) => {
-          const row = payload.old as Record<string, unknown>
-          setCardComments((prev) => prev.filter((c) => c.id !== (row.id as string)))
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['card-comments', boardId, cardId] })
         }
       )
       .on(
@@ -199,19 +178,8 @@ export default function CardDetailModal({
           table: 'card_comments',
           filter: `card_id=eq.${cardId}`,
         },
-        (payload) => {
-          const row = payload.new as Record<string, unknown>
-          setCardComments((prev) =>
-            prev.map((c) =>
-              c.id === (row.id as string)
-                ? {
-                    ...c,
-                    content: row.content as Record<string, unknown>,
-                    authorAvatar: row.author_avatar as string,
-                  }
-                : c
-            )
-          )
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['card-comments', boardId, cardId] })
         }
       )
       .on(
@@ -222,22 +190,8 @@ export default function CardDetailModal({
           table: 'card_activity',
           filter: `card_id=eq.${cardId}`,
         },
-        (payload) => {
-          const row = payload.new as Record<string, unknown>
-          setCardActivity((prev) => [
-            ...prev,
-            {
-              id: row.id as string,
-              boardId: row.board_id as string,
-              cardId: row.card_id as string,
-              actorEmail: row.actor_email as string,
-              actorName: row.actor_name as string,
-              actorAvatar: row.actor_avatar as string,
-              type: row.type as ActivityEntry['type'],
-              payload: row.payload as Record<string, string>,
-              createdAt: row.created_at as string,
-            },
-          ])
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['card-activity', boardId, cardId] })
         }
       )
       .subscribe()
@@ -291,11 +245,15 @@ export default function CardDetailModal({
         return
       }
 
-      // Optimistic/Manual update in case realtime is slow
-      setCardComments((prev) => {
-        if (prev.some((c) => c.id === added.id)) return prev
-        return [...prev, added]
-      })
+      // Optimistic update
+      queryClient.setQueryData(
+        ['card-comments', boardId, cardId],
+        (prev: CardComment[] | undefined) => {
+          if (!prev) return [added]
+          if (prev.some((c) => c.id === added.id)) return prev
+          return [...prev, added]
+        }
+      )
 
       void apiInsertActivity({
         boardId,
@@ -353,8 +311,12 @@ export default function CardDetailModal({
       await apiUpdateComment(commentId, content)
 
       // Local update
-      setCardComments((prev) =>
-        prev.map((c) => (c.id === commentId ? { ...c, content: content as any } : c))
+      queryClient.setQueryData(
+        ['card-comments', boardId, cardId],
+        (prev: CardComment[] | undefined) => {
+          if (!prev) return []
+          return prev.map((c) => (c.id === commentId ? { ...c, content: content as any } : c))
+        }
       )
 
       // Notifications for new mentions in the edited comment
@@ -386,7 +348,13 @@ export default function CardDetailModal({
   }
 
   const handleDeleteOwnComment = async (commentId: string) => {
-    setCardComments((prev) => prev.filter((c) => c.id !== commentId))
+    queryClient.setQueryData(
+      ['card-comments', boardId, cardId],
+      (prev: CardComment[] | undefined) => {
+        if (!prev) return []
+        return prev.filter((c) => c.id !== commentId)
+      }
+    )
     await apiDeleteComment(commentId)
   }
 

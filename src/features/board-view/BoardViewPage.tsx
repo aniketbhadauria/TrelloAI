@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useBoards } from '@/context/BoardContext'
+import { useQuery } from '@tanstack/react-query'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import type { DropResult } from '@hello-pangea/dnd'
 import KanbanList from './KanbanList'
@@ -62,13 +63,18 @@ export default function BoardView() {
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false)
   const [showFilter, setShowFilter] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
-  const [boardMembers, setBoardMembers] = useState<BoardMember[]>([])
   const [confirmDeleteMember, setConfirmDeleteMember] = useState<{
     userId: string
     name: string
   } | null>(null)
   const [confirmArchiveBoard, setConfirmArchiveBoard] = useState(false)
   const [editingMember, setEditingMember] = useState<BoardMember | null>(null)
+
+  const { data: boardMembers = [], refetch: refetchMembers } = useQuery<BoardMember[]>({
+    queryKey: ['board-members', boardId],
+    queryFn: () => apiFetchBoardMembers(boardId!).then((res) => res as BoardMember[]),
+    enabled: !!boardId,
+  })
 
   const {
     filters,
@@ -95,11 +101,6 @@ export default function BoardView() {
       }
     }
   }, [board?.id]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!boardId) return
-    apiFetchBoardMembers(boardId).then((members) => setBoardMembers(members as BoardMember[]))
-  }, [boardId])
 
   if (boardsLoading) {
     return (
@@ -160,8 +161,7 @@ export default function BoardView() {
   }
 
   const handleMembersRefresh = () => {
-    if (!boardId) return
-    apiFetchBoardMembers(boardId).then((members) => setBoardMembers(members as BoardMember[]))
+    refetchMembers()
   }
 
   const handleRemoveMember = async (userId: string) => {
@@ -183,9 +183,7 @@ export default function BoardView() {
     try {
       const { apiUpdateMemberRole } = await import('@/api/members')
       await apiUpdateMemberRole(boardId!, userId, newRole)
-      setBoardMembers((prev) =>
-        prev.map((m) => (m.userId === userId ? { ...m, role: newRole } : m))
-      )
+      handleMembersRefresh()
       toast.success('Member role updated')
     } catch {
       toast.error('Failed to update role.')

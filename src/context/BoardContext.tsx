@@ -13,6 +13,7 @@ import {
 } from '@/api/boards'
 import type { Board, List, Card, ArchivedCard, BoardRole } from '../types/board'
 import { generateBoardKey } from '@/utils/board'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 interface BoardContextValue {
   boards: Board[]
@@ -73,35 +74,23 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
 
   const [boards, setBoards] = useState<Board[]>([])
   const [membershipMap, setMembershipMap] = useState<Record<string, BoardRole>>({})
-  const [boardsLoading, setBoardsLoading] = useState(true)
   const [isSavingBoards, setIsSavingBoards] = useState(false)
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const isInitialLoad = useRef(true)
   const lastSavedRef = useRef<Record<string, string>>({})
 
-  // Load boards on auth
-  useEffect(() => {
-    if (authLoading) return
-
-    if (!isAuthenticated || !user?.id) {
-      isInitialLoad.current = true
-      setBoards([])
-      setMembershipMap({})
-      setBoardsLoading(false)
-      return
-    }
-
-    let cancelled = false
-    isInitialLoad.current = true
-    setBoardsLoading(true)
-    ;(async () => {
+  const queryClient = useQueryClient()
+  const {
+    data: fetchResult,
+    isLoading: isFetchingBoards,
+    refetch,
+  } = useQuery({
+    queryKey: ['boards', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null
       await apiRunMigrationIfNeeded(user.id)
-      if (cancelled) return
-
-      const { boards: rawBoards, membershipMap: map } = await apiFetchAllBoards(user.id)
-      if (cancelled) return
-
-      const allBoards = rawBoards.map((b) => ({
+      const res = await apiFetchAllBoards(user.id)
+      const allBoards = res.boards.map((b) => ({
         ...b,
         key: b.key || generateBoardKey(b.title),
         nextCardNumber: b.nextCardNumber ?? 0,
@@ -109,16 +98,19 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
       allBoards.forEach((b) => {
         lastSavedRef.current[b.id] = JSON.stringify(extractBoardData(b))
       })
-      setBoards(allBoards)
-      setMembershipMap(map)
-      setBoardsLoading(false)
-      isInitialLoad.current = false
-    })()
+      return { boards: allBoards, membershipMap: res.membershipMap }
+    },
+    enabled: isAuthenticated && !!user?.id,
+    staleTime: 5 * 60_000,
+  })
 
-    return () => {
-      cancelled = true
+  useEffect(() => {
+    if (fetchResult) {
+      setBoards(fetchResult.boards)
+      setMembershipMap(fetchResult.membershipMap)
+      isInitialLoad.current = false
     }
-  }, [isAuthenticated, authLoading, user?.id])
+  }, [fetchResult])
 
   // Realtime: listen for board updates from other clients
   useEffect(() => {
@@ -522,23 +514,9 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
   )
 
   const refreshBoards = useCallback(async (): Promise<void> => {
-    if (!user?.id) return
-    isInitialLoad.current = true
-    const { boards: rawBoards, membershipMap: map } = await apiFetchAllBoards(user.id)
-    const allBoards = rawBoards.map((b) => ({
-      ...b,
-      key: b.key || generateBoardKey(b.title),
-      nextCardNumber: b.nextCardNumber ?? 0,
-    }))
-    allBoards.forEach((b) => {
-      lastSavedRef.current[b.id] = JSON.stringify(extractBoardData(b))
-    })
-    setBoards(allBoards)
-    setMembershipMap(map)
-    setTimeout(() => {
-      isInitialLoad.current = false
-    }, 150)
-  }, [user?.id])
+    await queryClient.invalidateQueries({ queryKey: ['boards', user?.id] })
+    await refetch()
+  }, [queryClient, user?.id, refetch])
 
   const persistBoardsNow = useCallback(async (): Promise<void> => {
     if (!isAuthenticated) return
@@ -596,7 +574,7 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
         archivedBoards,
         archivedCards,
         membershipMap,
-        boardsLoading,
+        boardsLoading: isFetchingBoards,
         isSavingBoards,
         lastSavedAt,
         getBoardRole,
