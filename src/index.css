@@ -1,3 +1,129 @@
-@import "tailwindcss";
-@import "./styles/theme.css";
-@import "./styles/globals.css";
+@import 'tailwindcss';
+@import './styles/theme.css';
+@import './styles/globals.css';
+
+/* Tiptap editor content */
+.tiptap-content .ProseMirror {
+  outline: none;
+}
+
+.tiptap-content .ProseMirror p {
+  margin: 0.25rem 0;
+  line-height: 1.6;
+}
+.tiptap-content .ProseMirror h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0.75rem 0 0.25rem;
+}
+.tiptap-content .ProseMirror h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0.25rem;
+}
+.tiptap-content .ProseMirror ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin: 0.25rem 0;
+}
+.tiptap-content .ProseMirror ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+  margin: 0.25rem 0;
+}
+.tiptap-content .ProseMirror li {
+  margin: 0.1rem 0;
+}
+.tiptap-content .ProseMirror code {
+  background: hsl(var(--secondary));
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+.tiptap-content .ProseMirror pre {
+  background: hsl(var(--secondary));
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+.tiptap-content .ProseMirror pre code {
+  background: none;
+  padding: 0;
+}
+.tiptap-content .ProseMirror blockquote {
+  border-left: 3px solid hsl(var(--border));
+  padding-left: 0.75rem;
+  color: hsl(var(--muted-foreground));
+  margin: 0.5rem 0;
+}
+.tiptap-content .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+/* Mention chips */
+.mention {
+  background-color: hsl(var(--primary) / 0.12);
+  color: hsl(var(--primary));
+  font-weight: 500;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  font-size: 0.9em;
+  cursor: default;
+}
+
+/* Read-only tiptap render (description view, comment display) */
+.tiptap-render p {
+  margin: 0.25rem 0;
+  line-height: 1.6;
+}
+.tiptap-render h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0.75rem 0 0.25rem;
+}
+.tiptap-render h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0.25rem;
+}
+.tiptap-render ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin: 0.25rem 0;
+}
+.tiptap-render ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+  margin: 0.25rem 0;
+}
+.tiptap-render li {
+  margin: 0.1rem 0;
+}
+.tiptap-render code {
+  background: hsl(var(--secondary));
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+.tiptap-render pre {
+  background: hsl(var(--secondary));
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+.tiptap-render pre code {
+  background: none;
+  padding: 0;
+}
+.tiptap-render blockquote {
+  border-left: 3px solid hsl(var(--border));
+  padding-left: 0.75rem;
+  color: hsl(var(--muted-foreground));
+  margin: 0.5rem 0;
+}
