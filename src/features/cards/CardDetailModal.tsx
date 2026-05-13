@@ -35,7 +35,13 @@ import RichTextEditor, { type RichTextEditorRef } from './RichTextEditor'
 import { apiFetchComments, apiAddComment, apiDeleteComment } from '@/api/comments'
 import { apiFetchActivity, apiInsertActivity } from '@/api/activity'
 import { supabase } from '@/lib/supabase'
-import { extractPlainText, formatActivityMessage } from './activityUtils'
+import {
+  extractPlainText,
+  formatActivityMessage,
+  extractMentions,
+  diffMentions,
+} from './activityUtils'
+import { sendNotification } from '@/context/NotificationContext'
 
 const MEMBER_COLORS = [
   '#8b5cf6',
@@ -217,6 +223,15 @@ export default function CardDetailModal({
   const actorName =
     user?.user_metadata?.display_name ?? user?.user_metadata?.full_name ?? user?.email ?? 'Unknown'
 
+  const notifyAssignedMembers = (excludeEmail: string, title: string, body: string) => {
+    for (const assignedMember of card.members ?? []) {
+      const member = boardMembers.find((m) => m.userId === assignedMember.id)
+      if (member?.email && member.email !== excludeEmail) {
+        void sendNotification({ userEmail: member.email, title, body, boardId, cardId })
+      }
+    }
+  }
+
   const handleAddComment = async () => {
     const content = commentEditorRef.current?.getContent()
     if (!content) return
@@ -234,6 +249,29 @@ export default function CardDetailModal({
       type: 'comment_added',
       payload: { preview: plain.slice(0, 60) },
     })
+
+    const boardTitle = board?.title ?? ''
+    const cardTitle = card.title
+
+    notifyAssignedMembers(
+      actorEmail,
+      `${cardTitle} — ${boardTitle}`,
+      `${actorName} commented: ${plain.slice(0, 80)}`
+    )
+
+    const newMentions = diffMentions(prevCommentMentionsRef.current, extractMentions(content))
+    for (const mention of newMentions) {
+      const member = boardMembers.find((m) => m.userId === mention.id)
+      if (member?.email && member.email !== actorEmail) {
+        void sendNotification({
+          userEmail: member.email,
+          title: `@mention — ${boardTitle}`,
+          body: `${actorName} mentioned you in a comment on ${cardTitle}`,
+          boardId,
+          cardId,
+        })
+      }
+    }
 
     commentEditorRef.current?.resetContent(null)
     prevCommentMentionsRef.current = []
@@ -290,18 +328,33 @@ export default function CardDetailModal({
     setDueDate(formatted)
     updateCard(boardId, listId, cardId, { dueDate: newDueDate })
 
+    const boardTitle = board?.title ?? ''
+    const cardTitle = card.title
+
     if (!newDueDate) {
       void apiInsertActivity({ boardId, cardId, actorEmail, actorName, type: 'due_date_removed' })
+      notifyAssignedMembers(
+        actorEmail,
+        `${cardTitle} — ${boardTitle}`,
+        `${actorName} removed the due date`
+      )
     } else if (!prevDate) {
+      const dateStr = format(new Date(newDueDate), 'MMM d, yyyy')
       void apiInsertActivity({
         boardId,
         cardId,
         actorEmail,
         actorName,
         type: 'due_date_set',
-        payload: { date: format(new Date(newDueDate), 'MMM d, yyyy') },
+        payload: { date: dateStr },
       })
+      notifyAssignedMembers(
+        actorEmail,
+        `${cardTitle} — ${boardTitle}`,
+        `${actorName} set the due date to ${dateStr}`
+      )
     } else {
+      const toStr = format(new Date(newDueDate), 'MMM d, yyyy')
       void apiInsertActivity({
         boardId,
         cardId,
@@ -310,9 +363,14 @@ export default function CardDetailModal({
         type: 'due_date_changed',
         payload: {
           from: format(new Date(prevDate), 'MMM d, yyyy'),
-          to: format(new Date(newDueDate), 'MMM d, yyyy'),
+          to: toStr,
         },
       })
+      notifyAssignedMembers(
+        actorEmail,
+        `${cardTitle} — ${boardTitle}`,
+        `${actorName} changed the due date to ${toStr}`
+      )
     }
   }
 
@@ -414,9 +472,38 @@ export default function CardDetailModal({
       type: isAssigned ? 'member_unassigned' : 'member_assigned',
       payload: { userId: member.userId, userName: memberName },
     })
+
+    if (member.email && member.email !== actorEmail) {
+      const boardTitle = board?.title ?? ''
+      const cardTitle = card.title
+      if (isAssigned) {
+        void sendNotification({
+          userEmail: member.email,
+          title: `${cardTitle} — ${boardTitle}`,
+          body: `${actorName} removed you from this card`,
+          boardId,
+          cardId,
+        })
+      } else {
+        void sendNotification({
+          userEmail: member.email,
+          title: `${cardTitle} — ${boardTitle}`,
+          body: `${actorName} assigned you to this card`,
+          boardId,
+          cardId,
+        })
+      }
+    }
   }
 
   const handleDelete = () => {
+    const boardTitle = board?.title ?? ''
+    const cardTitle = card.title
+    notifyAssignedMembers(
+      actorEmail,
+      `${cardTitle} — ${boardTitle}`,
+      `${actorName} archived this card`
+    )
     void apiInsertActivity({ boardId, cardId, actorEmail, actorName, type: 'archived' })
     archiveCard(boardId, listId, cardId)
     onClose()
