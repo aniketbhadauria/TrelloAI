@@ -3,6 +3,7 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import reactPlugin from 'eslint-plugin-react'
+import prettierConfig from 'eslint-config-prettier'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
@@ -13,6 +14,7 @@ export default defineConfig([
       js.configs.recommended,
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
+      prettierConfig,
     ],
     plugins: {
       react: reactPlugin,
@@ -35,14 +37,14 @@ export default defineConfig([
     rules: {
       ...reactPlugin.configs.recommended.rules,
       ...reactPlugin.configs['jsx-runtime'].rules,
-      'no-unused-vars': ['error', { 
-        varsIgnorePattern: '^[A-Z_]',
-        argsIgnorePattern: '^_',
-      }],
-      'react-refresh/only-export-components': [
-        'warn',
-        { allowConstantExport: true },
+      'no-unused-vars': [
+        'error',
+        {
+          varsIgnorePattern: '^[A-Z_]',
+          argsIgnorePattern: '^_',
+        },
       ],
+      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       'react-hooks/set-state-in-effect': 'off', // This is often too strict for legit initialization
       'react/prop-types': 'off',
       'react/no-unescaped-entities': 'off',
