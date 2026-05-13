@@ -28,21 +28,14 @@ import CardChecklist from './CardChecklist'
 import CardDueDate from './CardDueDate'
 import CardAttachments from './CardAttachments'
 import type { Label, CardComment, ActivityEntry } from '@/types/board'
-import type { JSONContent } from '@tiptap/core'
 import { generateHTML } from '@tiptap/html'
 import StarterKit from '@tiptap/starter-kit'
 import Mention from '@tiptap/extension-mention'
 import RichTextEditor, { type RichTextEditorRef } from './RichTextEditor'
 import { apiFetchComments, apiAddComment, apiDeleteComment } from '@/api/comments'
-import { apiFetchActivity, apiInsertActivity } from '@/api/activity'
+import { apiFetchActivity } from '@/api/activity'
 import { supabase } from '@/lib/supabase'
-import {
-  extractMentions,
-  diffMentions,
-  extractPlainText,
-  formatActivityMessage,
-} from './activityUtils'
-import { sendNotification } from '@/context/NotificationContext'
+import { extractPlainText, formatActivityMessage } from './activityUtils'
 
 const MEMBER_COLORS = [
   '#8b5cf6',
@@ -389,10 +382,24 @@ export default function CardDetailModal({
         : 'bg-secondary/40 border-border/50 text-muted-foreground hover:text-foreground hover:border-border'
     }`
 
+  function renderCommentHTML(content: Record<string, unknown>): string {
+    return generateHTML(content as Parameters<typeof generateHTML>[0], [
+      StarterKit,
+      Mention.configure({ HTMLAttributes: { class: 'mention' } }),
+    ])
+  }
+
+  type FeedItem = { kind: 'comment'; data: CardComment } | { kind: 'activity'; data: ActivityEntry }
+
+  const feed: FeedItem[] = [
+    ...cardComments.map((c) => ({ kind: 'comment' as const, data: c })),
+    ...cardActivity.map((a) => ({ kind: 'activity' as const, data: a })),
+  ].sort((a, b) => new Date(a.data.createdAt).getTime() - new Date(b.data.createdAt).getTime())
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal-content bg-card border border-border rounded-2xl w-full mx-4 shadow-2xl max-h-[85vh] flex flex-col max-w-2xl"
+        className="modal-content bg-card border border-border rounded-2xl w-full mx-4 shadow-2xl max-h-[85vh] flex flex-col max-w-4xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -802,6 +809,106 @@ export default function CardDetailModal({
               boardMembers={boardMembers}
               onSave={(desc) => updateCard(boardId, listId, cardId, { description: desc })}
             />
+          </div>
+
+          {/* Right Column — Activity + Comments */}
+          <div className="w-80 shrink-0 border-l border-border/30 flex flex-col overflow-hidden">
+            <div className="px-4 pt-4 pb-2 shrink-0">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Activity</span>
+              </div>
+            </div>
+
+            {/* Feed */}
+            <div className="flex-1 overflow-y-auto px-4 pb-2 space-y-3">
+              {feedLoading ? (
+                <p className="text-xs text-muted-foreground py-2">Loading...</p>
+              ) : feed.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2">No activity yet.</p>
+              ) : (
+                feed.map((item) => {
+                  if (item.kind === 'activity') {
+                    const entry = item.data
+                    return (
+                      <div
+                        key={entry.id}
+                        className="flex items-start gap-2 text-xs text-muted-foreground"
+                      >
+                        <Clock className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                          <span>
+                            {formatActivityMessage(entry.type, entry.actorName, entry.payload)}
+                          </span>
+                          <span className="ml-1.5 text-muted-foreground/60">
+                            {formatCommentTime(entry.createdAt)}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  const comment = item.data
+                  const initials = comment.authorName
+                    .split(' ')
+                    .map((w: string) => w[0])
+                    .join('')
+                    .toUpperCase()
+                    .slice(0, 2)
+                  const isOwn = comment.authorEmail === user?.email
+
+                  return (
+                    <div key={comment.id} className="flex items-start gap-2">
+                      <div
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0 mt-0.5"
+                        style={{ backgroundColor: getMemberColor(comment.authorName) }}
+                      >
+                        {initials}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-1.5 mb-0.5">
+                          <span className="text-xs font-semibold">{comment.authorName}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatCommentTime(comment.createdAt)}
+                          </span>
+                          {isOwn && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteOwnComment(comment.id)}
+                              className="ml-auto text-xs text-muted-foreground hover:text-destructive transition-colors"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                        <div
+                          className="tiptap-render text-sm bg-secondary/30 rounded-xl px-3 py-2"
+                          dangerouslySetInnerHTML={{ __html: renderCommentHTML(comment.content) }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+
+            {/* Comment input */}
+            <div className="px-4 pt-2 pb-4 border-t border-border/30 shrink-0 space-y-2">
+              <RichTextEditor
+                ref={commentEditorRef}
+                content={null}
+                placeholder="Write a comment... (⌘↵ to submit)"
+                members={boardMembers}
+                showHeadings={false}
+                onSubmit={handleAddComment}
+              />
+              <div className="flex justify-end">
+                <Button size="sm" onClick={handleAddComment}>
+                  <Send className="w-3.5 h-3.5 mr-1" />
+                  Comment
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
