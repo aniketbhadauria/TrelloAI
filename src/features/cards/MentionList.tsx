@@ -51,10 +51,12 @@ const MentionListDropdown = forwardRef<MentionListRef, MentionListProps>((props,
   useImperativeHandle(ref, () => ({
     onKeyDown({ event }: SuggestionKeyDownProps) {
       if (event.key === 'ArrowUp') {
+        if (props.items.length === 0) return true
         setSelectedIndex((i) => (i + props.items.length - 1) % props.items.length)
         return true
       }
       if (event.key === 'ArrowDown') {
+        if (props.items.length === 0) return true
         setSelectedIndex((i) => (i + 1) % props.items.length)
         return true
       }
