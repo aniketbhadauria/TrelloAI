@@ -28,7 +28,7 @@ export interface CardComment {
   cardId: string
   authorEmail: string
   authorName: string
-  content: object
+  content: Record<string, unknown>
   createdAt: string
 }
 
