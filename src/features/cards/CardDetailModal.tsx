@@ -33,7 +33,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Mention from '@tiptap/extension-mention'
 import RichTextEditor, { type RichTextEditorRef } from './RichTextEditor'
 import { apiFetchComments, apiAddComment, apiDeleteComment } from '@/api/comments'
-import { apiFetchActivity } from '@/api/activity'
+import { apiFetchActivity, apiInsertActivity } from '@/api/activity'
 import { supabase } from '@/lib/supabase'
 import { extractPlainText, formatActivityMessage } from './activityUtils'
 
@@ -226,6 +226,15 @@ export default function CardDetailModal({
     const added = await apiAddComment(boardId, cardId, actorEmail, actorName, content)
     if (!added) return
 
+    void apiInsertActivity({
+      boardId,
+      cardId,
+      actorEmail,
+      actorName,
+      type: 'comment_added',
+      payload: { preview: plain.slice(0, 60) },
+    })
+
     commentEditorRef.current?.resetContent(null)
     prevCommentMentionsRef.current = []
   }
@@ -276,8 +285,35 @@ export default function CardDetailModal({
 
   const handleDueDateChange = (newDueDate: string | null) => {
     const formatted = newDueDate ? format(new Date(newDueDate), 'yyyy-MM-dd') : ''
+    const prevDate = card.dueDate
+
     setDueDate(formatted)
     updateCard(boardId, listId, cardId, { dueDate: newDueDate })
+
+    if (!newDueDate) {
+      void apiInsertActivity({ boardId, cardId, actorEmail, actorName, type: 'due_date_removed' })
+    } else if (!prevDate) {
+      void apiInsertActivity({
+        boardId,
+        cardId,
+        actorEmail,
+        actorName,
+        type: 'due_date_set',
+        payload: { date: format(new Date(newDueDate), 'MMM d, yyyy') },
+      })
+    } else {
+      void apiInsertActivity({
+        boardId,
+        cardId,
+        actorEmail,
+        actorName,
+        type: 'due_date_changed',
+        payload: {
+          from: format(new Date(prevDate), 'MMM d, yyyy'),
+          to: format(new Date(newDueDate), 'MMM d, yyyy'),
+        },
+      })
+    }
   }
 
   const handleAddCheckItem = (text: string) => {
@@ -368,9 +404,20 @@ export default function CardDetailModal({
           { id: member.userId, name: member.display_name || member.email || member.userId },
         ]
     updateCard(boardId, listId, cardId, { members: updated })
+
+    const memberName = member.display_name || member.email || member.userId
+    void apiInsertActivity({
+      boardId,
+      cardId,
+      actorEmail,
+      actorName,
+      type: isAssigned ? 'member_unassigned' : 'member_assigned',
+      payload: { userId: member.userId, userName: memberName },
+    })
   }
 
   const handleDelete = () => {
+    void apiInsertActivity({ boardId, cardId, actorEmail, actorName, type: 'archived' })
     archiveCard(boardId, listId, cardId)
     onClose()
   }
