@@ -79,6 +79,11 @@ const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
       membersRef.current = members
     }, [members])
 
+    const onSubmitRef = useRef(onSubmit)
+    useEffect(() => {
+      onSubmitRef.current = onSubmit
+    }, [onSubmit])
+
     const editor = useEditor({
       extensions: [
         StarterKit,
@@ -91,10 +96,10 @@ const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
       content: content ?? undefined,
       autofocus: autoFocus,
       editorProps: {
-        handleKeyDown(_view, event) {
-          if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && onSubmit) {
-            const json = editor?.getJSON()
-            if (json) onSubmit(json)
+        handleKeyDown(view, event) {
+          if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && onSubmitRef.current) {
+            const json = view.state.doc.toJSON() as JSONContent
+            onSubmitRef.current(json)
             return true
           }
           return false
@@ -102,15 +107,21 @@ const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
       },
     })
 
-    useImperativeHandle(ref, () => ({
-      getContent: () => editor?.getJSON() ?? { type: 'doc', content: [{ type: 'paragraph' }] },
-      resetContent: (newContent) => {
-        editor?.commands.setContent(newContent ?? { type: 'doc', content: [{ type: 'paragraph' }] })
-      },
-      focus: () => {
-        editor?.commands.focus()
-      },
-    }))
+    useImperativeHandle(
+      ref,
+      () => ({
+        getContent: () => editor?.getJSON() ?? { type: 'doc', content: [{ type: 'paragraph' }] },
+        resetContent: (newContent) => {
+          editor?.commands.setContent(
+            newContent ?? { type: 'doc', content: [{ type: 'paragraph' }] }
+          )
+        },
+        focus: () => {
+          editor?.commands.focus()
+        },
+      }),
+      [editor]
+    )
 
     if (!editor) return null
 
