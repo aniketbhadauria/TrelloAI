@@ -11,6 +11,9 @@ import {
   Link2,
   Check,
   Users,
+  Clock,
+  MessageSquare,
+  Send,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,7 +27,22 @@ import CardLabels from './CardLabels'
 import CardChecklist from './CardChecklist'
 import CardDueDate from './CardDueDate'
 import CardAttachments from './CardAttachments'
-import type { Label } from '@/types/board'
+import type { Label, CardComment, ActivityEntry } from '@/types/board'
+import type { JSONContent } from '@tiptap/core'
+import { generateHTML } from '@tiptap/html'
+import StarterKit from '@tiptap/starter-kit'
+import Mention from '@tiptap/extension-mention'
+import RichTextEditor, { type RichTextEditorRef } from './RichTextEditor'
+import { apiFetchComments, apiAddComment, apiDeleteComment } from '@/api/comments'
+import { apiFetchActivity, apiInsertActivity } from '@/api/activity'
+import { supabase } from '@/lib/supabase'
+import {
+  extractMentions,
+  diffMentions,
+  extractPlainText,
+  formatActivityMessage,
+} from './activityUtils'
+import { sendNotification } from '@/context/NotificationContext'
 
 const MEMBER_COLORS = [
   '#8b5cf6',
@@ -40,6 +58,22 @@ const MEMBER_COLORS = [
 function avatarColor(id: string): string {
   let h = 0
   for (let i = 0; i < id.length; i++) h = id.charCodeAt(i) + ((h << 5) - h)
+  return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length]
+}
+
+function formatCommentTime(dateStr: string): string {
+  const d = new Date(dateStr)
+  const now = new Date()
+  const diff = Math.floor((now.getTime() - d.getTime()) / 1000)
+  if (diff < 60) return 'just now'
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  return format(d, 'MMM d')
+}
+
+function getMemberColor(name: string): string {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h)
   return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length]
 }
 
@@ -88,7 +122,125 @@ export default function CardDetailModal({
 
   const attachmentBtnRef = useRef<HTMLButtonElement>(null)
 
+  const commentEditorRef = useRef<RichTextEditorRef>(null)
+  const [cardComments, setCardComments] = useState<CardComment[]>([])
+  const [cardActivity, setCardActivity] = useState<ActivityEntry[]>([])
+  const [feedLoading, setFeedLoading] = useState(true)
+  const prevCommentMentionsRef = useRef<Array<{ id: string; label: string }>>([])
+
+  useEffect(() => {
+    let cancelled = false
+    setFeedLoading(true)
+
+    Promise.all([apiFetchComments(boardId, cardId), apiFetchActivity(boardId, cardId)]).then(
+      ([comments, activity]) => {
+        if (cancelled) return
+        setCardComments(comments)
+        setCardActivity(activity)
+        setFeedLoading(false)
+      }
+    )
+
+    return () => {
+      cancelled = true
+    }
+  }, [boardId, cardId])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`card-comments-${cardId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'card_comments',
+          filter: `card_id=eq.${cardId}`,
+        },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>
+          setCardComments((prev) => [
+            ...prev,
+            {
+              id: row.id as string,
+              boardId: row.board_id as string,
+              cardId: row.card_id as string,
+              authorEmail: row.author_email as string,
+              authorName: row.author_name as string,
+              content: row.content as Record<string, unknown>,
+              createdAt: row.created_at as string,
+            },
+          ])
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'card_comments',
+          filter: `card_id=eq.${cardId}`,
+        },
+        (payload) => {
+          const row = payload.old as Record<string, unknown>
+          setCardComments((prev) => prev.filter((c) => c.id !== (row.id as string)))
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'card_activity',
+          filter: `card_id=eq.${cardId}`,
+        },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>
+          setCardActivity((prev) => [
+            ...prev,
+            {
+              id: row.id as string,
+              boardId: row.board_id as string,
+              cardId: row.card_id as string,
+              actorEmail: row.actor_email as string,
+              actorName: row.actor_name as string,
+              type: row.type as ActivityEntry['type'],
+              payload: row.payload as Record<string, string>,
+              createdAt: row.created_at as string,
+            },
+          ])
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [cardId])
+
   if (!card) return null
+
+  const actorEmail = user?.email ?? ''
+  const actorName =
+    user?.user_metadata?.display_name ?? user?.user_metadata?.full_name ?? user?.email ?? 'Unknown'
+
+  const handleAddComment = async () => {
+    const content = commentEditorRef.current?.getContent()
+    if (!content) return
+    const plain = extractPlainText(content)
+    if (!plain) return
+
+    const added = await apiAddComment(boardId, cardId, actorEmail, actorName, content)
+    if (!added) return
+
+    commentEditorRef.current?.resetContent(null)
+    prevCommentMentionsRef.current = []
+  }
+
+  const handleDeleteOwnComment = async (commentId: string) => {
+    setCardComments((prev) => prev.filter((c) => c.id !== commentId))
+    await apiDeleteComment(commentId)
+  }
 
   const checklist = card.checklist ?? []
   const attachments = card.attachments ?? []
