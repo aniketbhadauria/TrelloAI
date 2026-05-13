@@ -1,12 +1,12 @@
-import { Search, Calendar, Tag, CheckSquare, Clock, X } from 'lucide-react';
-import type { Label } from '@/types/board';
+import { Search, Calendar, Tag, CheckSquare, Clock, X } from 'lucide-react'
+import type { Label } from '@/types/board'
 
 interface FilterCheckboxProps {
-  checked: boolean;
-  onChange: () => void;
-  icon?: React.ReactNode;
-  label?: string;
-  isLabel?: boolean;
+  checked: boolean
+  onChange: () => void
+  icon?: React.ReactNode
+  label?: string
+  isLabel?: boolean
 }
 
 function FilterCheckbox({ checked, onChange, icon, label, isLabel }: FilterCheckboxProps) {
@@ -21,7 +21,13 @@ function FilterCheckbox({ checked, onChange, icon, label, isLabel }: FilterCheck
         }`}
       >
         {checked && (
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+          <svg
+            className="w-3 h-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={3}
+          >
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         )}
@@ -35,39 +41,44 @@ function FilterCheckbox({ checked, onChange, icon, label, isLabel }: FilterCheck
         </>
       )}
     </button>
-  );
+  )
 }
 
 interface BoardFilterPanelProps {
-  filterKeyword: string;
-  setFilterKeyword: (v: string) => void;
-  filterLabels: string[];
-  setFilterLabels: (v: string[] | ((prev: string[]) => string[])) => void;
-  filterDueDate: string[];
-  setFilterDueDate: (v: string[] | ((prev: string[]) => string[])) => void;
-  filterStatus: string[];
-  setFilterStatus: (v: string[] | ((prev: string[]) => string[])) => void;
-  filterActivity: string[];
-  setFilterActivity: (v: string[] | ((prev: string[]) => string[])) => void;
-  allLabels: Label[];
-  hasActiveFilters: boolean;
-  clearAllFilters: () => void;
-  onClose: () => void;
+  filterKeyword: string
+  setFilterKeyword: (v: string) => void
+  filterLabels: string[]
+  setFilterLabels: (v: string[] | ((prev: string[]) => string[])) => void
+  filterDueDate: string[]
+  setFilterDueDate: (v: string[] | ((prev: string[]) => string[])) => void
+  filterStatus: string[]
+  setFilterStatus: (v: string[] | ((prev: string[]) => string[])) => void
+  filterActivity: string[]
+  setFilterActivity: (v: string[] | ((prev: string[]) => string[])) => void
+  allLabels: Label[]
+  hasActiveFilters: boolean
+  clearAllFilters: () => void
+  onClose: () => void
 }
 
 export default function BoardFilterPanel({
-  filterKeyword, setFilterKeyword,
-  filterLabels, setFilterLabels,
-  filterDueDate, setFilterDueDate,
-  filterStatus, setFilterStatus,
-  filterActivity, setFilterActivity,
-  allLabels, hasActiveFilters, clearAllFilters, onClose,
+  filterKeyword,
+  setFilterKeyword,
+  filterLabels,
+  setFilterLabels,
+  filterDueDate,
+  setFilterDueDate,
+  filterStatus,
+  setFilterStatus,
+  filterActivity,
+  setFilterActivity,
+  allLabels,
+  hasActiveFilters,
+  clearAllFilters,
+  onClose,
 }: BoardFilterPanelProps) {
-  const toggle = (
-    arr: string[],
-    setArr: (v: (prev: string[]) => string[]) => void,
-    val: string,
-  ) => setArr(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  const toggle = (setArr: (v: (prev: string[]) => string[]) => void, val: string) =>
+    setArr((prev) => (prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val]))
 
   return (
     <>
@@ -106,13 +117,13 @@ export default function BoardFilterPanel({
             <div className="space-y-1">
               <FilterCheckbox
                 checked={filterStatus.includes('complete')}
-                onChange={() => toggle(filterStatus, setFilterStatus, 'complete')}
+                onChange={() => toggle(setFilterStatus, 'complete')}
                 icon={<CheckSquare className="w-4 h-4 text-green-400" />}
                 label="Marked as complete"
               />
               <FilterCheckbox
                 checked={filterStatus.includes('incomplete')}
-                onChange={() => toggle(filterStatus, setFilterStatus, 'incomplete')}
+                onChange={() => toggle(setFilterStatus, 'incomplete')}
                 icon={<CheckSquare className="w-4 h-4 text-muted-foreground" />}
                 label="Not marked as complete"
               />
@@ -127,16 +138,36 @@ export default function BoardFilterPanel({
             </label>
             <div className="space-y-1">
               {[
-                { id: 'none', icon: <Calendar className="w-4 h-4 text-muted-foreground" />, label: 'No dates' },
-                { id: 'overdue', icon: <Clock className="w-4 h-4 text-red-400" />, label: 'Overdue' },
-                { id: 'nextDay', icon: <Clock className="w-4 h-4 text-yellow-400" />, label: 'Due in the next day' },
-                { id: 'nextWeek', icon: <Clock className="w-4 h-4 text-blue-400" />, label: 'Due in the next week' },
-                { id: 'nextMonth', icon: <Clock className="w-4 h-4 text-cyan-400" />, label: 'Due in the next month' },
+                {
+                  id: 'none',
+                  icon: <Calendar className="w-4 h-4 text-muted-foreground" />,
+                  label: 'No dates',
+                },
+                {
+                  id: 'overdue',
+                  icon: <Clock className="w-4 h-4 text-red-400" />,
+                  label: 'Overdue',
+                },
+                {
+                  id: 'nextDay',
+                  icon: <Clock className="w-4 h-4 text-yellow-400" />,
+                  label: 'Due in the next day',
+                },
+                {
+                  id: 'nextWeek',
+                  icon: <Clock className="w-4 h-4 text-blue-400" />,
+                  label: 'Due in the next week',
+                },
+                {
+                  id: 'nextMonth',
+                  icon: <Clock className="w-4 h-4 text-cyan-400" />,
+                  label: 'Due in the next month',
+                },
               ].map((item) => (
                 <FilterCheckbox
                   key={item.id}
                   checked={filterDueDate.includes(item.id)}
-                  onChange={() => toggle(filterDueDate, setFilterDueDate, item.id)}
+                  onChange={() => toggle(setFilterDueDate, item.id)}
                   icon={item.icon}
                   label={item.label}
                 />
@@ -153,7 +184,7 @@ export default function BoardFilterPanel({
             <div className="space-y-1">
               <FilterCheckbox
                 checked={filterLabels.includes('__none__')}
-                onChange={() => toggle(filterLabels, setFilterLabels, '__none__')}
+                onChange={() => toggle(setFilterLabels, '__none__')}
                 icon={<Tag className="w-4 h-4 text-muted-foreground" />}
                 label="No labels"
               />
@@ -161,7 +192,7 @@ export default function BoardFilterPanel({
                 <FilterCheckbox
                   key={lb.id}
                   checked={filterLabels.includes(lb.id)}
-                  onChange={() => toggle(filterLabels, setFilterLabels, lb.id)}
+                  onChange={() => toggle(setFilterLabels, lb.id)}
                   icon={
                     <span
                       className="w-full h-6 rounded-md text-white text-xs font-medium flex items-center px-2"
@@ -192,7 +223,7 @@ export default function BoardFilterPanel({
                 <FilterCheckbox
                   key={item.id}
                   checked={filterActivity.includes(item.id)}
-                  onChange={() => toggle(filterActivity, setFilterActivity, item.id)}
+                  onChange={() => toggle(setFilterActivity, item.id)}
                   label={item.label}
                 />
               ))}
@@ -210,5 +241,5 @@ export default function BoardFilterPanel({
         </div>
       </div>
     </>
-  );
+  )
 }

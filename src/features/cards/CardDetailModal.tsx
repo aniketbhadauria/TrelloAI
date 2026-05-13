@@ -11,15 +11,15 @@ import {
   Link2,
   Check,
   Users,
-  Clock,
   MessageSquare,
   Send,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { useBoards } from '@/context/BoardContext'
 import { useAuth } from '@/context/AuthContext'
+import { useProfile } from '@/context/ProfileContext'
 import { format } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
 import CardDescription from './CardDescription'
@@ -32,6 +32,7 @@ import { generateHTML } from '@tiptap/html'
 import StarterKit from '@tiptap/starter-kit'
 import Mention from '@tiptap/extension-mention'
 import RichTextEditor, { type RichTextEditorRef } from './RichTextEditor'
+import type { JSONContent } from '@tiptap/core'
 import { apiFetchComments, apiAddComment, apiDeleteComment } from '@/api/comments'
 import { apiFetchActivity, apiInsertActivity } from '@/api/activity'
 import { supabase } from '@/lib/supabase'
@@ -42,6 +43,7 @@ import {
   diffMentions,
 } from './activityUtils'
 import { sendNotification } from '@/context/NotificationContext'
+import ConfirmModal from '@/components/modals/ConfirmModal'
 
 const MEMBER_COLORS = [
   '#8b5cf6',
@@ -100,6 +102,7 @@ export default function CardDetailModal({
 }: CardDetailModalProps) {
   const { getBoard, updateCard, archiveCard } = useBoards()
   const { user } = useAuth()
+  const { profile } = useProfile()
   const board = getBoard(boardId)
   const list = board?.lists.find((l) => l.id === listId)
   const card = list?.cards.find((c) => c.id === cardId)
@@ -117,14 +120,15 @@ export default function CardDetailModal({
   const [attachmentText, setAttachmentText] = useState('')
   const [attachmentFileName, setAttachmentFileName] = useState('')
   const [attachmentFileData, setAttachmentFileData] = useState('')
-  const [attachmentPopupPos, setAttachmentPopupPos] = useState({ top: 0, left: 0 })
-
   const attachmentBtnRef = useRef<HTMLButtonElement>(null)
 
   const commentEditorRef = useRef<RichTextEditorRef>(null)
   const [cardComments, setCardComments] = useState<CardComment[]>([])
   const [cardActivity, setCardActivity] = useState<ActivityEntry[]>([])
   const [feedLoading, setFeedLoading] = useState(true)
+  const [isCommenting, setIsCommenting] = useState(false)
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [commentToDeleteId, setCommentToDeleteId] = useState<string | null>(null)
   const prevCommentMentionsRef = useRef<Array<{ id: string; label: string }>>([])
 
   useEffect(() => {
@@ -158,18 +162,20 @@ export default function CardDetailModal({
         },
         (payload) => {
           const row = payload.new as Record<string, unknown>
-          setCardComments((prev) => [
-            ...prev,
-            {
-              id: row.id as string,
-              boardId: row.board_id as string,
-              cardId: row.card_id as string,
-              authorEmail: row.author_email as string,
-              authorName: row.author_name as string,
-              content: row.content as Record<string, unknown>,
-              createdAt: row.created_at as string,
-            },
-          ])
+          const newComment = {
+            id: row.id as string,
+            boardId: row.board_id as string,
+            cardId: row.card_id as string,
+            authorEmail: row.author_email as string,
+            authorName: row.author_name as string,
+            authorAvatar: row.author_avatar as string,
+            content: row.content as Record<string, unknown>,
+            createdAt: row.created_at as string,
+          }
+          setCardComments((prev) => {
+            if (prev.some((c) => c.id === newComment.id)) return prev
+            return [...prev, newComment]
+          })
         }
       )
       .on(
@@ -183,6 +189,29 @@ export default function CardDetailModal({
         (payload) => {
           const row = payload.old as Record<string, unknown>
           setCardComments((prev) => prev.filter((c) => c.id !== (row.id as string)))
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'card_comments',
+          filter: `card_id=eq.${cardId}`,
+        },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>
+          setCardComments((prev) =>
+            prev.map((c) =>
+              c.id === (row.id as string)
+                ? {
+                    ...c,
+                    content: row.content as Record<string, unknown>,
+                    authorAvatar: row.author_avatar as string,
+                  }
+                : c
+            )
+          )
         }
       )
       .on(
@@ -203,6 +232,7 @@ export default function CardDetailModal({
               cardId: row.card_id as string,
               actorEmail: row.actor_email as string,
               actorName: row.actor_name as string,
+              actorAvatar: row.actor_avatar as string,
               type: row.type as ActivityEntry['type'],
               payload: row.payload as Record<string, string>,
               createdAt: row.created_at as string,
@@ -220,8 +250,13 @@ export default function CardDetailModal({
   if (!card) return null
 
   const actorEmail = user?.email ?? ''
+  const member = boardMembers.find((m) => m.userId === user?.id)
   const actorName =
-    user?.user_metadata?.display_name ?? user?.user_metadata?.full_name ?? user?.email ?? 'Unknown'
+    member?.display_name ||
+    user?.user_metadata?.display_name ||
+    user?.user_metadata?.full_name ||
+    user?.email ||
+    'Someone'
 
   const notifyAssignedMembers = (excludeEmail: string, title: string, body: string) => {
     for (const assignedMember of card.members ?? []) {
@@ -237,44 +272,117 @@ export default function CardDetailModal({
     if (!content) return
     const plain = extractPlainText(content)
     if (!plain) return
+    const actorEmail = user?.email || ''
+    const actorAvatar = profile?.avatar_url || undefined
 
-    const added = await apiAddComment(boardId, cardId, actorEmail, actorName, content)
-    if (!added) return
-
-    void apiInsertActivity({
-      boardId,
-      cardId,
-      actorEmail,
-      actorName,
-      type: 'comment_added',
-      payload: { preview: plain.slice(0, 60) },
-    })
-
-    const boardTitle = board?.title ?? ''
-    const cardTitle = card.title
-
-    notifyAssignedMembers(
-      actorEmail,
-      `${cardTitle} — ${boardTitle}`,
-      `${actorName} commented: ${plain.slice(0, 80)}`
-    )
-
-    const newMentions = diffMentions(prevCommentMentionsRef.current, extractMentions(content))
-    for (const mention of newMentions) {
-      const member = boardMembers.find((m) => m.userId === mention.id)
-      if (member?.email && member.email !== actorEmail) {
-        void sendNotification({
-          userEmail: member.email,
-          title: `@mention — ${boardTitle}`,
-          body: `${actorName} mentioned you in a comment on ${cardTitle}`,
-          boardId,
-          cardId,
-        })
+    setIsCommenting(true)
+    try {
+      const added = await apiAddComment(
+        boardId,
+        cardId,
+        actorEmail,
+        actorName,
+        content,
+        actorAvatar
+      )
+      if (!added) {
+        toast.error('Forbidden: Board owner must be added to members list or policy updated.')
+        setIsCommenting(false)
+        return
       }
-    }
 
-    commentEditorRef.current?.resetContent(null)
-    prevCommentMentionsRef.current = []
+      // Optimistic/Manual update in case realtime is slow
+      setCardComments((prev) => {
+        if (prev.some((c) => c.id === added.id)) return prev
+        return [...prev, added]
+      })
+
+      void apiInsertActivity({
+        boardId,
+        cardId,
+        actorEmail,
+        actorName,
+        actorAvatar,
+        type: 'comment_added',
+        payload: { preview: plain.slice(0, 60) },
+      })
+
+      const boardTitle = board?.title ?? ''
+      const cardTitle = card.title
+
+      notifyAssignedMembers(
+        actorEmail,
+        `${cardTitle} — ${boardTitle}`,
+        `${actorName} commented: ${plain.slice(0, 80)}`
+      )
+
+      const newMentions = diffMentions(prevCommentMentionsRef.current, extractMentions(content))
+      for (const mention of newMentions) {
+        const member = boardMembers.find((m) => m.userId === mention.id)
+        if (member?.email && member.email !== actorEmail) {
+          void sendNotification({
+            userEmail: member.email,
+            title: `@mention — ${boardTitle}`,
+            body: `${actorName} mentioned you in a comment on ${cardTitle}`,
+            boardId,
+            cardId,
+          })
+        }
+      }
+
+      commentEditorRef.current?.resetContent(null)
+      prevCommentMentionsRef.current = []
+    } catch (err: any) {
+      console.error('Comment error:', err)
+      if (err.code === '42501') {
+        toast.error('Permission Denied: You do not have permission to comment on this card.')
+      } else {
+        toast.error('Failed to add comment. Please try again.')
+      }
+    } finally {
+      setIsCommenting(false)
+    }
+  }
+
+  const handleUpdateComment = async (commentId: string, content: JSONContent) => {
+    const original = cardComments.find((c) => c.id === commentId)
+    if (!original) return
+
+    try {
+      const { apiUpdateComment } = await import('@/api/comments')
+      await apiUpdateComment(commentId, content)
+
+      // Local update
+      setCardComments((prev) =>
+        prev.map((c) => (c.id === commentId ? { ...c, content: content as any } : c))
+      )
+
+      // Notifications for new mentions in the edited comment
+      const newMentions = diffMentions(
+        extractMentions(original.content as any),
+        extractMentions(content)
+      )
+      if (newMentions.length > 0) {
+        const boardTitle = board?.title ?? ''
+        const cardTitle = card.title
+        for (const mention of newMentions) {
+          const member = boardMembers.find((m) => m.userId === mention.id)
+          if (member?.email && member.email !== actorEmail) {
+            void sendNotification({
+              userEmail: member.email,
+              title: `@mention — ${boardTitle}`,
+              body: `${actorName} mentioned you in an edited comment on ${cardTitle}`,
+              boardId,
+              cardId,
+            })
+          }
+        }
+      }
+
+      setEditingCommentId(null)
+    } catch (err) {
+      toast.error('Failed to update comment.')
+    }
   }
 
   const handleDeleteOwnComment = async (commentId: string) => {
@@ -332,7 +440,14 @@ export default function CardDetailModal({
     const cardTitle = card.title
 
     if (!newDueDate) {
-      void apiInsertActivity({ boardId, cardId, actorEmail, actorName, type: 'due_date_removed' })
+      void apiInsertActivity({
+        boardId,
+        cardId,
+        actorEmail,
+        actorName,
+        actorAvatar: profile?.avatar_url || undefined,
+        type: 'due_date_removed',
+      })
       notifyAssignedMembers(
         actorEmail,
         `${cardTitle} — ${boardTitle}`,
@@ -345,6 +460,7 @@ export default function CardDetailModal({
         cardId,
         actorEmail,
         actorName,
+        actorAvatar: profile?.avatar_url || undefined,
         type: 'due_date_set',
         payload: { date: dateStr },
       })
@@ -360,6 +476,7 @@ export default function CardDetailModal({
         cardId,
         actorEmail,
         actorName,
+        actorAvatar: profile?.avatar_url || undefined,
         type: 'due_date_changed',
         payload: {
           from: format(new Date(prevDate), 'MMM d, yyyy'),
@@ -388,31 +505,13 @@ export default function CardDetailModal({
     updateCard(boardId, listId, cardId, { checklist: checklist.filter((i) => i.id !== itemId) })
   }
 
-  const updateAttachmentPopupPosition = () => {
-    if (!attachmentBtnRef.current) return
-    const rect = attachmentBtnRef.current.getBoundingClientRect()
-    setAttachmentPopupPos({ top: rect.bottom + 8, left: rect.left })
-  }
-
   const toggleAttachmentPopup = () => {
     if (activeSection === 'attachment') {
       setActiveSection(null)
       return
     }
-    updateAttachmentPopupPosition()
     setActiveSection('attachment')
   }
-
-  useEffect(() => {
-    if (activeSection !== 'attachment') return
-    const handleReposition = () => updateAttachmentPopupPosition()
-    window.addEventListener('resize', handleReposition)
-    window.addEventListener('scroll', handleReposition, true)
-    return () => {
-      window.removeEventListener('resize', handleReposition)
-      window.removeEventListener('scroll', handleReposition, true)
-    }
-  }, [activeSection])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -456,7 +555,7 @@ export default function CardDetailModal({
     const currentMembers = card.members ?? []
     const isAssigned = currentMembers.some((m) => m.id === member.userId)
     const updated = isAssigned
-      ? currentMembers.filter((m) => m.id !== member.userId)
+      ? currentMembers.filter((m) => String(m.id) !== String(member.userId))
       : [
           ...currentMembers,
           { id: member.userId, name: member.display_name || member.email || member.userId },
@@ -464,11 +563,13 @@ export default function CardDetailModal({
     updateCard(boardId, listId, cardId, { members: updated })
 
     const memberName = member.display_name || member.email || member.userId
+    const actorAvatar = profile?.avatar_url || undefined
     void apiInsertActivity({
       boardId,
       cardId,
       actorEmail,
       actorName,
+      actorAvatar,
       type: isAssigned ? 'member_unassigned' : 'member_assigned',
       payload: { userId: member.userId, userName: memberName },
     })
@@ -504,7 +605,15 @@ export default function CardDetailModal({
       `${cardTitle} — ${boardTitle}`,
       `${actorName} archived this card`
     )
-    void apiInsertActivity({ boardId, cardId, actorEmail, actorName, type: 'archived' })
+    const actorAvatar = profile?.avatar_url || undefined
+    void apiInsertActivity({
+      boardId,
+      cardId,
+      actorEmail,
+      actorName,
+      actorAvatar,
+      type: 'archived',
+    })
     archiveCard(boardId, listId, cardId)
     onClose()
   }
@@ -533,7 +642,7 @@ export default function CardDetailModal({
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal-content bg-card border border-border rounded-2xl w-full mx-4 shadow-2xl max-h-[85vh] flex flex-col max-w-4xl"
+        className="modal-content bg-card border border-border rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -567,9 +676,27 @@ export default function CardDetailModal({
               onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
               className="w-full text-lg font-semibold bg-transparent border-none outline-none focus:bg-secondary/30 rounded px-1 py-0.5 -ml-1 transition-colors"
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              in list <span className="font-medium text-foreground/80">{list?.title}</span>
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-xs text-muted-foreground">
+                in list <span className="font-medium text-foreground/80">{list?.title}</span>
+              </p>
+              {card.creatorName && (
+                <>
+                  <span className="text-muted-foreground/30 text-[10px]">•</span>
+                  <p className="text-xs text-muted-foreground">
+                    Created by{' '}
+                    <span className="font-medium text-foreground/80">{card.creatorName}</span>
+                  </p>
+                </>
+              )}
+              <span className="text-muted-foreground/30 text-[10px]">•</span>
+              <p className="text-xs text-muted-foreground">
+                on{' '}
+                <span className="font-medium text-foreground/80">
+                  {format(new Date(card.createdAt), 'MMM d, yyyy')}
+                </span>
+              </p>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -707,165 +834,67 @@ export default function CardDetailModal({
                 )}
               </button>
 
-              {/* Attachment button */}
-              <div className="relative">
-                <button
-                  ref={attachmentBtnRef}
-                  className={actionBtnClass('attachment')}
-                  onClick={toggleAttachmentPopup}
-                >
-                  <Paperclip className="w-3.5 h-3.5" />
-                  Attachment
-                  {attachments.length > 0 && (
-                    <span className="w-4.5 h-4.5 rounded-full bg-primary/20 text-[10px] flex items-center justify-center">
-                      {attachments.length}
-                    </span>
-                  )}
-                </button>
-                {activeSection === 'attachment' && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setActiveSection(null)} />
-                    <div
-                      className="fixed w-[420px] max-w-[calc(100vw-3rem)] bg-card border border-border/60 rounded-2xl p-4 shadow-2xl z-50 animate-slide-down"
-                      style={{ top: attachmentPopupPos.top, left: attachmentPopupPos.left }}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-lg font-semibold">Attach</h4>
-                        <button
-                          onClick={() => setActiveSection(null)}
-                          className="p-1 rounded hover:bg-secondary transition-colors"
-                        >
-                          <X className="w-4 h-4 text-muted-foreground" />
-                        </button>
-                      </div>
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-sm font-medium mb-1">
-                            Attach a file from your computer
-                          </p>
-                          <p className="text-xs text-muted-foreground mb-2">
-                            You can also drag and drop files to upload them.
-                          </p>
-                          <label className="block">
-                            <input
-                              type="file"
-                              className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0]
-                                if (!file) return
-                                setAttachmentFileName(file.name)
-                                if (!attachmentText.trim()) setAttachmentText(file.name)
-                                const reader = new FileReader()
-                                reader.onload = () => {
-                                  const result =
-                                    typeof reader.result === 'string' ? reader.result : ''
-                                  setAttachmentFileData(result)
-                                }
-                                reader.onerror = () => setAttachmentFileData('')
-                                reader.readAsDataURL(file)
-                              }}
-                            />
-                            <span className="h-9 rounded-md bg-secondary/70 hover:bg-secondary cursor-pointer flex items-center justify-center text-sm font-medium transition-colors">
-                              Choose a file
-                            </span>
-                          </label>
-                          {attachmentFileName && (
-                            <p className="text-xs text-muted-foreground mt-1 truncate">
-                              {attachmentFileName}
-                            </p>
-                          )}
-                        </div>
-                        <div className="border-t border-border/40 pt-3 space-y-2">
-                          <div className="text-sm font-medium">Search or paste a link</div>
-                          <Input
-                            value={attachmentUrl}
-                            onChange={(e) => setAttachmentUrl(e.target.value)}
-                            placeholder="Find recent links or paste a new link"
-                            className="h-9 text-sm bg-background/60"
-                          />
-                          <div className="text-sm font-medium">Display text (optional)</div>
-                          <Input
-                            value={attachmentText}
-                            onChange={(e) => setAttachmentText(e.target.value)}
-                            placeholder="Text to display"
-                            className="h-9 text-sm bg-background/60"
-                          />
-                          <Button
-                            size="sm"
-                            onClick={handleAddAttachment}
-                            disabled={!attachmentUrl.trim() && !attachmentFileData.trim()}
-                          >
-                            Add attachment
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </>
+              <button
+                ref={attachmentBtnRef}
+                className={actionBtnClass('attachment')}
+                onClick={toggleAttachmentPopup}
+              >
+                <Paperclip className="w-3.5 h-3.5" />
+                Attachment
+                {attachments.length > 0 && (
+                  <span className="w-4.5 h-4.5 rounded-full bg-primary/20 text-[10px] flex items-center justify-center">
+                    {attachments.length}
+                  </span>
                 )}
-              </div>
+              </button>
             </div>
 
-            {/* Expanded sections */}
+            {/* Contextual Panels */}
             {activeSection === 'members' && (
-              <div className="mb-4 p-3 bg-secondary/30 rounded-xl border border-border/40">
-                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
-                  Assignee
-                </p>
-                {/* Assign to me shortcut */}
-                {user && (
-                  <button
-                    onClick={() => {
-                      const me = boardMembers.find((m) => m.userId === user.id)
-                      handleToggleMember({
-                        userId: user.id,
-                        display_name: me?.display_name ?? null,
-                        email: user.email ?? null,
-                        avatar_url: me?.avatar_url ?? null,
-                      })
-                    }}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 mb-2 rounded-lg border border-dashed border-border/60 hover:bg-secondary/60 transition-colors text-left"
-                  >
-                    <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0"
-                      style={{ backgroundColor: avatarColor(user.id) }}
-                    >
-                      {(user.email?.[0] ?? '?').toUpperCase()}
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {(card.members ?? []).some((m) => m.id === user.id)
-                        ? 'Remove me'
-                        : 'Assign to me'}
-                    </span>
+              <div className="mb-4 p-4 bg-secondary/20 rounded-xl border border-border/40 animate-slide-down">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Assign Members
+                  </h4>
+                  <button onClick={() => setActiveSection(null)}>
+                    <X className="w-4 h-4 text-muted-foreground" />
                   </button>
-                )}
-                {boardMembers.length > 0 ? (
-                  <div className="space-y-1">
-                    {boardMembers.map((m) => {
-                      const isAssigned = (card.members ?? []).some((cm) => cm.id === m.userId)
-                      const label = m.display_name || m.email || m.userId
-                      return (
-                        <button
-                          key={m.userId}
-                          onClick={() => handleToggleMember(m)}
-                          className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors text-left ${isAssigned ? 'bg-primary/10' : 'hover:bg-secondary/60'}`}
-                        >
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {boardMembers.map((m) => {
+                    const isAssigned = (card.members ?? []).some((cm) => cm.id === m.userId)
+                    return (
+                      <button
+                        key={m.userId}
+                        onClick={() => handleToggleMember(m)}
+                        className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg border transition-all ${
+                          isAssigned
+                            ? 'bg-primary/10 border-primary/30 text-primary'
+                            : 'bg-background border-border/50 hover:border-primary/40'
+                        }`}
+                      >
+                        {m.avatar_url ? (
+                          <img
+                            src={m.avatar_url}
+                            alt=""
+                            className="w-6 h-6 rounded-full object-cover shadow-sm"
+                          />
+                        ) : (
                           <div
-                            className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
                             style={{ backgroundColor: avatarColor(m.userId) }}
                           >
-                            {label[0]?.toUpperCase()}
+                            {m.display_name?.[0] || m.email?.[0] || '?'}
                           </div>
-                          <span className="flex-1 text-sm truncate">{label}</span>
-                          {isAssigned && <Check className="w-3.5 h-3.5 text-primary" />}
-                        </button>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground px-1">
-                    No other members on this board yet.
-                  </p>
-                )}
+                        )}
+                        <span className="text-xs font-medium max-w-[100px] truncate">
+                          {m.display_name || m.email}
+                        </span>
+                        {isAssigned && <Check className="w-3 h-3" />}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             )}
             {activeSection === 'labels' && (
@@ -877,6 +906,17 @@ export default function CardDetailModal({
             )}
             {activeSection === 'dates' && (
               <CardDueDate dueDate={card.dueDate} onChange={handleDueDateChange} />
+            )}
+            {activeSection === 'attachment' && (
+              <CardAttachments
+                attachments={attachments}
+                onAdd={handleAddAttachment}
+                onRemove={handleRemoveAttachment}
+                url={attachmentUrl}
+                setUrl={setAttachmentUrl}
+                name={attachmentText}
+                setName={setAttachmentText}
+              />
             )}
             {activeSection === 'checklist' && (
               <CardChecklist
@@ -934,19 +974,14 @@ export default function CardDetailModal({
               cardId={cardId}
               boardTitle={board?.title ?? ''}
               actorEmail={user?.email ?? ''}
-              actorName={
-                user?.user_metadata?.display_name ??
-                user?.user_metadata?.full_name ??
-                user?.email ??
-                ''
-              }
+              actorName={actorName}
               boardMembers={boardMembers}
               onSave={(desc) => updateCard(boardId, listId, cardId, { description: desc })}
             />
           </div>
 
           {/* Right Column — Activity + Comments */}
-          <div className="w-80 shrink-0 border-l border-border/30 flex flex-col overflow-hidden">
+          <div className="w-96 shrink-0 border-l border-border/30 flex flex-col overflow-hidden bg-secondary/5">
             <div className="px-4 pt-4 pb-2 shrink-0">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-muted-foreground" />
@@ -955,26 +990,41 @@ export default function CardDetailModal({
             </div>
 
             {/* Feed */}
-            <div className="flex-1 overflow-y-auto px-4 pb-2 space-y-3">
+            <div className="flex-1 overflow-y-auto px-4 pb-2 space-y-4">
               {feedLoading ? (
-                <p className="text-xs text-muted-foreground py-2">Loading...</p>
+                <p className="text-xs text-muted-foreground py-2 text-center">
+                  Loading activity...
+                </p>
               ) : feed.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-2">No activity yet.</p>
+                <p className="text-xs text-muted-foreground py-2 text-center">No activity yet.</p>
               ) : (
                 feed.map((item) => {
                   if (item.kind === 'activity') {
                     const entry = item.data
                     return (
-                      <div
-                        key={entry.id}
-                        className="flex items-start gap-2 text-xs text-muted-foreground"
-                      >
-                        <Clock className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                        <div className="min-w-0">
-                          <span>
-                            {formatActivityMessage(entry.type, entry.actorName, entry.payload)}
+                      <div key={entry.id} className="flex items-start gap-3 text-xs">
+                        {entry.actorAvatar ? (
+                          <img
+                            src={entry.actorAvatar}
+                            alt=""
+                            className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5 shadow-sm"
+                          />
+                        ) : (
+                          <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[8px] font-bold shrink-0 mt-0.5 shadow-sm"
+                            style={{ backgroundColor: avatarColor(entry.actorEmail) }}
+                          >
+                            {entry.actorName.slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1 leading-relaxed">
+                          <span className="font-semibold text-foreground/90 mr-1.5">
+                            {entry.actorName}
                           </span>
-                          <span className="ml-1.5 text-muted-foreground/60">
+                          <span className="text-muted-foreground">
+                            {formatActivityMessage(entry.type, '', entry.payload)}
+                          </span>
+                          <span className="ml-2 text-muted-foreground/50 text-[10px]">
                             {formatCommentTime(entry.createdAt)}
                           </span>
                         </div>
@@ -992,33 +1042,80 @@ export default function CardDetailModal({
                   const isOwn = comment.authorEmail === user?.email
 
                   return (
-                    <div key={comment.id} className="flex items-start gap-2">
-                      <div
-                        className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0 mt-0.5"
-                        style={{ backgroundColor: getMemberColor(comment.authorName) }}
-                      >
-                        {initials}
-                      </div>
+                    <div key={comment.id} className="flex items-start gap-3 group">
+                      {comment.authorAvatar ? (
+                        <img
+                          src={comment.authorAvatar}
+                          alt={comment.authorName}
+                          className="w-8 h-8 rounded-full object-cover shrink-0 mt-0.5 shadow-sm border border-border/20"
+                        />
+                      ) : (
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold shrink-0 mt-0.5 shadow-sm"
+                          style={{ backgroundColor: getMemberColor(comment.authorName) }}
+                        >
+                          {initials}
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline gap-1.5 mb-0.5">
-                          <span className="text-xs font-semibold">{comment.authorName}</span>
-                          <span className="text-xs text-muted-foreground">
+                        <div className="flex items-baseline gap-2 mb-1">
+                          <span
+                            className="text-[13px] font-bold text-foreground/90 truncate max-w-[150px]"
+                            title={comment.authorName}
+                          >
+                            {comment.authorName}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">
                             {formatCommentTime(comment.createdAt)}
                           </span>
                           {isOwn && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteOwnComment(comment.id)}
-                              className="ml-auto text-xs text-muted-foreground hover:text-destructive transition-colors"
-                            >
-                              Delete
-                            </button>
+                            <div className="ml-auto flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                type="button"
+                                onClick={() => setEditingCommentId(comment.id)}
+                                className="text-[10px] font-medium text-muted-foreground hover:text-primary transition-colors"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCommentToDeleteId(comment.id)}
+                                className="text-[10px] font-medium text-muted-foreground hover:text-destructive transition-colors"
+                              >
+                                Delete
+                              </button>
+                            </div>
                           )}
                         </div>
-                        <div
-                          className="tiptap-render text-sm bg-secondary/30 rounded-xl px-3 py-2"
-                          dangerouslySetInnerHTML={{ __html: renderCommentHTML(comment.content) }}
-                        />
+                        {editingCommentId === comment.id ? (
+                          <div className="mt-1 space-y-2 bg-background p-2 rounded-xl border border-border/50 shadow-sm">
+                            <RichTextEditor
+                              content={comment.content as any}
+                              members={boardMembers}
+                              showHeadings={false}
+                              onSubmit={(content) => handleUpdateComment(comment.id, content)}
+                              autoFocus
+                            />
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                size="xs"
+                                variant="ghost"
+                                onClick={() => setEditingCommentId(null)}
+                                className="text-[10px] h-7"
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                            <p className="text-[9px] text-muted-foreground italic px-1">
+                              Press ⌘↵ to save, Esc to cancel
+                            </p>
+                          </div>
+                        ) : (
+                          <div
+                            className="tiptap-render text-[13px] bg-background border border-border/30 rounded-xl px-3 py-2 shadow-sm"
+                            dangerouslySetInnerHTML={{ __html: renderCommentHTML(comment.content) }}
+                          />
+                        )}
                       </div>
                     </div>
                   )
@@ -1027,7 +1124,7 @@ export default function CardDetailModal({
             </div>
 
             {/* Comment input */}
-            <div className="px-4 pt-2 pb-4 border-t border-border/30 shrink-0 space-y-2">
+            <div className="px-4 pt-2 pb-4 border-t border-border/30 shrink-0 space-y-2 bg-background/50 backdrop-blur-sm">
               <RichTextEditor
                 ref={commentEditorRef}
                 content={null}
@@ -1037,9 +1134,14 @@ export default function CardDetailModal({
                 onSubmit={handleAddComment}
               />
               <div className="flex justify-end">
-                <Button size="sm" onClick={handleAddComment}>
-                  <Send className="w-3.5 h-3.5 mr-1" />
-                  Comment
+                <Button
+                  size="sm"
+                  onClick={handleAddComment}
+                  disabled={isCommenting}
+                  className="h-8 text-xs gap-1.5 shadow-sm"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  {isCommenting ? 'Sending...' : 'Comment'}
                 </Button>
               </div>
             </div>
@@ -1047,17 +1149,31 @@ export default function CardDetailModal({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-border/50 px-6 py-3 flex justify-end shrink-0">
+        <div className="border-t border-border/50 px-6 py-3 flex justify-end shrink-0 bg-secondary/10">
           <Button
             variant="ghost"
             size="sm"
-            className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 text-xs"
             onClick={handleDelete}
           >
-            <Archive className="w-4 h-4" />
+            <Archive className="w-3.5 h-3.5" />
             Archive card
           </Button>
         </div>
+
+        {commentToDeleteId && (
+          <ConfirmModal
+            onClose={() => setCommentToDeleteId(null)}
+            onConfirm={() => {
+              if (commentToDeleteId) handleDeleteOwnComment(commentToDeleteId)
+              setCommentToDeleteId(null)
+            }}
+            title="Delete comment?"
+            message="Are you sure you want to delete this comment? This action cannot be undone."
+            confirmText="Delete"
+            variant="destructive"
+          />
+        )}
       </div>
     </div>
   )

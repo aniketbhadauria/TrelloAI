@@ -8,7 +8,8 @@ export async function apiAddComment(
   cardId: string,
   authorEmail: string,
   authorName: string,
-  content: JSONContent
+  content: JSONContent,
+  authorAvatar?: string
 ): Promise<CardComment | null> {
   const { data, error } = await supabase
     .from('card_comments')
@@ -17,6 +18,7 @@ export async function apiAddComment(
       card_id: cardId,
       author_email: authorEmail,
       author_name: authorName,
+      author_avatar: authorAvatar,
       content,
     })
     .select()
@@ -31,6 +33,7 @@ export async function apiAddComment(
     cardId: data.card_id as string,
     authorEmail: data.author_email as string,
     authorName: data.author_name as string,
+    authorAvatar: data.author_avatar as string,
     content: data.content as Record<string, unknown>,
     createdAt: data.created_at as string,
   }
@@ -53,6 +56,7 @@ export async function apiFetchComments(boardId: string, cardId: string): Promise
     cardId: row.card_id as string,
     authorEmail: row.author_email as string,
     authorName: row.author_name as string,
+    authorAvatar: row.author_avatar as string,
     content: row.content as Record<string, unknown>,
     createdAt: row.created_at as string,
   }))
@@ -61,4 +65,9 @@ export async function apiFetchComments(boardId: string, cardId: string): Promise
 export async function apiDeleteComment(commentId: string): Promise<void> {
   const { error } = await supabase.from('card_comments').delete().eq('id', commentId)
   if (error) logError('comment_delete_failed', { commentId, message: error.message })
+}
+
+export async function apiUpdateComment(commentId: string, content: JSONContent): Promise<void> {
+  const { error } = await supabase.from('card_comments').update({ content }).eq('id', commentId)
+  if (error) logError('comment_update_failed', { commentId, message: error.message })
 }

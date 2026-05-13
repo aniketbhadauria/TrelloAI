@@ -127,3 +127,16 @@
   color: hsl(var(--muted-foreground));
   margin: 0.5rem 0;
 }
+
+/* Tippy Mention Theme */
+.tippy-box[data-theme~='mention'] {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+.tippy-box[data-theme~='mention'] .tippy-content {
+  padding: 0 !important;
+}
+.tippy-box[data-theme~='mention'] .tippy-arrow {
+  display: none !important;
+}

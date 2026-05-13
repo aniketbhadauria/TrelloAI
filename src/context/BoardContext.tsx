@@ -37,7 +37,13 @@ interface BoardContextValue {
   addList: (boardId: string, title: string) => void
   deleteList: (boardId: string, listId: string) => void
   updateListTitle: (boardId: string, listId: string, title: string) => void
-  addCard: (boardId: string, listId: string, title: string) => void
+  addCard: (
+    boardId: string,
+    listId: string,
+    title: string,
+    creatorName?: string,
+    creatorEmail?: string
+  ) => Promise<string | undefined>
   archiveCard: (boardId: string, listId: string, cardId: string) => void
   updateCard: (boardId: string, listId: string, cardId: string, updates: Partial<Card>) => void
   handleDragEnd: (boardId: string, result: DropResult) => void
@@ -88,7 +94,6 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false
     isInitialLoad.current = true
     setBoardsLoading(true)
-
     ;(async () => {
       await apiRunMigrationIfNeeded(user.id)
       if (cancelled) return
@@ -346,13 +351,21 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
   )
 
   const addCard = useCallback(
-    (boardId: string, listId: string, title: string) => {
+    async (
+      boardId: string,
+      listId: string,
+      title: string,
+      creatorName?: string,
+      creatorEmail?: string
+    ): Promise<string | undefined> => {
+      const cardId = uuidv4()
+      let nextNum = 0
       updateData((prev) =>
         prev.map((b) => {
           if (b.id !== boardId) return b
-          const nextNum = (b.nextCardNumber ?? 0) + 1
+          nextNum = (b.nextCardNumber ?? 0) + 1
           const newCard: Card = {
-            id: uuidv4(),
+            id: cardId,
             number: nextNum,
             title,
             description: '',
@@ -364,6 +377,8 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
             archived: false,
             archivedAt: null,
             createdAt: new Date().toISOString(),
+            creatorName,
+            creatorEmail,
           }
           return {
             ...b,
@@ -374,6 +389,7 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
           }
         })
       )
+      return cardId
     },
     [updateData]
   )

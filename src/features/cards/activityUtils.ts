@@ -73,6 +73,8 @@ export function formatActivityMessage(
       return `${actorName} archived this card`
     case 'description_updated':
       return `${actorName} updated the description`
+    case 'card_created':
+      return `${actorName} created this card`
     default:
       return ''
   }

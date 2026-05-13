@@ -10,6 +10,7 @@ export type ActivityType =
   | 'due_date_removed'
   | 'archived'
   | 'description_updated'
+  | 'card_created'
 
 export interface ActivityEntry {
   id: string
@@ -17,6 +18,7 @@ export interface ActivityEntry {
   cardId: string
   actorEmail: string
   actorName: string
+  actorAvatar?: string
   type: ActivityType
   payload: Record<string, string>
   createdAt: string
@@ -28,6 +30,7 @@ export interface CardComment {
   cardId: string
   authorEmail: string
   authorName: string
+  authorAvatar?: string
   content: Record<string, unknown>
   createdAt: string
 }
@@ -72,6 +75,8 @@ export interface Card {
   archived: boolean
   archivedAt: string | null
   createdAt: string
+  creatorName?: string
+  creatorEmail?: string
 }
 
 export interface List {
@@ -95,6 +100,14 @@ export interface Board {
   ownerId?: string
   memberRole?: BoardRole
   ownerName?: string | null
+}
+
+export interface BoardMember {
+  userId: string
+  display_name: string | null
+  email: string | null
+  avatar_url: string | null
+  role?: BoardRole
 }
 
 export interface ArchivedCard extends Card {

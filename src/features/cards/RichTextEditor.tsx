@@ -126,7 +126,10 @@ const RichTextEditor = forwardRef<RichTextEditorRef, RichTextEditorProps>(
     if (!editor) return null
 
     return (
-      <div className="border border-border/40 rounded-xl overflow-hidden bg-white">
+      <div
+        className="border border-border/40 rounded-xl overflow-hidden bg-background/50 hover:bg-background transition-colors cursor-text"
+        onClick={() => editor.commands.focus()}
+      >
         {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-border/30 bg-secondary/20">
           <ToolbarButton

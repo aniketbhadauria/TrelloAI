@@ -7,6 +7,7 @@ interface InsertActivityParams {
   cardId: string
   actorEmail: string
   actorName: string
+  actorAvatar?: string
   type: ActivityType
   payload?: Record<string, string>
 }
@@ -17,6 +18,7 @@ export async function apiInsertActivity(params: InsertActivityParams): Promise<v
     card_id: params.cardId,
     actor_email: params.actorEmail,
     actor_name: params.actorName,
+    actor_avatar: params.actorAvatar,
     type: params.type,
     payload: params.payload ?? {},
   })
@@ -40,6 +42,7 @@ export async function apiFetchActivity(boardId: string, cardId: string): Promise
     cardId: row.card_id as string,
     actorEmail: row.actor_email as string,
     actorName: row.actor_name as string,
+    actorAvatar: row.actor_avatar as string,
     type: row.type as ActivityType,
     payload: row.payload as Record<string, string>,
     createdAt: row.created_at as string,

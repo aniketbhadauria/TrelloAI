@@ -70,14 +70,14 @@ const MentionListDropdown = forwardRef<MentionListRef, MentionListProps>((props,
 
   if (!props.items.length) {
     return (
-      <div className="bg-popover border border-border rounded-xl shadow-lg py-2 px-3 text-sm text-muted-foreground min-w-[160px]">
+      <div className="bg-popover/90 backdrop-blur-xl border border-border/40 rounded-2xl shadow-2xl py-3 px-4 text-sm text-muted-foreground min-w-[180px] animate-slide-down">
         No members found
       </div>
     )
   }
 
   return (
-    <div className="bg-popover border border-border rounded-xl shadow-lg py-1 min-w-[200px] max-w-[280px]">
+    <div className="bg-popover/90 backdrop-blur-xl border border-border/40 rounded-2xl shadow-2xl py-2 min-w-[220px] max-w-[300px] overflow-hidden animate-slide-down">
       {props.items.map((item, index) => {
         const name = item.display_name || item.email || 'Unknown'
         const initials = name
@@ -86,25 +86,31 @@ const MentionListDropdown = forwardRef<MentionListRef, MentionListProps>((props,
           .join('')
           .toUpperCase()
           .slice(0, 2)
+        const isSelected = index === selectedIndex
         return (
           <button
             key={item.userId}
             type="button"
             onClick={() => selectItem(index)}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
-              index === selectedIndex ? 'bg-secondary' : 'hover:bg-secondary/60'
+            className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-all relative ${
+              isSelected ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-secondary/60'
             }`}
           >
+            {isSelected && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary" />}
             <div
-              className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold shrink-0 shadow-sm"
               style={{ backgroundColor: avatarColor(item.userId) }}
             >
               {initials}
             </div>
             <div className="text-left min-w-0">
-              <div className="font-medium truncate">{name}</div>
+              <div
+                className={`font-semibold truncate ${isSelected ? 'text-primary' : 'text-foreground'}`}
+              >
+                {name}
+              </div>
               {item.email && (
-                <div className="text-xs text-muted-foreground truncate">{item.email}</div>
+                <div className="text-[11px] text-muted-foreground/80 truncate">{item.email}</div>
               )}
             </div>
           </button>
@@ -148,6 +154,8 @@ export function buildMentionSuggestion(getMembersRef: () => MentionMember[]) {
             interactive: true,
             trigger: 'manual',
             placement: 'bottom-start',
+            theme: 'mention',
+            arrow: false,
           })
         },
         onUpdate(props: SuggestionProps) {
