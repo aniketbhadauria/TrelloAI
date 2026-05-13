@@ -47,6 +47,7 @@ interface BoardMember {
   userId: string
   display_name: string | null
   email: string | null
+  avatar_url: string | null
 }
 
 interface CardDetailModalProps {
@@ -526,6 +527,7 @@ export default function CardDetailModal({
                         userId: user.id,
                         display_name: me?.display_name ?? null,
                         email: user.email ?? null,
+                        avatar_url: me?.avatar_url ?? null,
                       })
                     }}
                     className="w-full flex items-center gap-2 px-2.5 py-1.5 mb-2 rounded-lg border border-dashed border-border/60 hover:bg-secondary/60 transition-colors text-left"
@@ -635,6 +637,17 @@ export default function CardDetailModal({
 
             <CardDescription
               description={card.description}
+              boardId={boardId}
+              cardId={cardId}
+              boardTitle={board?.title ?? ''}
+              actorEmail={user?.email ?? ''}
+              actorName={
+                user?.user_metadata?.display_name ??
+                user?.user_metadata?.full_name ??
+                user?.email ??
+                ''
+              }
+              boardMembers={boardMembers}
               onSave={(desc) => updateCard(boardId, listId, cardId, { description: desc })}
             />
           </div>
