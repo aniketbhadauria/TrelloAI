@@ -1,58 +1,58 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Loader2 } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { usePageTitle } from '@/hooks/usePageTitle';
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Loader2 } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { usePageTitle } from '@/hooks/usePageTitle'
 
 const schema = z.object({
   email: z
     .string()
     .email('Invalid email address')
-    .refine(v => v.toLowerCase().endsWith('@esperiastudio.com'), {
+    .refine((v) => v.toLowerCase().endsWith('@esperiastudio.com'), {
       message: 'Only @esperiastudio.com accounts are allowed',
     }),
   password: z.string().min(6, 'At least 6 characters'),
-});
-type SignupForm = z.infer<typeof schema>;
+})
+type SignupForm = z.infer<typeof schema>
 
 function formatSignupError(err: unknown): string {
-  const msg = err instanceof Error ? err.message : String(err);
+  const msg = err instanceof Error ? err.message : String(err)
   if (/signups not allowed/i.test(msg))
-    return 'New sign-ups are disabled. Enable them in Supabase Dashboard → Authentication → User Signups.';
-  return msg || 'Could not sign up';
+    return 'New sign-ups are disabled. Enable them in Supabase Dashboard → Authentication → User Signups.'
+  return msg || 'Could not sign up'
 }
 
 export default function SignupPage() {
-  usePageTitle('Sign Up');
-  const { signUp } = useAuth();
-  const navigate = useNavigate();
-  const [successMsg, setSuccessMsg] = useState('');
+  usePageTitle('Sign Up')
+  const { signUp } = useAuth()
+  const navigate = useNavigate()
+  const [successMsg, setSuccessMsg] = useState('')
 
   const {
     register,
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<SignupForm>({ resolver: zodResolver(schema) });
+  } = useForm<SignupForm>({ resolver: zodResolver(schema) })
 
   const onSubmit = async (data: SignupForm) => {
     try {
-      const result = await signUp(data.email, data.password);
+      const result = await signUp(data.email, data.password)
       if (result.session) {
-        navigate('/boards', { replace: true });
+        navigate('/boards', { replace: true })
       } else {
-        setSuccessMsg('Check your email to confirm your account, then sign in.');
+        setSuccessMsg('Check your email to confirm your account, then sign in.')
       }
     } catch (err) {
-      setError('root', { message: formatSignupError(err) });
+      setError('root', { message: formatSignupError(err) })
     }
-  };
+  }
 
   return (
     <div>
@@ -91,10 +91,14 @@ export default function SignupPage() {
         </div>
 
         {errors.root && (
-          <p className="text-sm text-destructive" role="alert">{errors.root.message}</p>
+          <p className="text-sm text-destructive" role="alert">
+            {errors.root.message}
+          </p>
         )}
         {successMsg && (
-          <p className="text-sm text-muted-foreground" role="status">{successMsg}</p>
+          <p className="text-sm text-muted-foreground" role="status">
+            {successMsg}
+          </p>
         )}
 
         <Button type="submit" className="w-full h-10 mt-2" disabled={isSubmitting}>
@@ -110,5 +114,5 @@ export default function SignupPage() {
         </Link>
       </p>
     </div>
-  );
+  )
 }

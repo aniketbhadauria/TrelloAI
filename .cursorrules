@@ -1,0 +1,47 @@
+# Esperia Trello - Cursor Rules
+
+## Package Manager
+- **STRICTLY USE `pnpm`**. Do not use `npm` or `yarn` for installing dependencies or running scripts.
+
+## API Architecture & State Management
+We use a domain-driven module structure for our API and strictly rely on TanStack React Query for fetching and caching to avoid duplicated network requests.
+
+When writing or modifying API and data-fetching code, ALWAYS adhere to the following rules:
+
+1. **Domain-Driven Structure**: 
+   - All API logic lives inside `src/api/`.
+   - Create a subfolder for each domain (e.g., `src/api/members/`, `src/api/boards/`).
+   
+2. **File Separation within Domains**:
+   - `api.ts`: Contains pure, framework-agnostic async functions (e.g., Supabase DB calls) and their TypeScript interfaces.
+   - `queries.ts`: Contains React Query `useQuery` hooks.
+   - `mutations.ts`: Contains React Query `useMutation` hooks or custom hooks that wrap mutations and perform optimistic updates / cache invalidation.
+   - `index.ts`: A barrel file that exports everything from the domain.
+
+3. **Unified Imports**:
+   - ALWAYS import API functions and hooks from the top-level barrel `@/api`.
+   - Never import directly from `src/api/domain/file.ts`.
+
+4. **Fetching & Caching**:
+   - DO NOT use raw `useEffect` hooks for fetching data.
+   - ALWAYS use React Query hooks (`useQuery`) to let it handle deduplication, caching, and background refetching automatically.
+   
+5. **Real-time Subscriptions**:
+   - When using Supabase real-time subscriptions, do NOT manually mutate local React state.
+   - Instead, invalidate the corresponding React Query cache key using `queryClient.invalidateQueries()`.
+
+## Folder Structure & Component Architecture
+
+1. **Pages (`src/pages/`)**:
+   - MUST contain ONLY top-level routing components (e.g., `BoardViewPage.tsx`, `HomePage.tsx`).
+   - Pages act as integration layers that orchestrate multiple features.
+   - Do NOT place reusable UI components or domain logic here.
+
+2. **Features (`src/features/`)**:
+   - MUST be strictly domain-driven (e.g., `src/features/boards/`, `src/features/auth/`).
+   - Contain domain-specific UI components, local hooks, and utilities.
+   - A feature should NOT know about the URL routing layer.
+
+3. **Types (`src/types/`)**:
+   - Keep shared TypeScript interfaces and types in `src/types/` (e.g., `board.ts`, `profile.ts`).
+   - Do NOT co-locate heavily shared models inside `src/api/` or `src/features/` to prevent circular dependencies.

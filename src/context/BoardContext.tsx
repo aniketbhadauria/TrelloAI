@@ -10,7 +10,7 @@ import {
   apiCreateBoard,
   apiSaveBoard,
   apiDeleteBoard,
-} from '@/api/boards'
+} from '@/api'
 import type { Board, List, Card, ArchivedCard, BoardRole } from '../types/board'
 import { generateBoardKey } from '@/utils/board'
 

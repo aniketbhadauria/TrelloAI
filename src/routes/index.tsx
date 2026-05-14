@@ -1,13 +1,13 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
-import AuthPageLayout from '@/layouts/AuthPageLayout';
-import LoginPage from '@/features/auth/LoginPage';
-import SignupPage from '@/features/auth/SignupPage';
-import OnboardingPage from '@/features/onboarding/OnboardingPage';
-import HomePage from '@/features/boards/HomePage';
-import BoardViewPage from '@/features/board-view/BoardViewPage';
-import ArchivePage from '@/features/boards/ArchivePage';
-import ProfilePage from '@/features/profile/ProfilePage';
+import { Routes, Route, Navigate } from 'react-router-dom'
+import AuthenticatedLayout from '@/layouts/AuthenticatedLayout'
+import AuthPageLayout from '@/layouts/AuthPageLayout'
+import LoginPage from '@/pages/LoginPage'
+import SignupPage from '@/pages/SignupPage'
+import OnboardingPage from '@/pages/OnboardingPage'
+import HomePage from '@/pages/HomePage'
+import BoardViewPage from '@/pages/BoardViewPage'
+import ArchivePage from '@/pages/ArchivePage'
+import ProfilePage from '@/pages/ProfilePage'
 
 export default function AppRoutes() {
   return (
@@ -28,5 +28,5 @@ export default function AppRoutes() {
         <Route path="/profile" element={<ProfilePage />} />
       </Route>
     </Routes>
-  );
+  )
 }

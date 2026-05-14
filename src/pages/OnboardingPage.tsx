@@ -10,10 +10,10 @@ import { LogoFull } from '@/components/Logo'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { getUserInitials } from '@/utils/user'
 import { PROFILE_SCHEMA, ProfileFormData } from '@/schemas/profile'
-import OnboardingStepIndicator, { STEPS } from './OnboardingStepIndicator'
-import OnboardingPersonalInfo from './OnboardingPersonalInfo'
-import OnboardingContactInfo from './OnboardingContactInfo'
-import OnboardingAvatarUpload from './OnboardingAvatarUpload'
+import OnboardingStepIndicator, { STEPS } from '@/features/onboarding/OnboardingStepIndicator'
+import OnboardingPersonalInfo from '@/features/onboarding/OnboardingPersonalInfo'
+import OnboardingContactInfo from '@/features/onboarding/OnboardingContactInfo'
+import OnboardingAvatarUpload from '@/features/onboarding/OnboardingAvatarUpload'
 
 const STEP_FIELDS: (keyof ProfileFormData)[][] = [
   ['firstName', 'lastName'],

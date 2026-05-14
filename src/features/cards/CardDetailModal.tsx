@@ -33,8 +33,16 @@ import StarterKit from '@tiptap/starter-kit'
 import Mention from '@tiptap/extension-mention'
 import RichTextEditor, { type RichTextEditorRef } from './RichTextEditor'
 import type { JSONContent } from '@tiptap/core'
-import { apiFetchComments, apiAddComment, apiDeleteComment } from '@/api/comments'
-import { apiFetchActivity, apiInsertActivity } from '@/api/activity'
+import {
+  useCardCommentsQuery,
+  useCardActivityQuery,
+  useCommentsCache,
+  apiAddComment,
+  apiDeleteComment,
+  apiInsertActivity,
+  activityKey,
+} from '@/api'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import {
   extractPlainText,
@@ -123,121 +131,38 @@ export default function CardDetailModal({
   const attachmentBtnRef = useRef<HTMLButtonElement>(null)
 
   const commentEditorRef = useRef<RichTextEditorRef>(null)
-  const [cardComments, setCardComments] = useState<CardComment[]>([])
-  const [cardActivity, setCardActivity] = useState<ActivityEntry[]>([])
-  const [feedLoading, setFeedLoading] = useState(true)
+  const { data: cardComments = [], isLoading: commentsLoading } = useCardCommentsQuery(
+    boardId,
+    cardId
+  )
+  const { data: cardActivity = [], isLoading: activityLoading } = useCardActivityQuery(
+    boardId,
+    cardId
+  )
+  const commentsCache = useCommentsCache(boardId, cardId)
+  const qc = useQueryClient()
+  const feedLoading = commentsLoading || activityLoading
+
   const [isCommenting, setIsCommenting] = useState(false)
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [commentToDeleteId, setCommentToDeleteId] = useState<string | null>(null)
   const prevCommentMentionsRef = useRef<Array<{ id: string; label: string }>>([])
 
   useEffect(() => {
-    let cancelled = false
-    setFeedLoading(true)
-
-    Promise.all([apiFetchComments(boardId, cardId), apiFetchActivity(boardId, cardId)]).then(
-      ([comments, activity]) => {
-        if (cancelled) return
-        setCardComments(comments)
-        setCardActivity(activity)
-        setFeedLoading(false)
-      }
-    )
-
-    return () => {
-      cancelled = true
-    }
-  }, [boardId, cardId])
-
-  useEffect(() => {
     const channel = supabase
       .channel(`card-comments-${cardId}`)
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'card_comments',
-          filter: `card_id=eq.${cardId}`,
-        },
-        (payload) => {
-          const row = payload.new as Record<string, unknown>
-          const newComment = {
-            id: row.id as string,
-            boardId: row.board_id as string,
-            cardId: row.card_id as string,
-            authorEmail: row.author_email as string,
-            authorName: row.author_name as string,
-            authorAvatar: row.author_avatar as string,
-            content: row.content as Record<string, unknown>,
-            createdAt: row.created_at as string,
-          }
-          setCardComments((prev) => {
-            if (prev.some((c) => c.id === newComment.id)) return prev
-            return [...prev, newComment]
-          })
+        { event: '*', schema: 'public', table: 'card_comments', filter: `card_id=eq.${cardId}` },
+        () => {
+          commentsCache.invalidate()
         }
       )
       .on(
         'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'card_comments',
-          filter: `card_id=eq.${cardId}`,
-        },
-        (payload) => {
-          const row = payload.old as Record<string, unknown>
-          setCardComments((prev) => prev.filter((c) => c.id !== (row.id as string)))
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'card_comments',
-          filter: `card_id=eq.${cardId}`,
-        },
-        (payload) => {
-          const row = payload.new as Record<string, unknown>
-          setCardComments((prev) =>
-            prev.map((c) =>
-              c.id === (row.id as string)
-                ? {
-                    ...c,
-                    content: row.content as Record<string, unknown>,
-                    authorAvatar: row.author_avatar as string,
-                  }
-                : c
-            )
-          )
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'card_activity',
-          filter: `card_id=eq.${cardId}`,
-        },
-        (payload) => {
-          const row = payload.new as Record<string, unknown>
-          setCardActivity((prev) => [
-            ...prev,
-            {
-              id: row.id as string,
-              boardId: row.board_id as string,
-              cardId: row.card_id as string,
-              actorEmail: row.actor_email as string,
-              actorName: row.actor_name as string,
-              actorAvatar: row.actor_avatar as string,
-              type: row.type as ActivityEntry['type'],
-              payload: row.payload as Record<string, string>,
-              createdAt: row.created_at as string,
-            },
-          ])
+        { event: '*', schema: 'public', table: 'card_activity', filter: `card_id=eq.${cardId}` },
+        () => {
+          qc.invalidateQueries({ queryKey: activityKey(boardId, cardId) })
         }
       )
       .subscribe()
@@ -245,7 +170,7 @@ export default function CardDetailModal({
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [cardId])
+  }, [cardId, boardId, qc, commentsCache])
 
   if (!card) return null
 
@@ -292,9 +217,9 @@ export default function CardDetailModal({
       }
 
       // Optimistic/Manual update in case realtime is slow
-      setCardComments((prev) => {
-        if (prev.some((c) => c.id === added.id)) return prev
-        return [...prev, added]
+      commentsCache.patch((prev) => {
+        if (prev?.some((c) => c.id === added.id)) return prev
+        return [...(prev ?? []), added]
       })
 
       void apiInsertActivity({
@@ -349,12 +274,13 @@ export default function CardDetailModal({
     if (!original) return
 
     try {
-      const { apiUpdateComment } = await import('@/api/comments')
+      const { apiUpdateComment } = await import('@/api')
       await apiUpdateComment(commentId, content)
 
       // Local update
-      setCardComments((prev) =>
-        prev.map((c) => (c.id === commentId ? { ...c, content: content as any } : c))
+      commentsCache.patch(
+        (prev) =>
+          prev?.map((c) => (c.id === commentId ? { ...c, content: content as any } : c)) ?? []
       )
 
       // Notifications for new mentions in the edited comment
@@ -386,7 +312,7 @@ export default function CardDetailModal({
   }
 
   const handleDeleteOwnComment = async (commentId: string) => {
-    setCardComments((prev) => prev.filter((c) => c.id !== commentId))
+    commentsCache.patch((prev) => prev?.filter((c) => c.id !== commentId) ?? [])
     await apiDeleteComment(commentId)
   }
 

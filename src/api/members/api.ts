@@ -2,6 +2,14 @@ import { supabase } from '@/lib/supabase'
 import { logError, logInfo } from '@/lib/logger'
 import type { BoardRole } from '@/types/board'
 
+export interface BoardMember {
+  userId: string
+  role: BoardRole
+  display_name: string | null
+  email: string | null
+  avatar_url: string | null
+}
+
 export interface AppUserResult {
   id: string
   display_name: string | null
@@ -26,13 +34,9 @@ export async function apiSearchUsers(query: string): Promise<AppUserResult[]> {
     return []
   }
   logInfo('members_searched', { query: q, count: (data || []).length })
-
   return (data || []).map((u) => {
     const fullName = [u.first_name, u.last_name].filter(Boolean).join(' ')
-    return {
-      ...u,
-      display_name: fullName || u.display_name || u.email || 'Unknown User',
-    }
+    return { ...u, display_name: fullName || u.display_name || u.email || 'Unknown User' }
   })
 }
 
@@ -51,27 +55,11 @@ export async function apiInviteMember(
   logInfo('member_invited', { boardId, userId, role })
 }
 
-export async function apiFetchBoardMembers(boardId: string): Promise<
-  Array<{
-    userId: string
-    role: BoardRole
-    display_name: string | null
-    email: string | null
-    avatar_url: string | null
-  }>
-> {
-  // 1. Fetch board to get owner_id
-  const { data: boardRow } = await supabase
-    .from('boards')
-    .select('owner_id')
-    .eq('id', boardId)
-    .maybeSingle()
-
-  // 2. Fetch board members
-  const { data: memberRows, error } = await supabase
-    .from('board_members')
-    .select('user_id, role')
-    .eq('board_id', boardId)
+export async function apiFetchBoardMembers(boardId: string): Promise<BoardMember[]> {
+  const [{ data: boardRow }, { data: memberRows, error }] = await Promise.all([
+    supabase.from('boards').select('owner_id').eq('id', boardId).maybeSingle(),
+    supabase.from('board_members').select('user_id, role').eq('board_id', boardId),
+  ])
 
   if (error) {
     logError('members_fetch_failed', { boardId, message: error.message })
@@ -81,7 +69,6 @@ export async function apiFetchBoardMembers(boardId: string): Promise<
   const userIds = (memberRows || []).map((m) => m.user_id as string)
   if (boardRow?.owner_id) userIds.push(boardRow.owner_id)
 
-  // 3. Fetch profiles from app_users
   const { data: profiles } = await supabase
     .from('app_users')
     .select('id, display_name, first_name, last_name, email, avatar_url')
@@ -100,7 +87,7 @@ export async function apiFetchBoardMembers(boardId: string): Promise<
     }
   })
 
-  const members = (memberRows || []).map((row) => {
+  const members: BoardMember[] = (memberRows || []).map((row) => {
     const p = profileMap[row.user_id as string]
     return {
       userId: row.user_id as string,
@@ -111,7 +98,6 @@ export async function apiFetchBoardMembers(boardId: string): Promise<
     }
   })
 
-  // 4. Add owner if not present
   if (boardRow?.owner_id && !members.some((m) => m.userId === boardRow.owner_id)) {
     const p = profileMap[boardRow.owner_id]
     members.unshift({

@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { getUserInitials } from '@/utils/user'
 import { PROFILE_SCHEMA, ProfileFormData } from '@/schemas/profile'
-import ProfileAvatarEditor from './ProfileAvatarEditor'
-import ProfileFormFields from './ProfileFormFields'
+import ProfileAvatarEditor from '@/features/profile/ProfileAvatarEditor'
+import ProfileFormFields from '@/features/profile/ProfileFormFields'
 
 export default function ProfilePage() {
   usePageTitle('Edit Profile')

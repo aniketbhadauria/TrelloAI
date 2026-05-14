@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import RichTextEditor, { type RichTextEditorRef } from './RichTextEditor'
 import type { MentionMember } from './MentionList'
 import { parseDescription, extractMentions, diffMentions } from './activityUtils'
-import { apiInsertActivity } from '@/api/activity'
+import { apiInsertActivity } from '@/api'
 import { sendNotification } from '@/context/NotificationContext'
 
 interface CardDescriptionProps {

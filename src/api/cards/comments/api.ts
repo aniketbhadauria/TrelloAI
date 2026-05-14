@@ -3,6 +3,29 @@ import { logError } from '@/lib/logger'
 import type { CardComment } from '@/types/board'
 import type { JSONContent } from '@tiptap/core'
 
+export async function apiFetchComments(boardId: string, cardId: string): Promise<CardComment[]> {
+  const { data, error } = await supabase
+    .from('card_comments')
+    .select('*')
+    .eq('board_id', boardId)
+    .eq('card_id', cardId)
+    .order('created_at', { ascending: true })
+  if (error) {
+    logError('comments_fetch_failed', { boardId, cardId, message: error.message })
+    return []
+  }
+  return (data || []).map((row) => ({
+    id: row.id as string,
+    boardId: row.board_id as string,
+    cardId: row.card_id as string,
+    authorEmail: row.author_email as string,
+    authorName: row.author_name as string,
+    authorAvatar: row.author_avatar as string,
+    content: row.content as Record<string, unknown>,
+    createdAt: row.created_at as string,
+  }))
+}
+
 export async function apiAddComment(
   boardId: string,
   cardId: string,
@@ -37,29 +60,6 @@ export async function apiAddComment(
     content: data.content as Record<string, unknown>,
     createdAt: data.created_at as string,
   }
-}
-
-export async function apiFetchComments(boardId: string, cardId: string): Promise<CardComment[]> {
-  const { data, error } = await supabase
-    .from('card_comments')
-    .select('*')
-    .eq('board_id', boardId)
-    .eq('card_id', cardId)
-    .order('created_at', { ascending: true })
-  if (error) {
-    logError('comments_fetch_failed', { boardId, cardId, message: error.message })
-    return []
-  }
-  return (data || []).map((row) => ({
-    id: row.id as string,
-    boardId: row.board_id as string,
-    cardId: row.card_id as string,
-    authorEmail: row.author_email as string,
-    authorName: row.author_name as string,
-    authorAvatar: row.author_avatar as string,
-    content: row.content as Record<string, unknown>,
-    createdAt: row.created_at as string,
-  }))
 }
 
 export async function apiDeleteComment(commentId: string): Promise<void> {

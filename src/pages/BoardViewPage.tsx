@@ -2,13 +2,13 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useBoards } from '@/context/BoardContext'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import type { DropResult } from '@hello-pangea/dnd'
-import KanbanList from './KanbanList'
-import AddListForm from './AddListForm'
+import KanbanList from '@/features/board-view/KanbanList'
+import AddListForm from '@/features/board-view/AddListForm'
 import CardDetailModal from '@/features/cards/CardDetailModal'
-import BoardHeader from './BoardHeader'
-import BoardBackgroundModal from './BoardBackgroundModal'
+import BoardHeader from '@/features/board-view/BoardHeader'
+import BoardBackgroundModal from '@/features/board-view/BoardBackgroundModal'
 import InviteMemberModal from '@/features/members/InviteMemberModal'
-import { apiFetchBoardMembers } from '@/api/members'
+import { useBoardMembersQuery, useBoardMemberMutations, apiInsertActivity } from '@/api'
 import { Button } from '@/components/ui/button'
 import ConfirmModal from '@/components/modals/ConfirmModal'
 import EditMemberRoleModal from '@/features/members/EditMemberRoleModal'
@@ -17,9 +17,8 @@ import { usePageTitle } from '@/hooks/usePageTitle'
 import { toast } from 'sonner'
 import { GRADIENT_STYLES } from '@/utils/gradients'
 import type { GradientKey } from '@/utils/gradients'
-import { useBoardFilters } from './useBoardFilters'
+import { useBoardFilters } from '@/features/board-view/useBoardFilters'
 import { generateBoardKey } from '@/utils/board'
-import { apiInsertActivity } from '@/api/activity'
 import { sendNotification } from '@/context/NotificationContext'
 import { useAuth } from '@/context/AuthContext'
 
@@ -62,7 +61,8 @@ export default function BoardView() {
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false)
   const [showFilter, setShowFilter] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
-  const [boardMembers, setBoardMembers] = useState<BoardMember[]>([])
+  const { data: boardMembers = [], refetch: handleMembersRefresh } = useBoardMembersQuery(boardId)
+  const { removeMember, updateRole } = useBoardMemberMutations(boardId)
   const [confirmDeleteMember, setConfirmDeleteMember] = useState<{
     userId: string
     name: string
@@ -95,11 +95,6 @@ export default function BoardView() {
       }
     }
   }, [board?.id]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!boardId) return
-    apiFetchBoardMembers(boardId).then((members) => setBoardMembers(members as BoardMember[]))
-  }, [boardId])
 
   if (boardsLoading) {
     return (
@@ -159,11 +154,6 @@ export default function BoardView() {
     }
   }
 
-  const handleMembersRefresh = () => {
-    if (!boardId) return
-    apiFetchBoardMembers(boardId).then((members) => setBoardMembers(members as BoardMember[]))
-  }
-
   const handleRemoveMember = async (userId: string) => {
     if (!boardId) return
     const member = boardMembers.find((m) => m.userId === userId)
@@ -171,25 +161,11 @@ export default function BoardView() {
   }
 
   const performRemoveMember = async (userId: string) => {
-    try {
-      const { apiRemoveMember } = await import('@/api/members')
-      await apiRemoveMember(boardId!, userId)
-      handleMembersRefresh()
-    } catch {
-      toast.error('Failed to remove member.')
-    }
+    await removeMember(userId)
+    setConfirmDeleteMember(null)
   }
   const handleUpdateMemberRole = async (userId: string, newRole: BoardRole) => {
-    try {
-      const { apiUpdateMemberRole } = await import('@/api/members')
-      await apiUpdateMemberRole(boardId!, userId, newRole)
-      setBoardMembers((prev) =>
-        prev.map((m) => (m.userId === userId ? { ...m, role: newRole } : m))
-      )
-      toast.success('Member role updated')
-    } catch {
-      toast.error('Failed to update role.')
-    }
+    await updateRole(userId, newRole)
   }
   const { user } = useAuth()
 
