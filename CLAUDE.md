@@ -29,6 +29,9 @@ Auth is restricted to `@esperiastudio.com` accounts only (enforced in `AuthConte
 - **Pages (`src/pages/`)**: Contains ONLY top-level route integration components. No reusable logic.
 - **Features (`src/features/`)**: Strictly domain-driven folders (`auth`, `boards`, `cards`) containing domain-specific UI components and local hooks.
 - **Types (`src/types/`)**: Centralized shared TypeScript models to avoid circular dependencies between `api` and `features`.
+- **Contexts (`src/context/`)**: All React contexts live here. Each file exports the context object + a `useXxxContext()` guard hook that throws if used outside its provider. Feature sub-components consume context instead of receiving deep prop chains.
+- **Feature hooks**: Feature-scoped hooks live as flat files directly in their feature folder (e.g., `src/features/board-view/useSelectedCardRoute.ts`) — no nested `hooks/` subdirectory.
+- **Modal decomposition**: Large modals are split into focused sub-components that read shared state via `useXxxContext()`. Sub-components live in the same `src/features/<domain>/` folder as the modal.
 
 ## Cloudflare Pages Deployment
 
