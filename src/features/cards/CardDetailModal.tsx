@@ -51,6 +51,7 @@ import {
   diffMentions,
 } from './activityUtils'
 import { sendNotification } from '@/context/NotificationContext'
+import { cancelPendingEmail } from '@/api'
 import ConfirmModal from '@/components/modals/ConfirmModal'
 
 const MEMBER_COLORS = [
@@ -183,11 +184,16 @@ export default function CardDetailModal({
     user?.email ||
     'Someone'
 
-  const notifyAssignedMembers = (excludeEmail: string, title: string, body: string) => {
+  const notifyAssignedMembers = (
+    excludeEmail: string,
+    title: string,
+    body: string,
+    email_type?: 'comment' | 'mention'
+  ) => {
     for (const assignedMember of card.members ?? []) {
       const member = boardMembers.find((m) => m.userId === assignedMember.id)
       if (member?.email && member.email !== excludeEmail) {
-        void sendNotification({ userEmail: member.email, title, body, boardId, cardId })
+        void sendNotification({ userEmail: member.email, title, body, boardId, cardId, email_type })
       }
     }
   }
@@ -238,7 +244,8 @@ export default function CardDetailModal({
       notifyAssignedMembers(
         actorEmail,
         `${cardTitle} — ${boardTitle}`,
-        `${actorName} commented: ${plain.slice(0, 80)}`
+        `${actorName} commented: ${plain.slice(0, 80)}`,
+        'comment'
       )
 
       const newMentions = diffMentions(prevCommentMentionsRef.current, extractMentions(content))
@@ -251,6 +258,7 @@ export default function CardDetailModal({
             body: `${actorName} mentioned you in a comment on ${cardTitle}`,
             boardId,
             cardId,
+            email_type: 'mention',
           })
         }
       }
@@ -300,6 +308,7 @@ export default function CardDetailModal({
               body: `${actorName} mentioned you in an edited comment on ${cardTitle}`,
               boardId,
               cardId,
+              email_type: 'mention',
             })
           }
         }
@@ -504,6 +513,7 @@ export default function CardDetailModal({
       const boardTitle = board?.title ?? ''
       const cardTitle = card.title
       if (isAssigned) {
+        void cancelPendingEmail(`assigned:${cardId}:${member.email}`)
         void sendNotification({
           userEmail: member.email,
           title: `${cardTitle} — ${boardTitle}`,
@@ -518,6 +528,7 @@ export default function CardDetailModal({
           body: `${actorName} assigned you to this card`,
           boardId,
           cardId,
+          email_type: 'assigned',
         })
       }
     }
