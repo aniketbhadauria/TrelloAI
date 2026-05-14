@@ -1,39 +1,54 @@
-import { useState, useRef } from 'react';
-import { Droppable, Draggable } from '@hello-pangea/dnd';
-import { MoreHorizontal, Trash2 } from 'lucide-react';
-import type { List } from '@/types/board';
-import type { DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
-import KanbanCard from './KanbanCard';
-import AddCardForm from './AddCardForm';
+import { useState, useRef } from 'react'
+import { Droppable, Draggable } from '@hello-pangea/dnd'
+import { MoreHorizontal, Trash2 } from 'lucide-react'
+import type { List, BoardMember, Sprint } from '@/types/board'
+import type { DraggableProvidedDragHandleProps } from '@hello-pangea/dnd'
+import KanbanCard from './KanbanCard'
+import AddCardForm from './AddCardForm'
 
 interface KanbanListProps {
-  list: List;
-  boardKey?: string;
-  onDeleteList: (listId: string) => void;
-  onUpdateListTitle: (listId: string, title: string) => void;
-  onAddCard: (listId: string, title: string) => void;
-  onCardClick: (listId: string, cardId: string, cardNumber?: number) => void;
-  dragHandleProps: DraggableProvidedDragHandleProps | null;
+  list: List
+  boardKey?: string
+  boardMembers?: BoardMember[]
+  sprints?: Sprint[]
+  onDeleteList: (listId: string) => void
+  onUpdateListTitle: (listId: string, title: string) => void
+  onAddCard: (listId: string, title: string) => void
+  onCardClick: (listId: string, cardId: string, cardNumber?: number) => void
+  dragHandleProps: DraggableProvidedDragHandleProps | null
 }
 
-export default function KanbanList({ list, boardKey, onDeleteList, onUpdateListTitle, onAddCard, onCardClick, dragHandleProps }: KanbanListProps) {
-  const [editingTitle, setEditingTitle] = useState(false);
-  const [titleValue, setTitleValue] = useState(list.title);
-  const [showMenu, setShowMenu] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+export default function KanbanList({
+  list,
+  boardKey,
+  boardMembers = [],
+  sprints = [],
+  onDeleteList,
+  onUpdateListTitle,
+  onAddCard,
+  onCardClick,
+  dragHandleProps,
+}: KanbanListProps) {
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleValue, setTitleValue] = useState(list.title)
+  const [showMenu, setShowMenu] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const handleTitleSubmit = () => {
     if (titleValue.trim() && titleValue !== list.title) {
-      onUpdateListTitle(list.id, titleValue.trim());
+      onUpdateListTitle(list.id, titleValue.trim())
     } else {
-      setTitleValue(list.title);
+      setTitleValue(list.title)
     }
-    setEditingTitle(false);
-  };
+    setEditingTitle(false)
+  }
 
   return (
     <div className="kanban-list">
-      <div className="flex items-center justify-between px-3 pt-3 pb-2" {...(dragHandleProps ?? {})}>
+      <div
+        className="flex items-center justify-between px-3 pt-3 pb-2"
+        {...(dragHandleProps ?? {})}
+      >
         {editingTitle ? (
           <input
             ref={inputRef}
@@ -41,8 +56,11 @@ export default function KanbanList({ list, boardKey, onDeleteList, onUpdateListT
             onChange={(e) => setTitleValue(e.target.value)}
             onBlur={handleTitleSubmit}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') handleTitleSubmit();
-              if (e.key === 'Escape') { setTitleValue(list.title); setEditingTitle(false); }
+              if (e.key === 'Enter') handleTitleSubmit()
+              if (e.key === 'Escape') {
+                setTitleValue(list.title)
+                setEditingTitle(false)
+              }
             }}
             className="flex-1 text-sm font-semibold bg-white/10 text-white px-2 py-1 rounded border border-white/20 outline-none"
             autoFocus
@@ -69,7 +87,10 @@ export default function KanbanList({ list, boardKey, onDeleteList, onUpdateListT
               <div className="fixed inset-0 z-30" onClick={() => setShowMenu(false)} />
               <div className="absolute top-full right-0 mt-1 bg-popover border border-border rounded-lg p-1 z-40 min-w-[140px] animate-slide-down">
                 <button
-                  onClick={() => { onDeleteList(list.id); setShowMenu(false); }}
+                  onClick={() => {
+                    onDeleteList(list.id)
+                    setShowMenu(false)
+                  }}
                   className="flex items-center gap-2 w-full px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-md transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -99,6 +120,8 @@ export default function KanbanList({ list, boardKey, onDeleteList, onUpdateListT
                     <KanbanCard
                       card={card}
                       boardKey={boardKey}
+                      boardMembers={boardMembers}
+                      sprints={sprints}
                       isDragging={snapshot.isDragging}
                       onClick={() => onCardClick(list.id, card.id, card.number)}
                     />
@@ -115,5 +138,5 @@ export default function KanbanList({ list, boardKey, onDeleteList, onUpdateListT
         <AddCardForm onAdd={(title) => onAddCard(list.id, title)} />
       </div>
     </div>
-  );
+  )
 }

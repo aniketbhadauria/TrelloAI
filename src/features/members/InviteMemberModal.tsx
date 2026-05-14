@@ -7,7 +7,7 @@ import { sendNotification } from '@/context/NotificationContext'
 import { useAuth } from '@/context/AuthContext'
 import { toast } from 'sonner'
 import type { BoardRole } from '@/types/board'
-import { getAvatarColor, getUserInitials } from '@/utils/user'
+import { getAvatarColor, getUserInitials, resolveActorIdentity } from '@/utils/user'
 
 interface Props {
   boardId: string
@@ -61,11 +61,7 @@ export default function InviteMemberModal({ boardId, boardTitle, ownerId, onClos
     if (selectedIds.size === 0) return
     setLoading(true)
     try {
-      const actorName =
-        user?.user_metadata?.display_name ||
-        user?.user_metadata?.full_name ||
-        user?.email ||
-        'Someone'
+      const { actorName } = resolveActorIdentity(user)
 
       const promises = Array.from(selectedIds).map(async (id) => {
         await apiInviteMember(boardId, id, role)

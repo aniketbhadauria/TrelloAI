@@ -1,5 +1,6 @@
-import { Search, Calendar, Tag, CheckSquare, Clock, X } from 'lucide-react'
-import type { Label } from '@/types/board'
+import { Search, Calendar, Tag, CheckSquare, Clock, X, Zap, Flag, Shapes } from 'lucide-react'
+import type { Label, Sprint } from '@/types/board'
+import { PRIORITIES, CARD_TYPES } from '@/utils/cardMeta'
 
 interface FilterCheckboxProps {
   checked: boolean
@@ -55,7 +56,14 @@ interface BoardFilterPanelProps {
   setFilterStatus: (v: string[] | ((prev: string[]) => string[])) => void
   filterActivity: string[]
   setFilterActivity: (v: string[] | ((prev: string[]) => string[])) => void
+  filterSprint: string[]
+  setFilterSprint: (v: string[] | ((prev: string[]) => string[])) => void
+  filterPriority: string[]
+  setFilterPriority: (v: string[] | ((prev: string[]) => string[])) => void
+  filterCardType: string[]
+  setFilterCardType: (v: string[] | ((prev: string[]) => string[])) => void
   allLabels: Label[]
+  allSprints: Sprint[]
   hasActiveFilters: boolean
   clearAllFilters: () => void
   onClose: () => void
@@ -72,7 +80,14 @@ export default function BoardFilterPanel({
   setFilterStatus,
   filterActivity,
   setFilterActivity,
+  filterSprint,
+  setFilterSprint,
+  filterPriority,
+  setFilterPriority,
+  filterCardType,
+  setFilterCardType,
   allLabels,
+  allSprints,
   hasActiveFilters,
   clearAllFilters,
   onClose,
@@ -206,6 +221,82 @@ export default function BoardFilterPanel({
               ))}
             </div>
           </div>
+
+          {/* Priority */}
+          <div>
+            <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <Flag className="w-3.5 h-3.5" />
+              Priority
+            </label>
+            <div className="space-y-1">
+              {PRIORITIES.map((p) => (
+                <FilterCheckbox
+                  key={p.value}
+                  checked={filterPriority.includes(p.value)}
+                  onChange={() => toggle(setFilterPriority, p.value)}
+                  icon={<span className={`w-2.5 h-2.5 rounded-full ${p.dot}`} />}
+                  label={p.label}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Type */}
+          <div>
+            <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <Shapes className="w-3.5 h-3.5" />
+              Type
+            </label>
+            <div className="space-y-1">
+              {CARD_TYPES.map((t) => (
+                <FilterCheckbox
+                  key={t.value}
+                  checked={filterCardType.includes(t.value)}
+                  onChange={() => toggle(setFilterCardType, t.value)}
+                  icon={
+                    <span
+                      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${t.bg} ${t.color}`}
+                    >
+                      {t.label}
+                    </span>
+                  }
+                  label=""
+                  isLabel
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Sprint */}
+          {allSprints.length > 0 && (
+            <div>
+              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5" />
+                Sprint
+              </label>
+              <div className="space-y-1">
+                <FilterCheckbox
+                  checked={filterSprint.includes('__backlog__')}
+                  onChange={() => toggle(setFilterSprint, '__backlog__')}
+                  icon={<Zap className="w-4 h-4 text-muted-foreground" />}
+                  label="Backlog (no sprint)"
+                />
+                {allSprints.map((s) => (
+                  <FilterCheckbox
+                    key={s.id}
+                    checked={filterSprint.includes(s.id)}
+                    onChange={() => toggle(setFilterSprint, s.id)}
+                    icon={
+                      <Zap
+                        className={`w-4 h-4 ${s.status === 'active' ? 'text-primary' : 'text-muted-foreground'}`}
+                      />
+                    }
+                    label={s.name}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Activity */}
           <div>

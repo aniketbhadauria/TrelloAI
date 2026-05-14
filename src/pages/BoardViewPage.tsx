@@ -8,28 +8,25 @@ import CardDetailModal from '@/features/cards/CardDetailModal'
 import BoardHeader from '@/features/board-view/BoardHeader'
 import BoardBackgroundModal from '@/features/board-view/BoardBackgroundModal'
 import InviteMemberModal from '@/features/members/InviteMemberModal'
+import SprintManagerModal from '@/features/sprints/SprintManagerModal'
 import { useBoardMembersQuery, useBoardMemberMutations, apiInsertActivity } from '@/api'
 import { Button } from '@/components/ui/button'
 import ConfirmModal from '@/components/modals/ConfirmModal'
 import EditMemberRoleModal from '@/features/members/EditMemberRoleModal'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { toast } from 'sonner'
 import { GRADIENT_STYLES } from '@/utils/gradients'
 import type { GradientKey } from '@/utils/gradients'
 import { useBoardFilters } from '@/features/board-view/useBoardFilters'
+import { useSelectedCardRoute } from '@/features/board-view/useSelectedCardRoute'
 import { generateBoardKey } from '@/utils/board'
+import { resolveActorIdentity } from '@/utils/user'
 import { sendNotification } from '@/context/NotificationContext'
 import { useAuth } from '@/context/AuthContext'
+import type { BoardRole, BoardMember, Card } from '@/types/board'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-interface SelectedCard {
-  listId: string
-  cardId: string
-}
-
-import type { BoardRole, BoardMember } from '@/types/board'
 
 export default function BoardView() {
   const { boardId: boardSlug, cardNumber: cardNumberParam } = useParams<{
@@ -49,6 +46,9 @@ export default function BoardView() {
     updateListTitle,
     addCard,
     deleteBoard,
+    addSprint,
+    updateSprint,
+    deleteSprint,
   } = useBoards()
 
   const board = getBoard(boardSlug!)
@@ -57,10 +57,11 @@ export default function BoardView() {
   const role = getBoardRole(boardId ?? '')
   const canEdit = role === 'owner' || role === 'admin' || role === 'member'
 
-  const [selectedCard, setSelectedCard] = useState<SelectedCard | null>(null)
   const [showBackgroundPicker, setShowBackgroundPicker] = useState(false)
   const [showFilter, setShowFilter] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
+  const [showSprintManager, setShowSprintManager] = useState(false)
+  const [sprintManagerInitialCreate, setSprintManagerInitialCreate] = useState(false)
   const { data: boardMembers = [], refetch: handleMembersRefresh } = useBoardMembersQuery(boardId)
   const { removeMember, updateRole } = useBoardMemberMutations(boardId)
   const [confirmDeleteMember, setConfirmDeleteMember] = useState<{
@@ -80,21 +81,18 @@ export default function BoardView() {
     setDueDate,
     setStatus,
     setActivity,
+    setSprint,
+    setPriority,
+    setCardType,
     clear: clearAllFilters,
   } = useBoardFilters(board)
 
-  // Open card from /boards/KEY/N URL param
-  useEffect(() => {
-    if (!cardNumberParam || !board) return
-    const num = parseInt(cardNumberParam, 10)
-    for (const list of board.lists) {
-      const card = list.cards.find((c) => c.number === num)
-      if (card) {
-        setSelectedCard({ listId: list.id, cardId: card.id })
-        return
-      }
-    }
-  }, [board?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const { selectedCard, handleCardOpen, handleCardClose } = useSelectedCardRoute(
+    board,
+    cardNumberParam
+  )
+
+  const { user } = useAuth()
 
   if (boardsLoading) {
     return (
@@ -128,18 +126,6 @@ export default function BoardView() {
       }
     : { backgroundColor: GRADIENT_STYLES[board.gradient as GradientKey] ?? '#475569' }
 
-  const boardPath = `/boards/${board.key || generateBoardKey(board.title)}`
-
-  const handleCardOpen = (listId: string, cardId: string, cardNumber?: number) => {
-    setSelectedCard({ listId, cardId })
-    if (cardNumber) navigate(`${boardPath}/${cardNumber}`, { replace: true })
-  }
-
-  const handleCardClose = () => {
-    setSelectedCard(null)
-    navigate(boardPath, { replace: true })
-  }
-
   const handleArchive = async () => {
     if (role !== 'owner') return
     setConfirmArchiveBoard(true)
@@ -167,7 +153,35 @@ export default function BoardView() {
   const handleUpdateMemberRole = async (userId: string, newRole: BoardRole) => {
     await updateRole(userId, newRole)
   }
-  const { user } = useAuth()
+  const getActorIdentity = () => {
+    return resolveActorIdentity(user, boardMembers)
+  }
+
+  const notifyCardMoved = (movedCard: Card, srcListTitle: string, destListTitle: string) => {
+    const { actorEmail, actorName } = getActorIdentity()
+
+    void apiInsertActivity({
+      boardId: boardId!,
+      cardId: movedCard.id,
+      actorEmail,
+      actorName,
+      type: 'moved',
+      payload: { from: srcListTitle, to: destListTitle },
+    })
+
+    for (const assignedMember of movedCard.members ?? []) {
+      const member = boardMembers.find((m) => m.userId === assignedMember.id)
+      if (member?.email && member.email !== actorEmail) {
+        void sendNotification({
+          userEmail: member.email,
+          title: `${movedCard.title} — ${board.title}`,
+          body: `${actorName} moved this from ${srcListTitle} to ${destListTitle}`,
+          boardId: boardId!,
+          cardId: movedCard.id,
+        })
+      }
+    }
+  }
 
   const handleDragEndWithNotify = (result: DropResult) => {
     const { source, destination, type } = result
@@ -189,36 +203,7 @@ export default function BoardView() {
 
     if (!movedCard || !srcList || !destList) return
 
-    const actorEmail = user?.email ?? ''
-    const member = boardMembers.find((m) => m.userId === user?.id)
-    const actorName =
-      member?.display_name ||
-      user?.user_metadata?.display_name ||
-      user?.user_metadata?.full_name ||
-      user?.email ||
-      'Someone'
-
-    void apiInsertActivity({
-      boardId: boardId!,
-      cardId: movedCard.id,
-      actorEmail,
-      actorName,
-      type: 'moved',
-      payload: { from: srcList.title, to: destList.title },
-    })
-
-    for (const assignedMember of movedCard.members ?? []) {
-      const member = boardMembers.find((m) => m.userId === assignedMember.id)
-      if (member?.email && member.email !== actorEmail) {
-        void sendNotification({
-          userEmail: member.email,
-          title: `${movedCard.title} — ${board.title}`,
-          body: `${actorName} moved this from ${srcList.title} to ${destList.title}`,
-          boardId: boardId!,
-          cardId: movedCard.id,
-        })
-      }
-    }
+    notifyCardMoved(movedCard, srcList.title, destList.title)
   }
 
   return (
@@ -254,8 +239,23 @@ export default function BoardView() {
         setFilterStatus={setStatus}
         filterActivity={filters.activity}
         setFilterActivity={setActivity}
+        filterSprint={filters.sprint}
+        setFilterSprint={setSprint}
+        filterPriority={filters.priority}
+        setFilterPriority={setPriority}
+        filterCardType={filters.cardType}
+        setFilterCardType={setCardType}
         allLabels={allLabels}
+        allSprints={board.sprints ?? []}
         clearAllFilters={clearAllFilters}
+        onSprintManager={() => {
+          setSprintManagerInitialCreate(false)
+          setShowSprintManager(true)
+        }}
+        onCreateSprint={() => {
+          setSprintManagerInitialCreate(true)
+          setShowSprintManager(true)
+        }}
       />
 
       <DragDropContext onDragEnd={handleDragEndWithNotify}>
@@ -269,19 +269,15 @@ export default function BoardView() {
                       <KanbanList
                         list={list}
                         boardKey={board.key}
+                        boardMembers={boardMembers}
+                        sprints={board.sprints ?? []}
                         dragHandleProps={provided.dragHandleProps}
                         onDeleteList={(listId) => deleteList(boardId!, listId)}
                         onUpdateListTitle={(listId, title) =>
                           updateListTitle(boardId!, listId, title)
                         }
                         onAddCard={async (listId, title) => {
-                          const member = boardMembers.find((m) => m.userId === user?.id)
-                          const actorName =
-                            member?.display_name ||
-                            user?.user_metadata?.display_name ||
-                            user?.user_metadata?.full_name ||
-                            user?.email ||
-                            'Someone'
+                          const { actorEmail, actorName } = getActorIdentity()
                           const cardId = await addCard(
                             boardId!,
                             listId,
@@ -293,7 +289,7 @@ export default function BoardView() {
                             void apiInsertActivity({
                               boardId: boardId!,
                               cardId,
-                              actorEmail: user.email || '',
+                              actorEmail,
                               actorName,
                               type: 'card_created',
                             })
@@ -343,6 +339,17 @@ export default function BoardView() {
             setShowInvite(false)
             handleMembersRefresh()
           }}
+        />
+      )}
+
+      {showSprintManager && (
+        <SprintManagerModal
+          sprints={board.sprints ?? []}
+          initialOpenCreate={sprintManagerInitialCreate}
+          onAdd={(data) => addSprint(boardId!, data)}
+          onUpdate={(sprintId, updates) => updateSprint(boardId!, sprintId, updates)}
+          onDelete={(sprintId) => deleteSprint(boardId!, sprintId)}
+          onClose={() => setShowSprintManager(false)}
         />
       )}
 

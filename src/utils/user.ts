@@ -1,3 +1,5 @@
+import type { BoardMember } from '@/types/board'
+
 export const MEMBER_COLORS = [
   '#8b5cf6',
   '#3b82f6',
@@ -14,6 +16,32 @@ export function getAvatarColor(id: string | undefined): string {
   let h = 0
   for (let i = 0; i < id.length; i++) h = id.charCodeAt(i) + ((h << 5) - h)
   return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length]
+}
+
+type ActorUser = {
+  id?: string
+  email?: string | null
+  user_metadata?: {
+    display_name?: string
+    full_name?: string
+    name?: string
+    preferred_username?: string
+  } | null
+}
+
+export function resolveActorIdentity(
+  user: ActorUser | null | undefined,
+  boardMembers: Array<Pick<BoardMember, 'userId' | 'display_name'>> = []
+): { actorEmail: string; actorName: string } {
+  const actorEmail = user?.email ?? ''
+  const member = boardMembers.find((m) => m.userId === user?.id)
+  const actorName =
+    member?.display_name ||
+    user?.user_metadata?.display_name ||
+    user?.user_metadata?.full_name ||
+    user?.email ||
+    'Someone'
+  return { actorEmail, actorName }
 }
 
 export function getUserInitials(

@@ -6,21 +6,10 @@ import Mention from '@tiptap/extension-mention'
 import type { JSONContent } from '@tiptap/core'
 import { Button } from '@/components/ui/button'
 import RichTextEditor, { type RichTextEditorRef } from './RichTextEditor'
-import type { MentionMember } from './MentionList'
 import { parseDescription, extractMentions, diffMentions } from './activityUtils'
 import { apiInsertActivity } from '@/api'
 import { sendNotification } from '@/context/NotificationContext'
-
-interface CardDescriptionProps {
-  description: string
-  boardId: string
-  cardId: string
-  boardTitle: string
-  actorEmail: string
-  actorName: string
-  boardMembers: MentionMember[]
-  onSave: (descriptionJson: string) => void
-}
+import { useCardContext } from '@/context/CardContext'
 
 function renderToHTML(content: JSONContent): string {
   return generateHTML(content, [
@@ -29,16 +18,13 @@ function renderToHTML(content: JSONContent): string {
   ])
 }
 
-export default function CardDescription({
-  description,
-  boardId,
-  cardId,
-  boardTitle,
-  actorEmail,
-  actorName,
-  boardMembers,
-  onSave,
-}: CardDescriptionProps) {
+export default function CardDescription() {
+  const { card, board, boardId, cardId, boardMembers, actorEmail, actorName, updateCard } =
+    useCardContext()
+  const description = card.description
+  const boardTitle = board.title
+  const onSave = (descriptionJson: string) => updateCard({ description: descriptionJson })
+
   const [editing, setEditing] = useState(false)
   const editorRef = useRef<RichTextEditorRef>(null)
   const prevMentionsRef = useRef<Array<{ id: string; label: string }>>([])
@@ -108,7 +94,7 @@ export default function CardDescription({
         <button
           type="button"
           onClick={handleClickArea}
-          className="w-full text-left min-h-[80px] rounded-xl p-4 text-sm cursor-pointer transition-colors bg-white hover:bg-gray-50 border border-border/40"
+          className="w-full text-left min-h-20 rounded-xl p-4 text-sm cursor-pointer transition-colors bg-white hover:bg-gray-50 border border-border/40"
         >
           {description ? (
             <div

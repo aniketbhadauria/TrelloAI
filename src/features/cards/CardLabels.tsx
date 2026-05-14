@@ -1,26 +1,31 @@
-import { useState } from 'react';
-import { X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { LABEL_COLORS } from '@/utils/labels';
-import type { Label } from '@/types/board';
+import { useState } from 'react'
+import { X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { LABEL_COLORS } from '@/utils/labels'
+import { useCardContext } from '@/context/CardContext'
 
-interface CardLabelsProps {
-  labels: Label[];
-  onAdd: (label: Label) => void;
-  onRemove: (labelId: string) => void;
-}
+export default function CardLabels() {
+  const { card, updateCard } = useCardContext()
+  const labels = card.labels
 
-export default function CardLabels({ labels, onAdd, onRemove }: CardLabelsProps) {
-  const [text, setText] = useState('');
-  const [color, setColor] = useState(LABEL_COLORS[0].value);
+  const handleAdd = (label: { id: string; text: string; color: string }) => {
+    updateCard({ labels: [...labels, label] })
+  }
 
-  const handleAdd = () => {
-    if (!text.trim()) return;
-    onAdd({ id: crypto.randomUUID(), text: text.trim(), color });
-    setText('');
-  };
+  const handleRemove = (labelId: string) => {
+    updateCard({ labels: labels.filter((l) => l.id !== labelId) })
+  }
+
+  const [text, setText] = useState('')
+  const [color, setColor] = useState(LABEL_COLORS[0].value)
+
+  const handleSubmit = () => {
+    if (!text.trim()) return
+    handleAdd({ id: crypto.randomUUID(), text: text.trim(), color })
+    setText('')
+  }
 
   return (
     <div className="mb-5 bg-secondary/30 rounded-xl p-4 border border-border/30 animate-slide-down">
@@ -31,7 +36,7 @@ export default function CardLabels({ labels, onAdd, onRemove }: CardLabelsProps)
               key={label.id}
               className="cursor-pointer hover:opacity-80 transition-opacity text-white border-none"
               style={{ backgroundColor: label.color }}
-              onClick={() => onRemove(label.id)}
+              onClick={() => handleRemove(label.id)}
             >
               {label.text} <X className="w-3 h-3 ml-1 inline" />
             </Badge>
@@ -45,7 +50,9 @@ export default function CardLabels({ labels, onAdd, onRemove }: CardLabelsProps)
           placeholder="Label text..."
           className="bg-background/50 text-sm h-8"
           autoFocus
-          onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSubmit()
+          }}
         />
         <div className="flex gap-1.5">
           {LABEL_COLORS.map((c) => (
@@ -58,8 +65,10 @@ export default function CardLabels({ labels, onAdd, onRemove }: CardLabelsProps)
             />
           ))}
         </div>
-        <Button size="sm" onClick={handleAdd} disabled={!text.trim()}>Add label</Button>
+        <Button size="sm" onClick={handleSubmit} disabled={!text.trim()}>
+          Add label
+        </Button>
       </div>
     </div>
-  );
+  )
 }

@@ -31,30 +31,24 @@ import ConfirmModal from '@/components/modals/ConfirmModal'
 import { getAvatarColor } from '@/utils/user'
 import { formatCommentTime } from '@/utils/date'
 import type { BoardMember, CardComment, ActivityEntry } from '@/types/board'
+import { useCardContext } from '@/context/CardContext'
 
-interface CardActivityFeedProps {
-  boardId: string
-  cardId: string
-  cardMembers: Array<{ id: string; name: string }>
-  boardMembers: BoardMember[]
-  actorEmail: string
-  actorName: string
-  actorAvatar?: string
-  cardTitle: string
-  boardTitle: string
-}
+export default function CardActivityFeed() {
+  const {
+    boardId,
+    cardId,
+    card,
+    board,
+    boardMembers,
+    actorEmail,
+    actorName,
+    actorAvatar,
+    notifyAssignedMembers,
+  } = useCardContext()
+  const cardMembers = card.members ?? []
+  const cardTitle = card.title
+  const boardTitle = board.title
 
-export default function CardActivityFeed({
-  boardId,
-  cardId,
-  cardMembers,
-  boardMembers,
-  actorEmail,
-  actorName,
-  actorAvatar,
-  cardTitle,
-  boardTitle,
-}: CardActivityFeedProps) {
   const { user } = useAuth()
   const commentEditorRef = useRef<RichTextEditorRef>(null)
   const { data: cardComments = [], isLoading: commentsLoading } = useCardCommentsQuery(
@@ -97,20 +91,6 @@ export default function CardActivityFeed({
       supabase.removeChannel(channel)
     }
   }, [cardId, boardId, qc, commentsCache])
-
-  const notifyAssignedMembers = (
-    excludeEmail: string,
-    title: string,
-    body: string,
-    email_type?: 'comment' | 'mention'
-  ) => {
-    for (const assignedMember of cardMembers) {
-      const member = boardMembers.find((m) => m.userId === assignedMember.id)
-      if (member?.email && member.email !== excludeEmail) {
-        void sendNotification({ userEmail: member.email, title, body, boardId, cardId, email_type })
-      }
-    }
-  }
 
   const handleAddComment = async () => {
     const content = commentEditorRef.current?.getContent()
@@ -320,7 +300,7 @@ export default function CardActivityFeed({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 mb-1">
                     <span
-                      className="text-[13px] font-bold text-foreground/90 truncate max-w-[150px]"
+                      className="text-[13px] font-bold text-foreground/90 truncate max-w-37.5"
                       title={comment.authorName}
                     >
                       {comment.authorName}

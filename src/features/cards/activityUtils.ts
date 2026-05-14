@@ -75,6 +75,24 @@ export function formatActivityMessage(
       return `${actorName} updated the description`
     case 'card_created':
       return `${actorName} created this card`
+    case 'sprint_assigned':
+      return `${actorName} added this card to ${payload.sprintName}`
+    case 'sprint_removed':
+      return `${actorName} removed this card from ${payload.sprintName}`
+    case 'label_added':
+      return `${actorName} added the label "${payload.labelText}"`
+    case 'label_removed':
+      return `${actorName} removed the label "${payload.labelText}"`
+    case 'title_changed':
+      return `${actorName} renamed this card from "${payload.from}" to "${payload.to}"`
+    case 'priority_changed':
+      return payload.to
+        ? `${actorName} set priority to ${payload.to}`
+        : `${actorName} removed the priority`
+    case 'type_changed':
+      return payload.to
+        ? `${actorName} set type to ${payload.to}`
+        : `${actorName} removed the card type`
     default:
       return ''
   }

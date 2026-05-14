@@ -97,12 +97,20 @@ const MentionListDropdown = forwardRef<MentionListRef, MentionListProps>((props,
             }`}
           >
             {isSelected && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary" />}
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold shrink-0 shadow-sm"
-              style={{ backgroundColor: avatarColor(item.userId) }}
-            >
-              {initials}
-            </div>
+            {item.avatar_url ? (
+              <img
+                src={item.avatar_url}
+                alt={name}
+                className="w-8 h-8 rounded-full object-cover shrink-0 shadow-sm"
+              />
+            ) : (
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold shrink-0 shadow-sm"
+                style={{ backgroundColor: avatarColor(item.userId) }}
+              >
+                {initials}
+              </div>
+            )}
             <div className="text-left min-w-0">
               <div
                 className={`font-semibold truncate ${isSelected ? 'text-primary' : 'text-foreground'}`}

@@ -8,9 +8,21 @@ interface Filters {
   dueDate: string[]
   status: string[]
   activity: string[]
+  sprint: string[]
+  priority: string[]
+  cardType: string[]
 }
 
-const EMPTY: Filters = { keyword: '', labels: [], dueDate: [], status: [], activity: [] }
+const EMPTY: Filters = {
+  keyword: '',
+  labels: [],
+  dueDate: [],
+  status: [],
+  activity: [],
+  sprint: [],
+  priority: [],
+  cardType: [],
+}
 
 type Setter<T> = T | ((prev: T) => T)
 
@@ -38,6 +50,21 @@ export function useBoardFilters(board: Board | null) {
       setFilters((f) => ({ ...f, activity: typeof v === 'function' ? v(f.activity) : v })),
     []
   )
+  const setSprint = useCallback(
+    (v: Setter<string[]>) =>
+      setFilters((f) => ({ ...f, sprint: typeof v === 'function' ? v(f.sprint) : v })),
+    []
+  )
+  const setPriority = useCallback(
+    (v: Setter<string[]>) =>
+      setFilters((f) => ({ ...f, priority: typeof v === 'function' ? v(f.priority) : v })),
+    []
+  )
+  const setCardType = useCallback(
+    (v: Setter<string[]>) =>
+      setFilters((f) => ({ ...f, cardType: typeof v === 'function' ? v(f.cardType) : v })),
+    []
+  )
   const clear = useCallback(() => setFilters(EMPTY), [])
 
   const hasActiveFilters = !!(
@@ -45,7 +72,10 @@ export function useBoardFilters(board: Board | null) {
     filters.labels.length ||
     filters.dueDate.length ||
     filters.status.length ||
-    filters.activity.length
+    filters.activity.length ||
+    filters.sprint.length ||
+    filters.priority.length ||
+    filters.cardType.length
   )
 
   const allLabels = useMemo(() => {
@@ -100,6 +130,24 @@ export function useBoardFilters(board: Board | null) {
           if (!pass) return false
         }
         // activity filter is a no-op until DB-backed activity feed is implemented
+        if (filters.sprint.length) {
+          const pass =
+            (filters.sprint.includes('__backlog__') && !card.sprintId) ||
+            (!!card.sprintId && filters.sprint.includes(card.sprintId))
+          if (!pass) return false
+        }
+        if (filters.priority.length) {
+          const pass =
+            (filters.priority.includes('__none__') && !card.priority) ||
+            (!!card.priority && filters.priority.includes(card.priority))
+          if (!pass) return false
+        }
+        if (filters.cardType.length) {
+          const pass =
+            (filters.cardType.includes('__none__') && !card.cardType) ||
+            (!!card.cardType && filters.cardType.includes(card.cardType))
+          if (!pass) return false
+        }
         return true
       }),
     }))
@@ -115,6 +163,9 @@ export function useBoardFilters(board: Board | null) {
     setDueDate,
     setStatus,
     setActivity,
+    setSprint,
+    setPriority,
+    setCardType,
     clear,
   }
 }

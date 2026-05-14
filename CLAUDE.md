@@ -29,9 +29,25 @@ Auth is restricted to `@esperiastudio.com` accounts only (enforced in `AuthConte
 - **Pages (`src/pages/`)**: Contains ONLY top-level route integration components. No reusable logic.
 - **Features (`src/features/`)**: Strictly domain-driven folders (`auth`, `boards`, `cards`) containing domain-specific UI components and local hooks.
 - **Types (`src/types/`)**: Centralized shared TypeScript models to avoid circular dependencies between `api` and `features`.
+- **Utils (`src/utils/`)**: All pure, framework-agnostic helper functions, constants, and zod schemas that are shared across features (e.g. `sprint.ts`, `cardMeta.ts`, `date.ts`). Never put utility logic inside a feature folder — if it could be useful in more than one place, it belongs in `src/utils/`.
 - **Contexts (`src/context/`)**: All React contexts live here. Each file exports the context object + a `useXxxContext()` guard hook that throws if used outside its provider. Feature sub-components consume context instead of receiving deep prop chains.
 - **Feature hooks**: Feature-scoped hooks live as flat files directly in their feature folder (e.g., `src/features/board-view/useSelectedCardRoute.ts`) — no nested `hooks/` subdirectory.
 - **Modal decomposition**: Large modals are split into focused sub-components that read shared state via `useXxxContext()`. Sub-components live in the same `src/features/<domain>/` folder as the modal.
+
+## File Size & Decomposition
+
+- **Hard limit: 250 lines per file.** If a file exceeds this, it must be split before adding new code.
+- Extract sub-components as soon as a section of JSX has a clear, self-contained purpose (e.g., a form, a list item, a panel header).
+- Extract custom hooks (`useXxx`) as soon as a component needs more than 2–3 related state values or side effects.
+- Shared display-only pieces (labels, badges, icon rows) belong in small focused components, not inlined repeatedly.
+- When splitting a modal, each sub-component reads shared state via context — never pass 5+ props down just to avoid a context.
+
+## State Management Principles
+
+- **Forms — always use `react-hook-form` + `zod`**: Every form in the app uses `useForm` with `zodResolver`. Never manage form field state with multiple `useState` calls. Validation logic lives in the zod schema (including cross-field checks via `superRefine`).
+- **Prefer derived values over state**: If a value can be computed from props, context, or other state, compute it inline or in a `useMemo` — don't store it in `useState`.
+- **Minimize `useEffect`**: Only use `useEffect` for genuine side effects (subscriptions, imperative DOM, one-time initialization). Never use it to sync state-to-state — use event handlers or derived values instead. If you find yourself writing `useEffect` + `setState` to react to a prop/state change, stop and find the derived-value or event-handler approach.
+- **Server state via React Query**: All data fetching and mutation lives in `@/api`. Never fetch data inside `useEffect` — use `useQuery` / `useMutation` hooks.
 
 ## Cloudflare Pages Deployment
 

@@ -11,7 +11,15 @@ import {
   apiSaveBoard,
   apiDeleteBoard,
 } from '@/api'
-import type { Board, List, Card, ArchivedCard, BoardRole } from '../types/board'
+import type {
+  Board,
+  List,
+  Card,
+  ArchivedCard,
+  BoardRole,
+  Sprint,
+  SprintStatus,
+} from '../types/board'
 import { generateBoardKey } from '@/utils/board'
 
 interface BoardContextValue {
@@ -53,6 +61,9 @@ interface BoardContextValue {
   deleteCardPermanently: (boardId: string, listId: string, cardId: string) => void
   refreshBoards: () => Promise<void>
   persistBoardsNow: () => Promise<void>
+  addSprint: (boardId: string, data: Omit<Sprint, 'id' | 'createdAt'>) => void
+  updateSprint: (boardId: string, sprintId: string, updates: Partial<Sprint>) => void
+  deleteSprint: (boardId: string, sprintId: string) => void
 }
 
 const BoardContext = createContext<BoardContextValue | null>(null)
@@ -178,7 +189,8 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     if (isInitialLoad.current || !isAuthenticated) return
     setIsSavingBoards(true)
     saveBoards.run(boards, membershipMap)
-  }, [boards, isAuthenticated, membershipMap, saveBoards])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boards, isAuthenticated, membershipMap])
 
   const updateData = useCallback((updater: Board[] | ((prev: Board[]) => Board[])) => {
     setBoards((prev) => (typeof updater === 'function' ? updater(prev) : updater))
@@ -540,6 +552,58 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     }, 150)
   }, [user?.id])
 
+  const addSprint = useCallback(
+    (boardId: string, data: Omit<Sprint, 'id' | 'createdAt'>) => {
+      const newSprint: Sprint = { ...data, id: uuidv4(), createdAt: new Date().toISOString() }
+      updateData((prev) =>
+        prev.map((b) =>
+          b.id !== boardId ? b : { ...b, sprints: [...(b.sprints ?? []), newSprint] }
+        )
+      )
+    },
+    [updateData]
+  )
+
+  const updateSprint = useCallback(
+    (boardId: string, sprintId: string, updates: Partial<Sprint>) => {
+      updateData((prev) =>
+        prev.map((b) =>
+          b.id !== boardId
+            ? b
+            : {
+                ...b,
+                sprints: (b.sprints ?? []).map((s) =>
+                  s.id === sprintId ? { ...s, ...updates } : s
+                ),
+              }
+        )
+      )
+    },
+    [updateData]
+  )
+
+  const deleteSprint = useCallback(
+    (boardId: string, sprintId: string) => {
+      updateData((prev) =>
+        prev.map((b) =>
+          b.id !== boardId
+            ? b
+            : {
+                ...b,
+                sprints: (b.sprints ?? []).filter((s) => s.id !== sprintId),
+                lists: b.lists.map((l) => ({
+                  ...l,
+                  cards: l.cards.map((c) =>
+                    c.sprintId === sprintId ? { ...c, sprintId: null } : c
+                  ),
+                })),
+              }
+        )
+      )
+    },
+    [updateData]
+  )
+
   const persistBoardsNow = useCallback(async (): Promise<void> => {
     if (!isAuthenticated) return
     saveBoards.cancel()
@@ -562,7 +626,8 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     )
     setLastSavedAt(new Date())
     setIsSavingBoards(false)
-  }, [boards, isAuthenticated, membershipMap, saveBoards])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boards, isAuthenticated, membershipMap])
 
   const activeBoards = boards
     .filter((b) => !b.archived)
@@ -618,6 +683,9 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
         deleteCardPermanently,
         refreshBoards,
         persistBoardsNow,
+        addSprint,
+        updateSprint,
+        deleteSprint,
       }}
     >
       {children}

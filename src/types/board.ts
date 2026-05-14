@@ -11,6 +11,27 @@ export type ActivityType =
   | 'archived'
   | 'description_updated'
   | 'card_created'
+  | 'sprint_assigned'
+  | 'sprint_removed'
+  | 'label_added'
+  | 'label_removed'
+  | 'title_changed'
+  | 'priority_changed'
+  | 'type_changed'
+
+export type CardPriority = 'urgent' | 'high' | 'medium' | 'low'
+export type CardType = 'feature' | 'bug' | 'improvement' | 'task' | 'chore'
+export type SprintStatus = 'planning' | 'active' | 'completed'
+
+export interface Sprint {
+  id: string
+  name: string
+  goal?: string | null
+  startDate?: string | null
+  endDate?: string | null
+  status: SprintStatus
+  createdAt: string
+}
 
 export interface ActivityEntry {
   id: string
@@ -72,6 +93,9 @@ export interface Card {
   comments?: never[]
   attachments: Attachment[]
   dueDate: string | null
+  sprintId?: string | null
+  priority?: CardPriority | null
+  cardType?: CardType | null
   archived: boolean
   archivedAt: string | null
   createdAt: string
@@ -96,6 +120,7 @@ export interface Board {
   archivedAt: string | null
   createdAt: string
   lists: List[]
+  sprints?: Sprint[]
   nextCardNumber?: number
   ownerId?: string
   memberRole?: BoardRole

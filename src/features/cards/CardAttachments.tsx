@@ -1,18 +1,9 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { Paperclip, X, ExternalLink, Plus } from 'lucide-react'
-import type { Attachment } from '@/types/board'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-
-interface CardAttachmentsProps {
-  attachments: Attachment[]
-  onRemove: (attachmentId: string) => void
-  onAdd?: () => void
-  url?: string
-  setUrl?: (v: string) => void
-  name?: string
-  setName?: (v: string) => void
-}
+import { v4 as uuidv4 } from 'uuid'
+import { useCardContext } from '@/context/CardContext'
 
 function sanitizeUrl(url: string | undefined): string | null {
   if (!url || typeof url !== 'string') return null
@@ -29,20 +20,40 @@ function sanitizeUrl(url: string | undefined): string | null {
   }
 }
 
-export default function CardAttachments({
-  attachments,
-  onRemove,
-  onAdd,
-  url,
-  setUrl,
-  name,
-  setName,
-}: CardAttachmentsProps) {
+export default function CardAttachments() {
+  const { card, updateCard, activeSection, setActiveSection } = useCardContext()
+  const attachments = card.attachments ?? []
+  const showForm = activeSection === 'attachment'
+
+  const onAdd = showForm
+    ? (url: string, name: string) => {
+        updateCard({
+          attachments: [
+            ...attachments,
+            { id: uuidv4(), url, name: name || url, addedAt: new Date().toISOString() },
+          ],
+        })
+        setActiveSection(null)
+      }
+    : undefined
+
+  const onRemove = (attachmentId: string) =>
+    updateCard({ attachments: attachments.filter((a) => a.id !== attachmentId) })
+
   const containerRef = useRef<HTMLDivElement>(null)
+  const [url, setUrl] = useState('')
+  const [name, setName] = useState('')
+
+  const handleAdd = () => {
+    if (!url.trim()) return
+    onAdd?.(url.trim(), name.trim())
+    setUrl('')
+    setName('')
+  }
 
   return (
     <div ref={containerRef} className="mb-4 space-y-3">
-      {onAdd && setUrl && setName && (
+      {onAdd && (
         <div className="bg-secondary/20 p-4 rounded-xl border border-border/30 space-y-3 animate-slide-down">
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
@@ -68,7 +79,12 @@ export default function CardAttachments({
             />
           </div>
           <div className="flex justify-end pt-1">
-            <Button size="sm" onClick={onAdd} disabled={!url?.trim()} className="h-8 text-xs px-4">
+            <Button
+              size="sm"
+              onClick={handleAdd}
+              disabled={!url.trim()}
+              className="h-8 text-xs px-4"
+            >
               <Plus className="w-3.5 h-3.5 mr-1" />
               Attach
             </Button>

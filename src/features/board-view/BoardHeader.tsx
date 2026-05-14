@@ -1,14 +1,15 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Star, MoreHorizontal, Filter, UserPlus, Users } from 'lucide-react'
+import { ArrowLeft, Star, MoreHorizontal, Filter, UserPlus, Users, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { Board, BoardRole, Label, BoardMember } from '@/types/board'
+import type { Board, BoardRole, Label, BoardMember, Sprint } from '@/types/board'
 import BoardFilterPanel from './BoardFilterPanel'
 import BoardMembersPanel from './BoardMembersPanel'
 import BoardTitleEditor from './BoardTitleEditor'
 import BoardKeyEditor from './BoardKeyEditor'
 import BoardMemberAvatars from './BoardMemberAvatars'
 import BoardMenuPanel from './BoardMenuPanel'
+import BoardSprintDropdown from './BoardSprintDropdown'
 import { useOutsideClick } from '@/hooks/useOutsideClick'
 
 type Setter<T> = T | ((prev: T) => T)
@@ -41,8 +42,17 @@ interface BoardHeaderProps {
   setFilterStatus: (v: Setter<string[]>) => void
   filterActivity: string[]
   setFilterActivity: (v: Setter<string[]>) => void
+  filterSprint: string[]
+  setFilterSprint: (v: Setter<string[]>) => void
+  filterPriority: string[]
+  setFilterPriority: (v: Setter<string[]>) => void
+  filterCardType: string[]
+  setFilterCardType: (v: Setter<string[]>) => void
   allLabels: Label[]
+  allSprints: Sprint[]
   clearAllFilters: () => void
+  onSprintManager: () => void
+  onCreateSprint: () => void
 }
 
 export default function BoardHeader({
@@ -73,20 +83,32 @@ export default function BoardHeader({
   setFilterStatus,
   filterActivity,
   setFilterActivity,
+  filterSprint,
+  setFilterSprint,
+  filterPriority,
+  setFilterPriority,
+  filterCardType,
+  setFilterCardType,
   allLabels,
+  allSprints,
   clearAllFilters,
+  onSprintManager,
+  onCreateSprint,
 }: BoardHeaderProps) {
   const navigate = useNavigate()
   const [showMenu, setShowMenu] = useState(false)
   const [showMembersPanel, setShowMembersPanel] = useState(false)
+  const [showSprintDropdown, setShowSprintDropdown] = useState(false)
 
   const menuRef = useRef<HTMLDivElement>(null)
   const membersRef = useRef<HTMLDivElement>(null)
   const filterRef = useRef<HTMLDivElement>(null)
+  const sprintRef = useRef<HTMLDivElement>(null)
 
   useOutsideClick(menuRef, () => setShowMenu(false), showMenu)
   useOutsideClick(membersRef, () => setShowMembersPanel(false), showMembersPanel)
   useOutsideClick(filterRef, () => onFilterClose(), filterOpen)
+  useOutsideClick(sprintRef, () => setShowSprintDropdown(false), showSprintDropdown)
 
   return (
     <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-black/25 backdrop-blur-md shrink-0 relative z-20 text-white">
@@ -159,6 +181,44 @@ export default function BoardHeader({
         )}
       </div>
 
+      <div className="relative" ref={sprintRef}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowSprintDropdown((v) => !v)}
+          className={`gap-1.5 text-white/90 hover:text-white hover:bg-white/10 ${showSprintDropdown ? 'bg-white/15' : ''}`}
+        >
+          <Zap className="w-4 h-4" />
+          {(() => {
+            const active = allSprints.find((s) => s.status === 'active')
+            return active ? (
+              <>
+                <span className="text-xs truncate max-w-[80px]">{active.name}</span>
+                <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+              </>
+            ) : (
+              'Sprints'
+            )
+          })()}
+        </Button>
+        {showSprintDropdown && (
+          <BoardSprintDropdown
+            sprints={allSprints}
+            filterSprint={filterSprint}
+            setFilterSprint={setFilterSprint}
+            onManage={() => {
+              setShowSprintDropdown(false)
+              onSprintManager()
+            }}
+            onCreateSprint={() => {
+              setShowSprintDropdown(false)
+              onCreateSprint()
+            }}
+            onClose={() => setShowSprintDropdown(false)}
+          />
+        )}
+      </div>
+
       <div className="relative" ref={filterRef}>
         <Button
           variant="ghost"
@@ -188,7 +248,14 @@ export default function BoardHeader({
             setFilterStatus={setFilterStatus}
             filterActivity={filterActivity}
             setFilterActivity={setFilterActivity}
+            filterSprint={filterSprint}
+            setFilterSprint={setFilterSprint}
+            filterPriority={filterPriority}
+            setFilterPriority={setFilterPriority}
+            filterCardType={filterCardType}
+            setFilterCardType={setFilterCardType}
             allLabels={allLabels}
+            allSprints={allSprints}
             hasActiveFilters={hasActiveFilters}
             clearAllFilters={clearAllFilters}
             onClose={onFilterClose}

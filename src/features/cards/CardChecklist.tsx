@@ -1,26 +1,35 @@
-import { useState } from 'react';
-import { Plus, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import type { ChecklistItem } from '@/types/board';
+import { useState } from 'react'
+import { Plus, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { v4 as uuidv4 } from 'uuid'
+import { useCardContext } from '@/context/CardContext'
 
-interface CardChecklistProps {
-  checklist: ChecklistItem[];
-  onToggle: (itemId: string) => void;
-  onAdd: (text: string) => void;
-  onRemove: (itemId: string) => void;
-}
+export default function CardChecklist() {
+  const { card, updateCard } = useCardContext()
+  const checklist = card.checklist ?? []
 
-export default function CardChecklist({ checklist, onToggle, onAdd, onRemove }: CardChecklistProps) {
-  const [newItem, setNewItem] = useState('');
-  const completedCount = checklist.filter((i) => i.completed).length;
-  const progress = checklist.length > 0 ? Math.round((completedCount / checklist.length) * 100) : 0;
+  const onToggle = (itemId: string) => {
+    updateCard({
+      checklist: checklist.map((i) => (i.id === itemId ? { ...i, completed: !i.completed } : i)),
+    })
+  }
+  const onAdd = (text: string) => {
+    updateCard({ checklist: [...checklist, { id: uuidv4(), text, completed: false }] })
+  }
+  const onRemove = (itemId: string) => {
+    updateCard({ checklist: checklist.filter((i) => i.id !== itemId) })
+  }
+
+  const [newItem, setNewItem] = useState('')
+  const completedCount = checklist.filter((i) => i.completed).length
+  const progress = checklist.length > 0 ? Math.round((completedCount / checklist.length) * 100) : 0
 
   const handleAdd = () => {
-    if (!newItem.trim()) return;
-    onAdd(newItem.trim());
-    setNewItem('');
-  };
+    if (!newItem.trim()) return
+    onAdd(newItem.trim())
+    setNewItem('')
+  }
 
   return (
     <div className="mb-5 bg-secondary/30 rounded-xl p-4 border border-border/30 animate-slide-down">
@@ -55,12 +64,20 @@ export default function CardChecklist({ checklist, onToggle, onAdd, onRemove }: 
                   }`}
                 >
                   {item.completed && (
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <svg
+                      className="w-3 h-3"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={3}
+                    >
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   )}
                 </button>
-                <span className={`flex-1 text-sm ${item.completed ? 'line-through text-muted-foreground' : ''}`}>
+                <span
+                  className={`flex-1 text-sm ${item.completed ? 'line-through text-muted-foreground' : ''}`}
+                >
                   {item.text}
                 </span>
                 <button
@@ -81,12 +98,14 @@ export default function CardChecklist({ checklist, onToggle, onAdd, onRemove }: 
           placeholder="Add an item..."
           className="h-8 text-sm bg-background/50 flex-1"
           autoFocus
-          onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleAdd()
+          }}
         />
         <Button size="sm" className="h-8 px-3" onClick={handleAdd} disabled={!newItem.trim()}>
           <Plus className="w-3.5 h-3.5" />
         </Button>
       </div>
     </div>
-  );
+  )
 }
