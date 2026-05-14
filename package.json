@@ -12,6 +12,7 @@
     "mcp": "node scripts/mcp-server.mjs",
     "slack": "node scripts/slack-bot.mjs",
     "build": "vite build",
+    "deploy": "pnpm build && pnpm dlx wrangler pages deploy dist --project-name esperia-trello --branch main --commit-dirty=true",
     "lint": "eslint .",
     "test": "vitest",
     "test:run": "vitest run",
