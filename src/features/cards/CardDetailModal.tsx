@@ -52,6 +52,7 @@ import {
 } from './activityUtils'
 import { sendNotification } from '@/context/NotificationContext'
 import { cancelPendingEmail } from '@/api'
+import { logError } from '@/lib/logger'
 import ConfirmModal from '@/components/modals/ConfirmModal'
 
 const MEMBER_COLORS = [
@@ -266,7 +267,7 @@ export default function CardDetailModal({
       commentEditorRef.current?.resetContent(null)
       prevCommentMentionsRef.current = []
     } catch (err: any) {
-      console.error('Comment error:', err)
+      logError('add_comment_failed', { message: (err as Error)?.message, code: (err as any)?.code })
       if (err.code === '42501') {
         toast.error('Permission Denied: You do not have permission to comment on this card.')
       } else {
