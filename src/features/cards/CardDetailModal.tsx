@@ -54,39 +54,8 @@ import { sendNotification } from '@/context/NotificationContext'
 import { cancelPendingEmail } from '@/api'
 import { logError } from '@/lib/logger'
 import ConfirmModal from '@/components/modals/ConfirmModal'
-
-const MEMBER_COLORS = [
-  '#8b5cf6',
-  '#3b82f6',
-  '#06b6d4',
-  '#10b981',
-  '#f59e0b',
-  '#f97316',
-  '#ef4444',
-  '#ec4899',
-]
-
-function avatarColor(id: string): string {
-  let h = 0
-  for (let i = 0; i < id.length; i++) h = id.charCodeAt(i) + ((h << 5) - h)
-  return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length]
-}
-
-function formatCommentTime(dateStr: string): string {
-  const d = new Date(dateStr)
-  const now = new Date()
-  const diff = Math.floor((now.getTime() - d.getTime()) / 1000)
-  if (diff < 60) return 'just now'
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-  return format(d, 'MMM d')
-}
-
-function getMemberColor(name: string): string {
-  let h = 0
-  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h)
-  return MEMBER_COLORS[Math.abs(h) % MEMBER_COLORS.length]
-}
+import { getAvatarColor } from '@/utils/user'
+import { formatCommentTime } from '@/utils/date'
 
 interface BoardMember {
   userId: string
@@ -820,7 +789,7 @@ export default function CardDetailModal({
                         ) : (
                           <div
                             className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
-                            style={{ backgroundColor: avatarColor(m.userId) }}
+                            style={{ backgroundColor: getAvatarColor(m.userId) }}
                           >
                             {m.display_name?.[0] || m.email?.[0] || '?'}
                           </div>
@@ -875,7 +844,7 @@ export default function CardDetailModal({
                       key={m.id}
                       title={m.name}
                       className="w-6 h-6 rounded-full border-2 border-card flex items-center justify-center text-white text-[9px] font-bold"
-                      style={{ backgroundColor: avatarColor(m.id) }}
+                      style={{ backgroundColor: getAvatarColor(m.id) }}
                     >
                       {m.name[0]?.toUpperCase()}
                     </div>
@@ -950,7 +919,7 @@ export default function CardDetailModal({
                         ) : (
                           <div
                             className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[8px] font-bold shrink-0 mt-0.5 shadow-sm"
-                            style={{ backgroundColor: avatarColor(entry.actorEmail) }}
+                            style={{ backgroundColor: getAvatarColor(entry.actorEmail) }}
                           >
                             {entry.actorName.slice(0, 1).toUpperCase()}
                           </div>
@@ -990,7 +959,7 @@ export default function CardDetailModal({
                       ) : (
                         <div
                           className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[11px] font-bold shrink-0 mt-0.5 shadow-sm"
-                          style={{ backgroundColor: getMemberColor(comment.authorName) }}
+                          style={{ backgroundColor: getAvatarColor(comment.authorName) }}
                         >
                           {initials}
                         </div>
