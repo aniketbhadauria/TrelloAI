@@ -1,65 +1,96 @@
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { X, Check } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useBoards } from '@/context/BoardContext';
-import { GRADIENTS, GRADIENT_STYLES } from '@/utils/gradients';
-import { generateBoardKey } from '@/utils/board';
-import type { List } from '@/types/board';
-import type { GradientKey } from '@/utils/gradients';
+import { useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
+import { X, Check } from 'lucide-react'
+import { v4 as uuidv4 } from 'uuid'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useBoards } from '@/context/board/BoardContext'
+import { GRADIENTS, GRADIENT_STYLES } from '@/utils/gradients'
+import { generateBoardKey } from '@/utils/board'
+import type { List } from '@/types/board'
+import type { GradientKey } from '@/utils/gradients'
 
 interface Template {
-  id: string;
-  name: string;
-  description: string;
-  lists: string[];
+  id: string
+  name: string
+  description: string
+  lists: string[]
 }
 
 const TEMPLATES: Template[] = [
   { id: 'blank', name: 'Blank board', description: 'Start from scratch', lists: [] },
-  { id: 'kanban', name: 'Kanban', description: 'Classic flow board', lists: ['Backlog', 'To Do', 'In Progress', 'Done'] },
-  { id: 'project', name: 'Project Management', description: 'Track work end-to-end', lists: ['Planning', 'In Progress', 'In Review', 'Done', 'Blocked'] },
-  { id: 'sprint', name: 'Sprint Board', description: 'Agile sprint planning', lists: ['Backlog', 'Sprint', 'In Progress', 'Testing', 'Done'] },
-];
+  {
+    id: 'kanban',
+    name: 'Kanban',
+    description: 'Classic flow board',
+    lists: ['Backlog', 'To Do', 'In Progress', 'Done'],
+  },
+  {
+    id: 'project',
+    name: 'Project Management',
+    description: 'Track work end-to-end',
+    lists: ['Planning', 'In Progress', 'In Review', 'Done', 'Blocked'],
+  },
+  {
+    id: 'sprint',
+    name: 'Sprint Board',
+    description: 'Agile sprint planning',
+    lists: ['Backlog', 'Sprint', 'In Progress', 'Testing', 'Done'],
+  },
+]
 
 function buildLists(listNames: string[]): List[] {
-  return listNames.map(name => ({ id: uuidv4(), title: name, cards: [] }));
+  return listNames.map((name) => ({ id: uuidv4(), title: name, cards: [] }))
 }
 
 interface CreateBoardModalProps {
-  onClose: () => void;
+  onClose: () => void
 }
 
 export default function CreateBoardModal({ onClose }: CreateBoardModalProps) {
-  const { addBoard } = useBoards();
-  const [selectedGradient, setSelectedGradient] = useState<GradientKey>(GRADIENTS[0]);
-  const [selectedTemplate, setSelectedTemplate] = useState('blank');
-  const [boardKey, setBoardKey] = useState('');
-  const [keyTouched, setKeyTouched] = useState(false);
+  const { addBoard } = useBoards()
+  const [selectedGradient, setSelectedGradient] = useState<GradientKey>(GRADIENTS[0])
+  const [selectedTemplate, setSelectedTemplate] = useState('blank')
+  const [boardKey, setBoardKey] = useState('')
+  const [keyTouched, setKeyTouched] = useState(false)
 
-  const { register, handleSubmit, watch, formState: { isDirty } } = useForm<{ title: string }>();
-  const title = watch('title', '');
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { isDirty },
+  } = useForm<{ title: string }>()
+  const title = watch('title', '')
 
   useEffect(() => {
     if (!keyTouched) {
-      setBoardKey(generateBoardKey(title));
+      setBoardKey(generateBoardKey(title))
     }
-  }, [title, keyTouched]);
+  }, [title, keyTouched])
 
   const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setKeyTouched(true);
-    setBoardKey(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8));
-  };
+    setKeyTouched(true)
+    setBoardKey(
+      e.target.value
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
+        .slice(0, 8)
+    )
+  }
 
   const onSubmit = ({ title }: { title: string }) => {
-    if (!title.trim()) return;
-    const template = TEMPLATES.find(t => t.id === selectedTemplate);
-    addBoard(title.trim(), selectedGradient, null, buildLists(template!.lists), boardKey || generateBoardKey(title));
-    onClose();
-  };
+    if (!title.trim()) return
+    const template = TEMPLATES.find((t) => t.id === selectedTemplate)
+    addBoard(
+      title.trim(),
+      selectedGradient,
+      null,
+      buildLists(template!.lists),
+      boardKey || generateBoardKey(title)
+    )
+    onClose()
+  }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -69,7 +100,10 @@ export default function CreateBoardModal({ onClose }: CreateBoardModalProps) {
       >
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold">Create new board</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-secondary transition-colors"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -85,7 +119,9 @@ export default function CreateBoardModal({ onClose }: CreateBoardModalProps) {
                 {title || 'Board title'}
               </p>
               {boardKey && (
-                <p className="text-white/60 text-xs font-mono mt-0.5">{boardKey}-1, {boardKey}-2…</p>
+                <p className="text-white/60 text-xs font-mono mt-0.5">
+                  {boardKey}-1, {boardKey}-2…
+                </p>
               )}
             </div>
           </div>
@@ -139,7 +175,10 @@ export default function CreateBoardModal({ onClose }: CreateBoardModalProps) {
                   {t.lists.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {t.lists.map((l) => (
-                        <span key={l} className="text-[10px] bg-secondary px-1.5 py-0.5 rounded-md text-muted-foreground">
+                        <span
+                          key={l}
+                          className="text-[10px] bg-secondary px-1.5 py-0.5 rounded-md text-muted-foreground"
+                        >
                           {l}
                         </span>
                       ))}
@@ -184,5 +223,5 @@ export default function CreateBoardModal({ onClose }: CreateBoardModalProps) {
         </form>
       </div>
     </div>
-  );
+  )
 }

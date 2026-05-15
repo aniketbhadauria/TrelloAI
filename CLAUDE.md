@@ -30,7 +30,8 @@ Auth is restricted to `@esperiastudio.com` accounts only (enforced in `AuthConte
 - **Features (`src/features/`)**: Strictly domain-driven folders (`auth`, `boards`, `cards`) containing domain-specific UI components and local hooks.
 - **Types (`src/types/`)**: Centralized shared TypeScript models to avoid circular dependencies between `api` and `features`.
 - **Utils (`src/utils/`)**: All pure, framework-agnostic helper functions, constants, and zod schemas that are shared across features (e.g. `sprint.ts`, `cardMeta.ts`, `date.ts`). Never put utility logic inside a feature folder — if it could be useful in more than one place, it belongs in `src/utils/`.
-- **Contexts (`src/context/`)**: All React contexts live here. Each file exports the context object + a `useXxxContext()` guard hook that throws if used outside its provider. Feature sub-components consume context instead of receiving deep prop chains.
+- **Contexts (`src/context/`)**: Top-level context files live directly here (`AuthContext`, `CardContext`, etc.). When a context is large enough to need private sub-hooks, create a named subfolder (e.g. `src/context/board/`) and co-locate the context file with its internal hooks there. Import the context from the subfolder path (e.g. `@/context/board/BoardContext`).
+- **`src/hooks/`**: Generic, reusable, domain-agnostic hooks only (`useOutsideClick`, `useDebouncedCallback`, etc.). If a hook is tightly coupled to a specific context or domain, it does NOT belong here — it belongs next to its context (see above) or in its feature folder.
 - **Feature hooks**: Feature-scoped hooks live as flat files directly in their feature folder (e.g., `src/features/board-view/useSelectedCardRoute.ts`) — no nested `hooks/` subdirectory.
 - **Modal decomposition**: Large modals are split into focused sub-components that read shared state via `useXxxContext()`. Sub-components live in the same `src/features/<domain>/` folder as the modal.
 

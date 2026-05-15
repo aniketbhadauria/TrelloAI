@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { LayoutDashboard } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { useBoards } from '@/context/BoardContext'
+import { useBoards } from '@/context/board/BoardContext'
 import { LogoMark } from '@/components/Logo'
 import SearchBar from './navbar/SearchBar'
 import NotificationDropdown from './navbar/NotificationDropdown'

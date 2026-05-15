@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useBoards } from '@/context/BoardContext'
+import { useBoards } from '@/context/board/BoardContext'
 import {
   Archive,
   RotateCcw,

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useBoards } from '@/context/BoardContext'
+import { useBoards } from '@/context/board/BoardContext'
 import BoardCard from '@/features/boards/BoardCard'
 import CreateBoardModal from '@/features/boards/CreateBoardModal'
 import { Star, Plus, Users } from 'lucide-react'

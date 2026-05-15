@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Bell, Clock, MessageSquare, CheckCircle2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useNotifications } from '@/context/NotificationContext'
-import { useBoards } from '@/context/BoardContext'
+import { useBoards } from '@/context/board/BoardContext'
 import { generateBoardKey } from '@/utils/board'
 import { useOutsideClick } from '@/hooks/useOutsideClick'
 

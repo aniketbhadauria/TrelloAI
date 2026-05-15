@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useBoards } from '@/context/BoardContext'
+import { useBoards } from '@/context/board/BoardContext'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import type { DropResult } from '@hello-pangea/dnd'
 import KanbanList from '@/features/board-view/KanbanList'
