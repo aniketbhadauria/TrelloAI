@@ -3,11 +3,9 @@ import { MessageSquare, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/context/AuthContext'
-import { generateHTML } from '@tiptap/html'
-import StarterKit from '@tiptap/starter-kit'
-import Mention from '@tiptap/extension-mention'
 import RichTextEditor, { type RichTextEditorRef } from './RichTextEditor'
 import type { JSONContent } from '@tiptap/core'
+import { renderTiptapHTML } from '@/utils/tiptap'
 import {
   useCardCommentsQuery,
   useCardActivityQuery,
@@ -25,7 +23,7 @@ import {
   extractMentions,
   diffMentions,
 } from './activityUtils'
-import { sendNotification } from '@/context/NotificationContext'
+import { sendNotification } from '@/api'
 import { logError } from '@/lib/logger'
 import ConfirmModal from '@/components/modals/ConfirmModal'
 import { getAvatarColor } from '@/utils/user'
@@ -153,9 +151,10 @@ export default function CardActivityFeed() {
 
       commentEditorRef.current?.resetContent(null)
       prevCommentMentionsRef.current = []
-    } catch (err: any) {
-      logError('add_comment_failed', { message: (err as Error)?.message, code: (err as any)?.code })
-      if (err.code === '42501') {
+    } catch (err: unknown) {
+      const e = err as { message?: string; code?: string }
+      logError('add_comment_failed', { message: e?.message, code: e?.code })
+      if (e?.code === '42501') {
         toast.error('Permission Denied: You do not have permission to comment on this card.')
       } else {
         toast.error('Failed to add comment. Please try again.')
@@ -174,14 +173,10 @@ export default function CardActivityFeed() {
       await apiUpdateComment(commentId, content)
 
       commentsCache.patch(
-        (prev) =>
-          prev?.map((c) => (c.id === commentId ? { ...c, content: content as any } : c)) ?? []
+        (prev) => prev?.map((c) => (c.id === commentId ? { ...c, content } : c)) ?? []
       )
 
-      const newMentions = diffMentions(
-        extractMentions(original.content as any),
-        extractMentions(content)
-      )
+      const newMentions = diffMentions(extractMentions(original.content), extractMentions(content))
       if (newMentions.length > 0) {
         for (const mention of newMentions) {
           const member = boardMembers.find((m) => m.userId === mention.id)
@@ -207,13 +202,6 @@ export default function CardActivityFeed() {
   const handleDeleteOwnComment = async (commentId: string) => {
     commentsCache.patch((prev) => prev?.filter((c) => c.id !== commentId) ?? [])
     await apiDeleteComment(commentId)
-  }
-
-  function renderCommentHTML(content: Record<string, unknown>): string {
-    return generateHTML(content as Parameters<typeof generateHTML>[0], [
-      StarterKit,
-      Mention.configure({ HTMLAttributes: { class: 'mention' } }),
-    ])
   }
 
   type FeedItem = { kind: 'comment'; data: CardComment } | { kind: 'activity'; data: ActivityEntry }
@@ -330,7 +318,7 @@ export default function CardActivityFeed() {
                   {editingCommentId === comment.id ? (
                     <div className="mt-1 space-y-2 bg-background p-2 rounded-xl border border-border/50 shadow-sm">
                       <RichTextEditor
-                        content={comment.content as any}
+                        content={comment.content}
                         members={boardMembers}
                         showHeadings={false}
                         onSubmit={(content) => handleUpdateComment(comment.id, content)}
@@ -353,7 +341,7 @@ export default function CardActivityFeed() {
                   ) : (
                     <div
                       className="tiptap-render text-[13px] bg-background border border-border/30 rounded-xl px-3 py-2 shadow-sm"
-                      dangerouslySetInnerHTML={{ __html: renderCommentHTML(comment.content) }}
+                      dangerouslySetInnerHTML={{ __html: renderTiptapHTML(comment.content) }}
                     />
                   )}
                 </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Board } from '@/types/board'
 import { generateBoardKey } from '@/utils/board'
@@ -10,42 +10,39 @@ interface SelectedCard {
 
 export function useSelectedCardRoute(board: Board | null, cardNumberParam?: string) {
   const navigate = useNavigate()
-  const [selectedCard, setSelectedCard] = useState<SelectedCard | null>(null)
+  // fallback for cards that have no number (rare edge case for old data)
+  const [manualCard, setManualCard] = useState<SelectedCard | null>(null)
 
   const boardPath = board ? `/boards/${board.key || generateBoardKey(board.title)}` : '/boards'
 
-  useEffect(() => {
-    if (!cardNumberParam || !board) return
-
+  const urlCard = useMemo(() => {
+    if (!cardNumberParam || !board) return null
     const num = parseInt(cardNumberParam, 10)
-    if (Number.isNaN(num)) return
-
+    if (Number.isNaN(num)) return null
     for (const list of board.lists) {
       const card = list.cards.find((c) => c.number === num)
-      if (card) {
-        setSelectedCard({ listId: list.id, cardId: card.id })
-        return
-      }
+      if (card) return { listId: list.id, cardId: card.id }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [board?.id, cardNumberParam])
+    return null
+  }, [board, cardNumberParam])
+
+  const selectedCard = urlCard ?? manualCard
 
   const handleCardOpen = useCallback(
     (listId: string, cardId: string, cardNumber?: number) => {
-      setSelectedCard({ listId, cardId })
-      if (cardNumber) navigate(`${boardPath}/${cardNumber}`, { replace: true })
+      if (cardNumber) {
+        navigate(`${boardPath}/${cardNumber}`, { replace: true })
+      } else {
+        setManualCard({ listId, cardId })
+      }
     },
     [boardPath, navigate]
   )
 
   const handleCardClose = useCallback(() => {
-    setSelectedCard(null)
+    setManualCard(null)
     navigate(boardPath, { replace: true })
   }, [boardPath, navigate])
 
-  return {
-    selectedCard,
-    handleCardOpen,
-    handleCardClose,
-  }
+  return { selectedCard, handleCardOpen, handleCardClose }
 }

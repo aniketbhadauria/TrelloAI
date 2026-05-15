@@ -1,22 +1,12 @@
 import { useRef, useState } from 'react'
 import { AlignLeft } from 'lucide-react'
-import { generateHTML } from '@tiptap/html'
-import StarterKit from '@tiptap/starter-kit'
-import Mention from '@tiptap/extension-mention'
 import type { JSONContent } from '@tiptap/core'
 import { Button } from '@/components/ui/button'
 import RichTextEditor, { type RichTextEditorRef } from './RichTextEditor'
 import { parseDescription, extractMentions, diffMentions } from './activityUtils'
-import { apiInsertActivity } from '@/api'
-import { sendNotification } from '@/context/NotificationContext'
+import { apiInsertActivity, sendNotification } from '@/api'
 import { useCardContext } from '@/context/CardContext'
-
-function renderToHTML(content: JSONContent): string {
-  return generateHTML(content, [
-    StarterKit,
-    Mention.configure({ HTMLAttributes: { class: 'mention' } }),
-  ])
-}
+import { renderTiptapHTML } from '@/utils/tiptap'
 
 export default function CardDescription() {
   const { card, board, boardId, cardId, boardMembers, actorEmail, actorName, updateCard } =
@@ -99,7 +89,7 @@ export default function CardDescription() {
           {description ? (
             <div
               className="tiptap-render"
-              dangerouslySetInnerHTML={{ __html: renderToHTML(currentContent) }}
+              dangerouslySetInnerHTML={{ __html: renderTiptapHTML(currentContent) }}
             />
           ) : (
             <span className="text-gray-500">Add a more detailed description...</span>

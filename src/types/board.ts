@@ -1,3 +1,7 @@
+import type { JSONContent } from '@tiptap/core'
+
+export type { JSONContent }
+
 export type BoardRole = 'owner' | 'admin' | 'member' | 'observer'
 
 export type ActivityType =
@@ -52,7 +56,7 @@ export interface CardComment {
   authorEmail: string
   authorName: string
   authorAvatar?: string
-  content: Record<string, unknown>
+  content: JSONContent
   createdAt: string
 }
 
@@ -132,7 +136,7 @@ export interface BoardMember {
   display_name: string | null
   email: string | null
   avatar_url: string | null
-  role?: BoardRole
+  role: BoardRole
 }
 
 export interface ArchivedCard extends Card {

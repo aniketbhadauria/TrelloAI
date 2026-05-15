@@ -1,14 +1,8 @@
 import { supabase } from '@/lib/supabase'
 import { logError, logInfo } from '@/lib/logger'
-import type { BoardRole } from '@/types/board'
+import type { BoardRole, BoardMember } from '@/types/board'
 
-export interface BoardMember {
-  userId: string
-  role: BoardRole
-  display_name: string | null
-  email: string | null
-  avatar_url: string | null
-}
+export type { BoardMember }
 
 export interface AppUserResult {
   id: string

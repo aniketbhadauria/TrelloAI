@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { X, Search, UserPlus, Check, Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { apiSearchUsers, apiInviteMember, apiFetchBoardMembers } from '@/api/members'
-import { sendNotification } from '@/context/NotificationContext'
+import { apiSearchUsers, apiInviteMember, useBoardMembersQuery, sendNotification } from '@/api'
 import { useAuth } from '@/context/AuthContext'
 import { toast } from 'sonner'
 import type { BoardRole } from '@/types/board'
@@ -25,19 +24,23 @@ const ROLES: { value: BoardRole; label: string }[] = [
 export default function InviteMemberModal({ boardId, boardTitle, ownerId, onClose }: Props) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Awaited<ReturnType<typeof apiSearchUsers>>>([])
-  const [existingIds, setExistingIds] = useState<Set<string>>(new Set(ownerId ? [ownerId] : []))
+  const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set())
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [role, setRole] = useState<BoardRole>('member')
   const [loading, setLoading] = useState(false)
   const { user } = useAuth()
 
-  useEffect(() => {
-    apiFetchBoardMembers(boardId).then((members) => {
-      setExistingIds(
-        new Set([ownerId, ...members.map((m) => m.userId)].filter(Boolean) as string[])
-      )
-    })
-  }, [boardId, ownerId])
+  const { data: boardMembers = [] } = useBoardMembersQuery(boardId)
+
+  const existingIds = useMemo(
+    () =>
+      new Set([
+        ...(ownerId ? [ownerId] : []),
+        ...boardMembers.map((m) => m.userId),
+        ...recentlyAdded,
+      ]),
+    [boardMembers, ownerId, recentlyAdded]
+  )
 
   useEffect(() => {
     if (!query.trim()) {
@@ -78,7 +81,7 @@ export default function InviteMemberModal({ boardId, boardTitle, ownerId, onClos
 
       await Promise.all(promises)
 
-      setExistingIds((prev) => new Set([...prev, ...Array.from(selectedIds)]))
+      setRecentlyAdded((prev) => new Set([...prev, ...Array.from(selectedIds)]))
       setSelectedIds(new Set())
       setQuery('')
       setResults([])

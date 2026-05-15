@@ -22,7 +22,7 @@ import { useBoardFilters } from '@/features/board-view/useBoardFilters'
 import { useSelectedCardRoute } from '@/features/board-view/useSelectedCardRoute'
 import { generateBoardKey } from '@/utils/board'
 import { resolveActorIdentity } from '@/utils/user'
-import { sendNotification } from '@/context/NotificationContext'
+import { sendNotification } from '@/api'
 import { useAuth } from '@/context/AuthContext'
 import type { BoardRole, BoardMember, Card } from '@/types/board'
 

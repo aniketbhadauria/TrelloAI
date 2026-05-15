@@ -3,7 +3,7 @@ import type { BoardMember } from '@/types/board'
 import { useCardContext } from '@/context/CardContext'
 import { getAvatarColor } from '@/utils/user'
 import { apiInsertActivity, cancelPendingEmail } from '@/api'
-import { sendNotification } from '@/context/NotificationContext'
+import { sendNotification } from '@/api'
 
 export default function CardMembersPanel() {
   const {
