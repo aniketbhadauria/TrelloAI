@@ -1,6 +1,6 @@
 import { Search, Calendar, Tag, CheckSquare, Clock, X, Zap, Flag, Shapes } from 'lucide-react'
-import type { Label, Sprint } from '@/types/board'
 import { PRIORITIES, CARD_TYPES } from '@/utils/cardMeta'
+import { useBoardFilterContext } from '@/context/BoardFilterContext'
 
 interface FilterCheckboxProps {
   checked: boolean
@@ -45,53 +45,33 @@ function FilterCheckbox({ checked, onChange, icon, label, isLabel }: FilterCheck
   )
 }
 
-interface BoardFilterPanelProps {
-  filterKeyword: string
-  setFilterKeyword: (v: string) => void
-  filterLabels: string[]
-  setFilterLabels: (v: string[] | ((prev: string[]) => string[])) => void
-  filterDueDate: string[]
-  setFilterDueDate: (v: string[] | ((prev: string[]) => string[])) => void
-  filterStatus: string[]
-  setFilterStatus: (v: string[] | ((prev: string[]) => string[])) => void
-  filterActivity: string[]
-  setFilterActivity: (v: string[] | ((prev: string[]) => string[])) => void
-  filterSprint: string[]
-  setFilterSprint: (v: string[] | ((prev: string[]) => string[])) => void
-  filterPriority: string[]
-  setFilterPriority: (v: string[] | ((prev: string[]) => string[])) => void
-  filterCardType: string[]
-  setFilterCardType: (v: string[] | ((prev: string[]) => string[])) => void
-  allLabels: Label[]
-  allSprints: Sprint[]
-  hasActiveFilters: boolean
-  clearAllFilters: () => void
-  onClose: () => void
-}
+export default function BoardFilterPanel() {
+  const {
+    filters,
+    setKeyword,
+    setLabels,
+    setDueDate,
+    setStatus,
+    setActivity,
+    setSprint,
+    setPriority,
+    setCardType,
+    allLabels,
+    allSprints,
+    hasActiveFilters,
+    clear: clearAllFilters,
+    closeFilter,
+  } = useBoardFilterContext()
 
-export default function BoardFilterPanel({
-  filterKeyword,
-  setFilterKeyword,
-  filterLabels,
-  setFilterLabels,
-  filterDueDate,
-  setFilterDueDate,
-  filterStatus,
-  setFilterStatus,
-  filterActivity,
-  setFilterActivity,
-  filterSprint,
-  setFilterSprint,
-  filterPriority,
-  setFilterPriority,
-  filterCardType,
-  setFilterCardType,
-  allLabels,
-  allSprints,
-  hasActiveFilters,
-  clearAllFilters,
-  onClose,
-}: BoardFilterPanelProps) {
+  const filterKeyword = filters.keyword
+  const filterLabels = filters.labels
+  const filterDueDate = filters.dueDate
+  const filterStatus = filters.status
+  const filterActivity = filters.activity
+  const filterSprint = filters.sprint
+  const filterPriority = filters.priority
+  const filterCardType = filters.cardType
+
   const toggle = (setArr: (v: (prev: string[]) => string[]) => void, val: string) =>
     setArr((prev) => (prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val]))
 
@@ -100,7 +80,10 @@ export default function BoardFilterPanel({
       <div className="absolute top-full right-0 mt-1 w-72 bg-card border border-border rounded-xl shadow-2xl z-50 max-h-[70vh] overflow-y-auto animate-slide-down text-foreground">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/30 sticky top-0 bg-card z-10 rounded-t-xl">
           <span className="text-sm font-semibold">Filter</span>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-secondary transition-colors">
+          <button
+            onClick={closeFilter}
+            className="p-1 rounded-lg hover:bg-secondary transition-colors"
+          >
             <X className="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
@@ -115,7 +98,7 @@ export default function BoardFilterPanel({
               <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={filterKeyword}
-                onChange={(e) => setFilterKeyword(e.target.value)}
+                onChange={(e) => setKeyword(e.target.value)}
                 placeholder="Enter a keyword..."
                 className="w-full h-8 pl-8 pr-3 text-sm bg-secondary/40 border border-border/50 rounded-lg outline-none focus:border-primary/50 transition-colors"
               />
@@ -233,7 +216,7 @@ export default function BoardFilterPanel({
                 <FilterCheckbox
                   key={p.value}
                   checked={filterPriority.includes(p.value)}
-                  onChange={() => toggle(setFilterPriority, p.value)}
+                  onChange={() => toggle(setPriority, p.value)}
                   icon={<span className={`w-2.5 h-2.5 rounded-full ${p.dot}`} />}
                   label={p.label}
                 />
@@ -252,7 +235,7 @@ export default function BoardFilterPanel({
                 <FilterCheckbox
                   key={t.value}
                   checked={filterCardType.includes(t.value)}
-                  onChange={() => toggle(setFilterCardType, t.value)}
+                  onChange={() => toggle(setCardType, t.value)}
                   icon={
                     <span
                       className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${t.bg} ${t.color}`}

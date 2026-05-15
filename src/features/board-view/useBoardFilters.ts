@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import type { Board } from '@/types/board'
 import { isPast, isToday, addDays, addWeeks, addMonths, isWithinInterval } from 'date-fns'
 
-interface Filters {
+export interface Filters {
   keyword: string
   labels: string[]
   dueDate: string[]
@@ -28,6 +28,11 @@ type Setter<T> = T | ((prev: T) => T)
 
 export function useBoardFilters(board: Board | null) {
   const [filters, setFilters] = useState<Filters>(EMPTY)
+  const [isOpen, setIsOpen] = useState(false)
+
+  const openFilter = useCallback(() => setIsOpen(true), [])
+  const closeFilter = useCallback(() => setIsOpen(false), [])
+  const toggleFilter = useCallback(() => setIsOpen((v) => !v), [])
 
   const setKeyword = useCallback((v: string) => setFilters((f) => ({ ...f, keyword: v })), [])
   const setLabels = useCallback(
@@ -86,6 +91,8 @@ export function useBoardFilters(board: Board | null) {
     )
     return [...map.values()]
   }, [board])
+
+  const allSprints = useMemo(() => board?.sprints ?? [], [board])
 
   const filteredLists = useMemo(() => {
     if (!board || !hasActiveFilters) return board?.lists || []
@@ -157,6 +164,7 @@ export function useBoardFilters(board: Board | null) {
     filters,
     hasActiveFilters,
     allLabels,
+    allSprints,
     filteredLists,
     setKeyword,
     setLabels,
@@ -167,5 +175,9 @@ export function useBoardFilters(board: Board | null) {
     setPriority,
     setCardType,
     clear,
+    isOpen,
+    openFilter,
+    closeFilter,
+    toggleFilter,
   }
 }

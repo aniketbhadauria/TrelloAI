@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Star, MoreHorizontal, Filter, UserPlus, Users, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { Board, BoardRole, Label, BoardMember, Sprint } from '@/types/board'
+import type { Board, BoardRole, BoardMember } from '@/types/board'
 import BoardFilterPanel from './BoardFilterPanel'
 import BoardMembersPanel from './BoardMembersPanel'
 import BoardTitleEditor from './BoardTitleEditor'
@@ -11,18 +11,13 @@ import BoardMemberAvatars from './BoardMemberAvatars'
 import BoardMenuPanel from './BoardMenuPanel'
 import BoardSprintDropdown from './BoardSprintDropdown'
 import { useOutsideClick } from '@/hooks/useOutsideClick'
-
-type Setter<T> = T | ((prev: T) => T)
+import { useBoardFilterContext } from '@/context/BoardFilterContext'
 
 interface BoardHeaderProps {
   board: Board
   canEdit: boolean
   role: BoardRole | null
   members: BoardMember[]
-  hasActiveFilters: boolean
-  filterOpen: boolean
-  onFilterToggle: () => void
-  onFilterClose: () => void
   onTitleSave: (title: string) => void
   onKeySave: (key: string) => void
   onStar: () => void
@@ -32,25 +27,6 @@ interface BoardHeaderProps {
   onEditMember?: (member: BoardMember) => void
   onBackgroundPicker: () => void
   onArchive: () => void
-  filterKeyword: string
-  setFilterKeyword: (v: string) => void
-  filterLabels: string[]
-  setFilterLabels: (v: Setter<string[]>) => void
-  filterDueDate: string[]
-  setFilterDueDate: (v: Setter<string[]>) => void
-  filterStatus: string[]
-  setFilterStatus: (v: Setter<string[]>) => void
-  filterActivity: string[]
-  setFilterActivity: (v: Setter<string[]>) => void
-  filterSprint: string[]
-  setFilterSprint: (v: Setter<string[]>) => void
-  filterPriority: string[]
-  setFilterPriority: (v: Setter<string[]>) => void
-  filterCardType: string[]
-  setFilterCardType: (v: Setter<string[]>) => void
-  allLabels: Label[]
-  allSprints: Sprint[]
-  clearAllFilters: () => void
   onSprintManager: () => void
   onCreateSprint: () => void
 }
@@ -60,10 +36,6 @@ export default function BoardHeader({
   canEdit,
   role,
   members,
-  hasActiveFilters,
-  filterOpen,
-  onFilterToggle,
-  onFilterClose,
   onTitleSave,
   onKeySave,
   onStar,
@@ -73,25 +45,6 @@ export default function BoardHeader({
   onEditMember,
   onBackgroundPicker,
   onArchive,
-  filterKeyword,
-  setFilterKeyword,
-  filterLabels,
-  setFilterLabels,
-  filterDueDate,
-  setFilterDueDate,
-  filterStatus,
-  setFilterStatus,
-  filterActivity,
-  setFilterActivity,
-  filterSprint,
-  setFilterSprint,
-  filterPriority,
-  setFilterPriority,
-  filterCardType,
-  setFilterCardType,
-  allLabels,
-  allSprints,
-  clearAllFilters,
   onSprintManager,
   onCreateSprint,
 }: BoardHeaderProps) {
@@ -100,6 +53,8 @@ export default function BoardHeader({
   const [showMembersPanel, setShowMembersPanel] = useState(false)
   const [showSprintDropdown, setShowSprintDropdown] = useState(false)
 
+  const { isOpen, toggleFilter, closeFilter, hasActiveFilters } = useBoardFilterContext()
+
   const menuRef = useRef<HTMLDivElement>(null)
   const membersRef = useRef<HTMLDivElement>(null)
   const filterRef = useRef<HTMLDivElement>(null)
@@ -107,8 +62,10 @@ export default function BoardHeader({
 
   useOutsideClick(menuRef, () => setShowMenu(false), showMenu)
   useOutsideClick(membersRef, () => setShowMembersPanel(false), showMembersPanel)
-  useOutsideClick(filterRef, () => onFilterClose(), filterOpen)
+  useOutsideClick(filterRef, () => closeFilter(), isOpen)
   useOutsideClick(sprintRef, () => setShowSprintDropdown(false), showSprintDropdown)
+
+  const allSprints = board.sprints ?? []
 
   return (
     <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-black/25 backdrop-blur-md shrink-0 relative z-20 text-white">
@@ -204,8 +161,6 @@ export default function BoardHeader({
         {showSprintDropdown && (
           <BoardSprintDropdown
             sprints={allSprints}
-            filterSprint={filterSprint}
-            setFilterSprint={setFilterSprint}
             onManage={() => {
               setShowSprintDropdown(false)
               onSprintManager()
@@ -223,7 +178,7 @@ export default function BoardHeader({
         <Button
           variant="ghost"
           size="sm"
-          onClick={onFilterToggle}
+          onClick={toggleFilter}
           className={`gap-1.5 text-white/90 hover:text-white hover:bg-white/10 ${
             hasActiveFilters ? 'bg-white/15' : ''
           }`}
@@ -236,31 +191,7 @@ export default function BoardHeader({
             </span>
           )}
         </Button>
-        {filterOpen && (
-          <BoardFilterPanel
-            filterKeyword={filterKeyword}
-            setFilterKeyword={setFilterKeyword}
-            filterLabels={filterLabels}
-            setFilterLabels={setFilterLabels}
-            filterDueDate={filterDueDate}
-            setFilterDueDate={setFilterDueDate}
-            filterStatus={filterStatus}
-            setFilterStatus={setFilterStatus}
-            filterActivity={filterActivity}
-            setFilterActivity={setFilterActivity}
-            filterSprint={filterSprint}
-            setFilterSprint={setFilterSprint}
-            filterPriority={filterPriority}
-            setFilterPriority={setFilterPriority}
-            filterCardType={filterCardType}
-            setFilterCardType={setFilterCardType}
-            allLabels={allLabels}
-            allSprints={allSprints}
-            hasActiveFilters={hasActiveFilters}
-            clearAllFilters={clearAllFilters}
-            onClose={onFilterClose}
-          />
-        )}
+        {isOpen && <BoardFilterPanel />}
       </div>
 
       <div className="relative" ref={menuRef}>

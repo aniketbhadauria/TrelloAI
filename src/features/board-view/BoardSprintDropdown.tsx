@@ -2,11 +2,10 @@ import { useRef } from 'react'
 import { Zap, Settings, Plus } from 'lucide-react'
 import { useOutsideClick } from '@/hooks/useOutsideClick'
 import type { Sprint } from '@/types/board'
+import { useBoardFilterContext } from '@/context/BoardFilterContext'
 
 interface BoardSprintDropdownProps {
   sprints: Sprint[]
-  filterSprint: string[]
-  setFilterSprint: (v: string[] | ((prev: string[]) => string[])) => void
   onManage: () => void
   onCreateSprint: () => void
   onClose: () => void
@@ -26,14 +25,15 @@ const STATUS_BADGE: Record<Sprint['status'], string> = {
 
 export default function BoardSprintDropdown({
   sprints,
-  filterSprint,
-  setFilterSprint,
   onManage,
   onCreateSprint,
   onClose,
 }: BoardSprintDropdownProps) {
   const ref = useRef<HTMLDivElement>(null)
   useOutsideClick(ref, onClose, true)
+
+  const { filters, setSprint: setFilterSprint } = useBoardFilterContext()
+  const filterSprint = filters.sprint
 
   const toggle = (id: string) =>
     setFilterSprint((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]))
