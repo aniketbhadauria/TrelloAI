@@ -5,8 +5,8 @@ import { z } from 'zod'
 import { Loader2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { FormField } from '@/components/ui/form-field'
 import { usePageTitle } from '@/hooks/usePageTitle'
 
 const schema = z.object({
@@ -61,30 +61,24 @@ export default function LoginPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="login-email">Email</Label>
+        <FormField name="email" label="Email" error={errors.email}>
           <Input
-            id="login-email"
             type="email"
             autoComplete="email"
             placeholder="you@esperiastudio.com"
             className="h-10"
             {...register('email')}
           />
-          {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
-        </div>
+        </FormField>
 
-        <div className="space-y-2">
-          <Label htmlFor="login-password">Password</Label>
+        <FormField name="password" label="Password" error={errors.password}>
           <Input
-            id="login-password"
             type="password"
             autoComplete="current-password"
             className="h-10"
             {...register('password')}
           />
-          {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
-        </div>
+        </FormField>
 
         {errors.root && (
           <p className="text-sm text-destructive" role="alert">

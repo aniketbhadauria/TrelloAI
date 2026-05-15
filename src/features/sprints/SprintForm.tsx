@@ -1,6 +1,7 @@
-import { useForm } from 'react-hook-form'
+import { useForm, UseFormRegister } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
+import { FormField } from '@/components/ui/form-field'
 import type { Sprint } from '@/types/board'
 import {
   SPRINT_PREFIX,
@@ -10,6 +11,8 @@ import {
   shiftDate,
 } from '@/utils/sprint'
 
+const LABEL_CLS = 'text-xs text-muted-foreground'
+
 interface SprintFormProps {
   defaultValues: SprintFormValues
   minNumber: number
@@ -17,6 +20,33 @@ interface SprintFormProps {
   onSubmit: (values: SprintFormValues) => void
   onCancel: () => void
   submitLabel: string
+}
+
+interface SprintNumberInputProps {
+  id?: string
+  register: UseFormRegister<SprintFormValues>
+  minNumber: number
+  hasError: boolean
+}
+
+function SprintNumberInput({ id, register, minNumber, hasError }: SprintNumberInputProps) {
+  return (
+    <div
+      className={`flex items-center gap-2 bg-background border rounded-lg px-3 py-2 transition-colors ${hasError ? 'border-destructive' : 'border-border/50 focus-within:border-primary/50'}`}
+    >
+      <span className="text-sm text-muted-foreground font-medium select-none">{SPRINT_PREFIX}</span>
+      <span className="text-muted-foreground/40 text-sm">#</span>
+      <input
+        id={id}
+        type="number"
+        min={minNumber}
+        step={1}
+        autoFocus
+        className="w-16 text-sm font-semibold bg-transparent outline-none"
+        {...register('sprintNumber', { valueAsNumber: true })}
+      />
+    </div>
+  )
 }
 
 export default function SprintForm({
@@ -63,28 +93,18 @@ export default function SprintForm({
       onSubmit={handleSubmit(onSubmit)}
       className="border border-border/50 rounded-xl p-4 bg-secondary/10 space-y-3"
     >
-      <div>
-        <label className="text-[10px] text-muted-foreground mb-1 block">Sprint number</label>
-        <div
-          className={`flex items-center gap-2 bg-background border rounded-lg px-3 py-2 transition-colors ${errors.sprintNumber ? 'border-destructive' : 'border-border/50 focus-within:border-primary/50'}`}
-        >
-          <span className="text-sm text-muted-foreground font-medium select-none">
-            {SPRINT_PREFIX}
-          </span>
-          <span className="text-muted-foreground/40 text-sm">#</span>
-          <input
-            type="number"
-            min={minNumber}
-            step={1}
-            autoFocus
-            className="w-16 text-sm font-semibold bg-transparent outline-none"
-            {...register('sprintNumber', { valueAsNumber: true })}
-          />
-        </div>
-        {errors.sprintNumber && (
-          <p className="text-[10px] text-destructive mt-1">{errors.sprintNumber.message}</p>
-        )}
-      </div>
+      <FormField
+        name="sprintNumber"
+        label="Sprint number"
+        error={errors.sprintNumber}
+        labelClassName={LABEL_CLS}
+      >
+        <SprintNumberInput
+          register={register}
+          minNumber={minNumber}
+          hasError={!!errors.sprintNumber}
+        />
+      </FormField>
 
       <input
         placeholder="Sprint goal (optional)"
@@ -92,8 +112,7 @@ export default function SprintForm({
         {...register('goal')}
       />
 
-      <div>
-        <label className="text-[10px] text-muted-foreground mb-1.5 block">Duration</label>
+      <FormField label="Duration" labelClassName={LABEL_CLS}>
         <div className="flex gap-2">
           {(['1week', '2weeks', 'custom'] as Duration[]).map((d) => (
             <button
@@ -110,25 +129,30 @@ export default function SprintForm({
             </button>
           ))}
         </div>
-      </div>
+      </FormField>
 
       <div className="flex gap-2">
-        <div className="flex-1">
-          <label className="text-[10px] text-muted-foreground mb-1 block">Start date</label>
+        <FormField
+          name="startDate"
+          label="Start date"
+          error={errors.startDate}
+          className="flex-1"
+          labelClassName={LABEL_CLS}
+        >
           <input
             type="date"
             className={`w-full text-sm bg-background border rounded-lg px-3 py-2 outline-none transition-colors ${errors.startDate ? 'border-destructive' : 'border-border/50 focus:border-primary/50'}`}
             {...register('startDate')}
             onChange={(e) => handleStartChange(e.target.value)}
           />
-          {errors.startDate && (
-            <p className="text-[10px] text-destructive mt-1">{errors.startDate.message}</p>
-          )}
-        </div>
-        <div className="flex-1">
-          <label className="text-[10px] text-muted-foreground mb-1 block">
-            End date{duration !== 'custom' && <span className="text-primary/60 ml-1">(auto)</span>}
-          </label>
+        </FormField>
+        <FormField
+          name="endDate"
+          label={duration !== 'custom' ? 'End date (auto)' : 'End date'}
+          error={errors.endDate}
+          className="flex-1"
+          labelClassName={LABEL_CLS}
+        >
           <input
             type="date"
             readOnly={duration !== 'custom'}
@@ -141,10 +165,7 @@ export default function SprintForm({
             }`}
             {...register('endDate')}
           />
-          {errors.endDate && (
-            <p className="text-[10px] text-destructive mt-1">{errors.endDate.message}</p>
-          )}
-        </div>
+        </FormField>
       </div>
 
       <div className="flex gap-2 justify-end pt-1">

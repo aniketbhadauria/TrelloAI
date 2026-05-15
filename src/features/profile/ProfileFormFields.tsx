@@ -1,79 +1,52 @@
 import { UseFormRegister, FieldErrors } from 'react-hook-form'
-import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { FormField } from '@/components/ui/form-field'
 import { COUNTRIES, GENDERS, SELECT_CLS } from '@/utils/constants'
 import { ProfileFormData } from '@/schemas/profile'
+
+const LABEL_CLS = 'text-xs font-bold uppercase tracking-wider text-muted-foreground'
 
 interface ProfileFormFieldsProps {
   register: UseFormRegister<ProfileFormData>
   errors: FieldErrors<ProfileFormData>
 }
 
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null
-  return <p className="text-xs text-destructive mt-1 animate-slide-down">⚠️ {message}</p>
-}
-
 export default function ProfileFormFields({ register, errors }: ProfileFormFieldsProps) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label
-            htmlFor="p-first"
-            className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >
-            First name
-          </Label>
+        <FormField
+          name="firstName"
+          label="First name"
+          error={errors.firstName}
+          labelClassName={LABEL_CLS}
+        >
           <Input
-            id="p-first"
             autoComplete="given-name"
             {...register('firstName')}
             className="h-11 focus:ring-primary/20"
           />
-          <FieldError message={errors.firstName?.message} />
-        </div>
-        <div className="space-y-2">
-          <Label
-            htmlFor="p-last"
-            className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >
-            Last name
-          </Label>
+        </FormField>
+        <FormField
+          name="lastName"
+          label="Last name"
+          error={errors.lastName}
+          labelClassName={LABEL_CLS}
+        >
           <Input
-            id="p-last"
             autoComplete="family-name"
             {...register('lastName')}
             className="h-11 focus:ring-primary/20"
           />
-          <FieldError message={errors.lastName?.message} />
-        </div>
+        </FormField>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label
-            htmlFor="p-dob"
-            className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >
-            Date of birth
-          </Label>
-          <Input
-            id="p-dob"
-            type="date"
-            {...register('dob')}
-            className="h-11 focus:ring-primary/20"
-          />
-          <FieldError message={errors.dob?.message} />
-        </div>
-        <div className="space-y-2">
-          <Label
-            htmlFor="p-gender"
-            className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >
-            Gender
-          </Label>
-          <select id="p-gender" className={SELECT_CLS} {...register('gender')}>
+        <FormField name="dob" label="Date of birth" error={errors.dob} labelClassName={LABEL_CLS}>
+          <Input type="date" {...register('dob')} className="h-11 focus:ring-primary/20" />
+        </FormField>
+        <FormField name="gender" label="Gender" error={errors.gender} labelClassName={LABEL_CLS}>
+          <select className={SELECT_CLS} {...register('gender')}>
             <option value="">Select…</option>
             {GENDERS.map((g) => (
               <option key={g.value} value={g.value}>
@@ -81,35 +54,25 @@ export default function ProfileFormFields({ register, errors }: ProfileFormField
               </option>
             ))}
           </select>
-          <FieldError message={errors.gender?.message} />
-        </div>
+        </FormField>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label
-            htmlFor="p-phone"
-            className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >
-            Phone number
-          </Label>
+        <FormField
+          name="phone"
+          label="Phone number"
+          error={errors.phone}
+          labelClassName={LABEL_CLS}
+        >
           <Input
-            id="p-phone"
             type="tel"
             autoComplete="tel"
             {...register('phone')}
             className="h-11 focus:ring-primary/20"
           />
-          <FieldError message={errors.phone?.message} />
-        </div>
-        <div className="space-y-2">
-          <Label
-            htmlFor="p-country"
-            className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >
-            Country
-          </Label>
-          <select id="p-country" className={SELECT_CLS} {...register('country')}>
+        </FormField>
+        <FormField name="country" label="Country" error={errors.country} labelClassName={LABEL_CLS}>
+          <select className={SELECT_CLS} {...register('country')}>
             <option value="">Select…</option>
             {COUNTRIES.map((c) => (
               <option key={c} value={c}>
@@ -117,8 +80,7 @@ export default function ProfileFormFields({ register, errors }: ProfileFormField
               </option>
             ))}
           </select>
-          <FieldError message={errors.country?.message} />
-        </div>
+        </FormField>
       </div>
     </div>
   )

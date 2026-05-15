@@ -6,8 +6,8 @@ import { z } from 'zod'
 import { Loader2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { FormField } from '@/components/ui/form-field'
 import { usePageTitle } from '@/hooks/usePageTitle'
 
 const schema = z.object({
@@ -64,31 +64,29 @@ export default function SignupPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="signup-email">Email</Label>
+        <FormField name="email" label="Email" error={errors.email}>
           <Input
-            id="signup-email"
             type="email"
             autoComplete="email"
             placeholder="you@esperiastudio.com"
             className="h-10"
             {...register('email')}
           />
-          {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
-        </div>
+        </FormField>
 
-        <div className="space-y-2">
-          <Label htmlFor="signup-password">Password</Label>
+        <FormField
+          name="password"
+          label="Password"
+          error={errors.password}
+          description="At least 6 characters."
+        >
           <Input
-            id="signup-password"
             type="password"
             autoComplete="new-password"
             className="h-10"
             {...register('password')}
           />
-          {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
-          <p className="text-xs text-muted-foreground">At least 6 characters.</p>
-        </div>
+        </FormField>
 
         {errors.root && (
           <p className="text-sm text-destructive" role="alert">
